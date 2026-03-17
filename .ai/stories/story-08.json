@@ -1,0 +1,32 @@
+{
+  "storyId": 8,
+  "title": "Utility Commands (util time-ms, util uuid)",
+  "description": "Implement two lightweight utility subcommands for agent use: util time-ms returns the current UTC time as a Unix millisecond timestamp, and util uuid generates a random UUID v4. These are dependency-free agent helpers that only require the output contract.",
+  "status": "Not Started",
+  "dependsOn": [2],
+  "prerequisiteState": "Story 2 complete. IOutputWriter and DI are wired. No other dependencies required.",
+  "goal": "zapi-cli util time-ms outputs {\"ts\": <unix_ms>} and zapi-cli util uuid outputs {\"uuid\": \"<uuid-v4>\"} — both as valid JSON success envelopes, exit 0.",
+  "scope": [
+    "Create src/ZapiCli/Commands/UtilCommands.cs with UtilTimeMsCommand and UtilUuidCommand",
+    "UtilTimeMsCommand: inherits AsyncCommand<GlobalSettings>; ExecuteAsync calls DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); WriteSuccess({ ts = <value> }); exits 0",
+    "UtilUuidCommand: inherits AsyncCommand<GlobalSettings>; ExecuteAsync calls Guid.NewGuid().ToString(\"D\") for RFC 4122 format; WriteSuccess({ uuid = <value> }); exits 0",
+    "Register both commands under 'util' branch in Program.cs",
+    "Unit tests: util time-ms output parses as long, is a positive value representing a recent Unix timestamp; util uuid output is a valid UUID v4 string (matches RFC 4122 pattern)"
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "zapi-cli util time-ms outputs { \"status\": \"ok\", \"data\": { \"ts\": <unix_ms> } } on stdout, exits 0",
+    "zapi-cli util uuid outputs { \"status\": \"ok\", \"data\": { \"uuid\": \"<uuid-v4>\" } } on stdout, exits 0",
+    "The ts value is a valid Unix millisecond timestamp for the current UTC time",
+    "The uuid value is a valid RFC 4122 UUID v4 (lowercase, hyphen-separated, 8-4-4-4-12 format)",
+    "No network access, no account resolution, no keychain access for either command",
+    "Both commands accept global flags (--no-input, --account, --json) without error",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "These are the simplest commands in the v1 surface. They only require IOutputWriter from Story 2. Read prd.json FR-010 for the exact output shapes. Use Guid.NewGuid().ToString(\"D\") for lowercase hyphen-separated UUID v4. Use DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() for the Unix millisecond timestamp.",
+  "openItems": [],
+  "sourceReferences": [
+    "tech_spec/prd.md (§ FR-010 Utility commands, § ZAPI-023, § ZAPI-024)"
+  ],
+  "relevantOpenQuestions": []
+}

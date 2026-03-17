@@ -1,0 +1,50 @@
+{
+  "storyId": 3,
+  "title": "AccountStore + PatAuthProvider + ZohoCorp Block",
+  "description": "Implement the account persistence layer (AccountStore reads/writes accounts.json), the PAT authentication provider (PatAuthProvider bridges IAuthProvider → IKeychainProvider), and the ZohoCorp domain hard-block utility. This is the security-critical core used by every subsequent feature.",
+  "status": "Not Started",
+  "dependsOn": [1, 2],
+  "prerequisiteState": "Stories 1-2 complete. IKeychainProvider, IOutputWriter, ZapiCliException, and ErrorCodes all exist. DI is wired in Program.cs.",
+  "goal": "AccountStore correctly reads and writes accounts.json (0600 perms on Unix). PatAuthProvider stores and retrieves PAT tokens via IKeychainProvider. ZohoCorpGuard.AssertNotZohoCorp() throws ACCOUNT_DOMAIN_BLOCKED unconditionally for zohocorp-domain emails.",
+  "scope": [
+    "Create src/ZapiCli.Core/Accounts/AccountEntry.cs as a sealed record with Name, Domain, Email?, Scopes, TokenType, IsDefault, NeedsReauth properties using snake_case JSON keys",
+    "Create src/ZapiCli.Core/Accounts/AccountsRoot.cs as a sealed record with a List<AccountEntry> Accounts property",
+    "Create src/ZapiCli.Core/Accounts/IAccountStore.cs with LoadAsync, SaveAsync, FindAsync, GetDefaultAsync",
+    "Create src/ZapiCli.Core/Accounts/AccountStore.cs implementing IAccountStore: config dir resolved via Environment.GetFolderPath; reads/writes <configDir>/accounts.json; sets Unix file permissions to 0600 after every write; sets Windows ACL to current-user-only (see OQ-004); always serializes with System.Text.Json SnakeCaseLower",
+    "Create src/ZapiCli.Core/Auth/IAuthProvider.cs with GetTokenAsync, StoreTokenAsync, ClearTokenAsync",
+    "Create src/ZapiCli.Core/Auth/PatAuthProvider.cs implementing IAuthProvider: StoreTokenAsync calls IKeychainProvider.SetAsync('zapi-cli:<name>:pat', token); GetTokenAsync calls IKeychainProvider.GetAsync and throws AUTH_FAILURE (exit 2) if null; ClearTokenAsync calls IKeychainProvider.DeleteAsync",
+    "Create src/ZapiCli.Core/Security/ZohoCorpGuard.cs with static void AssertNotZohoCorp(string? email): detection rule is email.Split('@')[1].Split('.')[0].Equals('zohocorp', OrdinalIgnoreCase); throws ZapiCliException(ACCOUNT_DOMAIN_BLOCKED, 1) if matches; the detection string 'zohocorp' must be a compile-time constant (not configurable)",
+    "Add startup check in AccountStore.LoadAsync: after loading accounts.json, emit a warning to stderr (via IOutputWriter or ILogger) if any account has a ZohoCorp-domain email",
+    "Register IAccountStore → AccountStore and IAuthProvider → PatAuthProvider in DI (Program.cs)",
+    "Unit tests: AccountStore round-trips an AccountEntry; AccountStore masks no token in accounts.json; ZohoCorpGuard throws for 'user@zohocorp.com', 'user@zohocorp.eu', 'user@zohocorp.in', 'user@zohocorp.com.au'; ZohoCorpGuard passes for 'user@zoho.com'; PatAuthProvider.GetTokenAsync returns correct token from InMemoryKeychainProvider; PatAuthProvider.GetTokenAsync throws AUTH_FAILURE for missing token"
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "accounts.json is written with 0600 permissions on macOS/Linux after AccountStore.SaveAsync",
+    "Token values are never present in accounts.json (verified by AccountStore unit tests)",
+    "ZohoCorpGuard.AssertNotZohoCorp throws ACCOUNT_DOMAIN_BLOCKED for any email whose second-level domain label equals 'zohocorp' (any TLD)",
+    "ZohoCorpGuard uses a compile-time constant for the 'zohocorp' string — no runtime override possible",
+    "PatAuthProvider keys are formatted as 'zapi-cli:<accountName>:pat'",
+    "AccountStore.LoadAsync emits a warning if accounts.json contains an account with a ZohoCorp email",
+    "GetDefaultAsync throws NO_DEFAULT_ACCOUNT (exit 1) if no account has is_default=true",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "Read ADR-0005 for the ZohoCorp domain-block design — especially the SLD-based detection rule and the principle that it covers all current and future datacenter TLDs via the second-level domain check. Read ADR-0002 for IAuthProvider design — PatAuthProvider is the v1 implementation; OAuthProvider is the v2 drop-in. Read ADR-0004 for keychain key naming format. The account domain field defaults to 'zoho.com' when not supplied. For Windows ACL restriction, see OQ-004.",
+  "openItems": [
+    {
+      "item": "Windows ACL restriction for accounts.json",
+      "defaultAssumption": "See OQ-004. Use FileSecurity to restrict to current user. Wrap in try/catch — failure logs a warning via ILogger but does not fail the operation."
+    },
+    {
+      "item": "ZohoCorp startup warning mechanism",
+      "defaultAssumption": "Use ILogger<AccountStore> to write a Warning-level log entry. Since logging goes to stderr and is at Warning level, it will appear as a structured warning without breaking the JSON output contract on stdout."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/adr/adr-0002-pluggable-auth-interface-pat-first.md",
+    "tech_spec/adr/adr-0004-os-keychain-for-secret-storage.md",
+    "tech_spec/adr/adr-0005-zohocorp-domain-hard-block.md",
+    "tech_spec/prd.md (§ FR-001 Account management, § FR-002 Keychain storage, § FR-006 ZohoCorp block)"
+  ],
+  "relevantOpenQuestions": ["OQ-001", "OQ-004"]
+}

@@ -1,0 +1,60 @@
+{
+  "storyId": 5,
+  "title": "ApiClient + Host Allowlist + api call Command",
+  "description": "Implement ApiClient with the compile-time host allowlist (SSRF prevention) and ZohoCorp block at dispatch, plus the api call command with full flag support including --base-url. This is the primary value-delivery story — AI agents depend on this to invoke any Zoho product REST endpoint.",
+  "status": "Not Started",
+  "dependsOn": [3, 4],
+  "prerequisiteState": "Stories 1-4 complete. AccountStore, PatAuthProvider, ZohoCorpGuard, and all account commands are working. DI registered.",
+  "goal": "zapi-cli api call --base-url https://cliq.zoho.com/api/v2 --method GET --path /channels returns the Zoho API response in the JSON success envelope. All security controls (host allowlist check pre-request before any token read, ZohoCorp block) fire before any network I/O.",
+  "scope": [
+    "Create src/ZapiCli.Core/Api/ApiRequest.cs sealed record with BaseUrl, Method, Path, Body?, Headers, QueryParams, AccountName",
+    "Create src/ZapiCli.Core/Api/ApiResponse.cs sealed record with StatusCode, Body (raw JSON string), IsSuccess computed property",
+    "Create src/ZapiCli.Core/Api/ApiClient.cs sealed class; constructor injects IAuthProvider, IAccountStore, IOutputWriter, ILogger<ApiClient>; single public method: Task<ApiResponse> CallAsync(ApiRequest request, CancellationToken ct)",
+    "ApiClient.CallAsync dispatch order: (1) load AccountEntry for request.AccountName via IAccountStore; (2) run ZohoCorpGuard.AssertNotZohoCorp(account.Email) — second enforcement point; (3) check account.NeedsReauth — if true throw NEEDS_REAUTH exit 2; (4) build final URL as <base-url><path> (normalize path with leading '/' if missing, see OQ-009); (5) ValidateHost(uri) — suffix check against compile-time allowlist BEFORE any token is read; (6) IAuthProvider.GetTokenAsync for auth header injection; (7) dispatch HttpClient.SendAsync; (8) return ApiResponse; (9) on non-2xx throw ZapiCliException API_ERROR with detail=response body",
+    "ValidateHost private static method: uri.Host must end with one of ['.zoho.com', '.zoho.eu', '.zoho.in', '.zoho.com.au', '.zohoapis.com', '.zohoapis.in'] case-insensitive; on failure throw ZapiCliException HOST_NOT_ALLOWED exit 1. Check must fire BEFORE GetTokenAsync is called.",
+    "AllowedHostSuffixes must be private static readonly IReadOnlyList<string> sealed compile-time constant — not configurable at runtime",
+    "Create src/ZapiCli/Commands/ApiCommands.cs with ApiCallCommand extending AsyncCommand<ApiCallSettings>",
+    "ApiCallSettings inherits GlobalSettings; flags: --base-url (req), --method GET|POST|PUT|PATCH|DELETE (req), --path (req), --body, --body-file, --header (repeatable List<string>), --query (repeatable List<string>); Validate() rejects if both --body and --body-file are set (INVALID_ARGS) before any network activity",
+    "ApiCallCommand.ExecuteAsync: parse --header as 'key:value' pairs; parse --query as 'key=value' pairs; build ApiRequest; call ApiClient.CallAsync; write result via IOutputWriter.WriteSuccess(response.Body deserialised as JsonElement to preserve raw JSON as actual JSON in the envelope)",
+    "For POST/PUT/PATCH: inject Content-Type: application/json automatically. For GET/DELETE: omit Content-Type",
+    "Register ApiClient via IHttpClientFactory (services.AddHttpClient<ApiClient>() with 30-second timeout) and ApiCallCommand in Program.cs",
+    "Unit tests: ValidateHost rejects 'evil.com'; ValidateHost accepts 'cliq.zoho.com', 'desk.zoho.eu', 'crm.zohoapis.com'; ZohoCorp account at dispatch → ACCOUNT_DOMAIN_BLOCKED; NEEDS_REAUTH fires when NeedsReauth=true; --body + --body-file → INVALID_ARGS; HOST_NOT_ALLOWED fires before GetTokenAsync (verify via mock); path missing leading '/' is normalized"
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "api call --base-url https://cliq.zoho.com/api/v2 --method GET --path /channels with valid PAT returns { \"status\": \"ok\", \"data\": <Zoho response> } on stdout",
+    "api call --base-url https://evil.com/api --method GET --path /anything → HOST_NOT_ALLOWED, exit 1, no HttpClient.SendAsync called, no token read",
+    "api call with --body and --body-file together → INVALID_ARGS on stderr, exit 1, no network I/O",
+    "api call when account.NeedsReauth=true → NEEDS_REAUTH, exit 2",
+    "api call with a ZohoCorp-domain account → ACCOUNT_DOMAIN_BLOCKED, exit 1, no network I/O",
+    "Authorization header is injected by ApiClient — never by the command class",
+    "Non-2xx Zoho API response → API_ERROR on stderr with 'detail' containing the response body",
+    "AllowedHostSuffixes is a static readonly sealed compile-time constant — no environment variable or config file reference",
+    "Host allowlist check fires BEFORE IAuthProvider.GetTokenAsync (verified by unit test with mock/fake)",
+    "Final URL assembled as <base-url><path> with no intermediate derivation from account domain",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "Read ADR-0003 for the --base-url design — caller supplies the full base URL, no product-to-subdomain derivation. Read ADR-0006 for the host allowlist design and exact suffix list. Read ADR-0005 for ZohoCorp block enforcement inside CallAsync. Read ADR-0002 for IAuthProvider consumption pattern. CRITICAL security order: host check (step 5) MUST fire before GetTokenAsync (step 6) to prevent credential exfiltration to non-Zoho hosts. The data field in the success envelope must be a parsed JsonElement (not a string) so it is embedded as real JSON.",
+  "openItems": [
+    {
+      "item": "HttpClient lifetime",
+      "defaultAssumption": "Register a named HttpClient via IHttpClientFactory in DI (services.AddHttpClient<ApiClient>()). Set a 30-second timeout. Do not create new HttpClient instances in each call."
+    },
+    {
+      "item": "Path normalization",
+      "defaultAssumption": "See OQ-009. Prepend '/' to --path if missing. Validate the assembled URI before host check. Return INVALID_ARGS if the URL is malformed."
+    },
+    {
+      "item": "Query parameter encoding",
+      "defaultAssumption": "Use UriBuilder + QueryString.Create or HttpUtility.ParseQueryString to safely encode query parameters from the --query flags into the final URL."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/adr/adr-0002-pluggable-auth-interface-pat-first.md",
+    "tech_spec/adr/adr-0003-caller-supplied-base-url.md",
+    "tech_spec/adr/adr-0005-zohocorp-domain-hard-block.md",
+    "tech_spec/adr/adr-0006-host-allowlist-compile-time-control.md",
+    "tech_spec/prd.md (§ FR-003 API invocation, § FR-007 Host allowlist, § ZAPI-011–ZAPI-014)"
+  ],
+  "relevantOpenQuestions": ["OQ-007", "OQ-009"]
+}

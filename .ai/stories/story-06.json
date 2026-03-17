@@ -1,0 +1,41 @@
+{
+  "storyId": 6,
+  "title": "Scope Management Command Group",
+  "description": "Implement the three scope subcommands (add, remove, list) that record OAuth scope metadata on accounts and set the needs_reauth lifecycle flag. These commands scaffold the OAuth2 re-auth flow for v2 while providing scope tracking in v1.",
+  "status": "Not Started",
+  "dependsOn": [4, 5],
+  "prerequisiteState": "Stories 1-5 complete. AccountStore, PatAuthProvider, ZohoCorpGuard, account commands, and ApiClient are all working.",
+  "goal": "scope add, scope remove, and scope list correctly mutate the account's scopes[] in accounts.json, set needs_reauth appropriately, and are blocked for ZohoCorp-domain accounts.",
+  "scope": [
+    "Create src/ZapiCli/Commands/ScopeCommands.cs with ScopeAddCommand, ScopeRemoveCommand, ScopeListCommand",
+    "ScopeAddSettings: --scope (req string), --account (optional, inherits from GlobalSettings); ScopeAddCommand.ExecuteAsync: (1) resolve account (use --account override if present, else default account); (2) ZohoCorpGuard.AssertNotZohoCorp(account.Email) — block ZohoCorp accounts; (3) skip if scope already in account.Scopes (no duplicate); (4) append scope to account.Scopes; (5) set account.NeedsReauth = true; (6) save via AccountStore; (7) WriteSuccess with updated scopes array",
+    "ScopeRemoveSettings: --scope (req string), --account (optional); ScopeRemoveCommand.ExecuteAsync: (1) resolve account; (2) ZohoCorpGuard.AssertNotZohoCorp; (3) throw SCOPE_NOT_FOUND (exit 1) if scope not in account.Scopes; (4) remove scope; (5) set NeedsReauth = true; (6) save; (7) WriteSuccess confirmation",
+    "ScopeListSettings: --account (optional); ScopeListCommand.ExecuteAsync: (1) resolve account; (2) ZohoCorpGuard.AssertNotZohoCorp; (3) WriteSuccess with scopes array (exits 0 even if empty)",
+    "Account resolution helper: if --account flag provided use that name; else call IAccountStore.GetDefaultAsync() which throws NO_DEFAULT_ACCOUNT if none set",
+    "Register all three commands under 'scope' branch in Program.cs",
+    "Unit tests: scope add appends scope and sets needs_reauth=true; scope add with duplicate scope does not create duplicate; scope remove removes scope and sets needs_reauth=true; scope remove throws SCOPE_NOT_FOUND for missing scope; scope list returns empty array without error; scope add/remove/list with ZohoCorp account → ACCOUNT_DOMAIN_BLOCKED"
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "scope add --scope ZohoDesk.Tickets.READ appends the scope to accounts.json and sets needs_reauth=true",
+    "scope add with an already-present scope does not add a duplicate; exits 0",
+    "scope remove --scope ZohoDesk.Tickets.READ removes the scope and sets needs_reauth=true",
+    "scope remove with a missing scope → SCOPE_NOT_FOUND, exit 1",
+    "scope list returns the scopes array as JSON; exits 0 even if empty",
+    "All three scope commands with a ZohoCorp-domain account → ACCOUNT_DOMAIN_BLOCKED, exit 1 (see OQ-005)",
+    "api call on an account with needs_reauth=true → NEEDS_REAUTH, exit 2 (verified by ApiClient unit test from Story 5)",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "Read ADR-0005 for ZohoCorp block enforcement at scope commands — it must apply to all three, including the read-only scope list. Read the prd.json FR-004 for scope management lifecycle. The needs_reauth=true flag is set by both scope add and scope remove, regardless of whether tokens are refreshed. In v1, account re-auth is a stub — needs_reauth is set but the agent will see NEEDS_REAUTH on api call until OAuth2 is implemented in v2.",
+  "openItems": [
+    {
+      "item": "ZohoCorp check on scope list (read-only)",
+      "defaultAssumption": "See OQ-005. Apply the check uniformly to all scope commands including the read-only scope list. This is consistent with ADR-0005."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/adr/adr-0005-zohocorp-domain-hard-block.md",
+    "tech_spec/prd.md (§ FR-004 Scope management, § ZAPI-007–ZAPI-010)"
+  ],
+  "relevantOpenQuestions": ["OQ-005"]
+}

@@ -1,0 +1,877 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "meta": {
+    "title": "zapi-cli — Zoho API CLI for AI Agents",
+    "version": "1.0.0",
+    "generatedFrom": "tech_spec/prd.md",
+    "sourceOfTruth": "tech_spec/ directory. The tech_spec files are the only source of truth.",
+    "lastUpdated": "2026-03-17",
+    "status": "Draft",
+    "authors": ["zapi-cli Engineering"]
+  },
+  "documentInventory": [
+    {
+      "id": 1,
+      "path": "tech_spec/prd.md",
+      "covers": "Full PRD: product overview, goals, personas, functional requirements, UX, narrative, success metrics, technical considerations, milestones, user stories (ZAPI-001–ZAPI-024)"
+    },
+    {
+      "id": 2,
+      "path": "tech_spec/tech_spec.md",
+      "covers": "Technical specification: solution structure, project layout, command tree, global flags, output contract, data models, auth flows, ZohoCorp restriction, storage paths, API client, trace sessions, dependency list, non-goals"
+    },
+    {
+      "id": 3,
+      "path": "tech_spec/brainstorming.md",
+      "covers": "Project vision and design exploration: agent-first design rationale, platform choices, PAT/OAuth flows, account metadata, scope lifecycle, storage layout, API base-URL strategy, host allowlist, trace design, Pex/WebSocket future ideas"
+    },
+    {
+      "id": 4,
+      "path": "tech_spec/adr/adr-0001-runtime-and-language-selection.md",
+      "covers": "Decision: .NET 10 / C# 13 as runtime and language; self-contained single-file binary per platform RID"
+    },
+    {
+      "id": 5,
+      "path": "tech_spec/adr/adr-0002-pluggable-auth-interface-pat-first.md",
+      "covers": "Decision: pluggable IAuthProvider with PatAuthProvider in v1; OAuthProvider as a v2 drop-in; compile-time OAuth client credentials"
+    },
+    {
+      "id": 6,
+      "path": "tech_spec/adr/adr-0003-caller-supplied-base-url.md",
+      "covers": "Decision: --base-url required on every api call; no product-to-subdomain derivation; API Registry shorthand deferred to v2"
+    },
+    {
+      "id": 7,
+      "path": "tech_spec/adr/adr-0004-os-keychain-for-secret-storage.md",
+      "covers": "Decision: OS-native keychain via P/Invoke (no NuGet package) with AES-256-GCM encrypted-file fallback for headless environments"
+    },
+    {
+      "id": 8,
+      "path": "tech_spec/adr/adr-0005-zohocorp-domain-hard-block.md",
+      "covers": "Decision: hard-block any account whose email's second-level domain label equals 'zohocorp'; compile-time constant; no runtime override"
+    },
+    {
+      "id": 9,
+      "path": "tech_spec/adr/adr-0006-host-allowlist-compile-time-control.md",
+      "covers": "Decision: compile-time sealed allowlist of Zoho host suffixes; HOST_NOT_ALLOWED pre-request if host not matched; SSRF prevention"
+    },
+    {
+      "id": 10,
+      "path": "tech_spec/adr/adr-0007-always-on-trace-session-design.md",
+      "covers": "Decision: always-on session-scoped tracing (no per-call flag); silent drop when no session active; named sessions; non-destructive export; Authorization header always excluded"
+    }
+  ],
+  "projectSummary": {
+    "name": "zapi-cli",
+    "fullName": "Zoho API CLI",
+    "description": "A standalone, self-contained command-line binary providing a deterministic, scriptable interface to any Zoho product's REST APIs. Manages multiple Zoho accounts, handles authentication via a pluggable IAuthProvider interface (PAT in v1, OAuth2 in v2), and exposes a general-purpose HTTP API invoker where the caller supplies the full base URL at invocation time.",
+    "primaryConsumers": [
+      "AI agents — GitHub Copilot CLI Skills and Claude Agent Skills that invoke zapi-cli as a subprocess",
+      "Human developers — light use for account setup, ad-hoc API calls, and trace session inspection"
+    ],
+    "coreWorkflow": "Agent or human invokes `zapi-cli <command-group> <command> [flags]` → zapi-cli resolves account, validates host allowlist (pre-request), injects Authorization header, dispatches HTTP request to Zoho product API → structured JSON to stdout (success) or stderr (error).",
+    "keyProperties": [
+      "Single self-contained binary, .NET 10 / C# 13, no runtime pre-install required on target machine",
+      "Platforms: macOS (Intel + Apple Silicon), Windows x64, Linux x64",
+      "Auth: PAT-first via IAuthProvider; OS-native keychain (P/Invoke, no NuGet) or AES-256-GCM encrypted file fallback",
+      "--base-url required on every api call; final URL assembled as <base-url><path>; no product-to-subdomain derivation",
+      "All stdout/stderr output is valid JSON; fixed symbolic error codes; exit codes 0 / 1 / 2",
+      "Compile-time HTTP host allowlist (SSRF prevention); ZohoCorp domain hard-block (unconditional, dual-layer)",
+      "Always-on session-scoped trace: api call auto-appends to active session JSONL without per-call flags; Authorization header always excluded from trace entries"
+    ]
+  },
+  "goals": {
+    "business": [
+      "Provide a single, self-contained binary that AI agents can invoke to perform authenticated Zoho API calls across any Zoho product.",
+      "Eliminate the need for product-specific Zoho CLI tools — one binary covers Cliq, Desk, CRM, People, Creator, and any other Zoho product via the caller-supplied --base-url pattern.",
+      "Deliver a fully runnable v1 CLI with all core use cases working end-to-end in a single development day."
+    ],
+    "user": [
+      "AI agents: execute Zoho REST API calls non-interactively, parse structured JSON responses, manage account context across multi-step workflows, and export complete trace logs for debugging.",
+      "Human developers: configure Zoho accounts and their PAT tokens once, then leave the CLI to agents; inspect trace sessions when reviewing agent runs."
+    ],
+    "nonGoals": [
+      "OAuth 2.0 authentication flow — deferred to v2.",
+      "WebSocket connections (ws group) — deferred to v2.",
+      "Pex / Zoho Cliq real-time protocol (pex group) — deferred to v2.",
+      "API Registry shorthand (api registry group) — deferred to v2.",
+      "Binary distribution, packaging, or publishing — address in a separate work item.",
+      "Support for ZohoCorp corporate accounts (*@zohocorp.com and datacenter variants) — hard-blocked unconditionally.",
+      "GUI or web interface.",
+      "Any Zoho product-specific logic beyond authentication header injection."
+    ]
+  },
+  "personas": [
+    {
+      "id": "P1",
+      "name": "AI Agent (Copilot / Claude)",
+      "type": "AI agent — primary consumer",
+      "description": "A GitHub Copilot CLI Skill or Claude Agent Skill that invokes zapi-cli as a subprocess for each API interaction. Issues commands with structured flags, parses stdout JSON, branches on the 'code' field in stderr on failure. Always runs with --no-input.",
+      "needs": [
+        "Machine-parseable JSON on stdout and stderr for every invocation",
+        "Fixed symbolic error code vocabulary — error-handling logic written once, works for all commands",
+        "No interactive prompts in any code path",
+        "Deterministic behavior: identical inputs always produce identical behavior"
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "Developer",
+      "type": "Human developer — secondary, light use",
+      "description": "A software engineer who configures Zoho accounts on their machine and occasionally runs api call or trace session export directly in a terminal. Performs initial account setup; then the CLI is left entirely to agents.",
+      "needs": [
+        "Simple one-shot account add command to configure PAT once",
+        "Readable (but still structured) output for account show and trace session export",
+        "Confidence that credentials are never written to disk in plaintext"
+      ]
+    }
+  ],
+  "roleBasedAccess": [
+    {
+      "role": "Account owner (human developer)",
+      "capabilities": "Add, remove, show, list, and set-default accounts. Responsible for the PAT credential stored in the OS keychain. Access to Zoho APIs governed by the PAT's own permissions."
+    },
+    {
+      "role": "Agent operator (AI agent)",
+      "capabilities": "Inherits account permissions at the token level. Can call APIs, manage trace sessions, and run scope/utility commands. Cannot add or remove accounts — account configuration must be completed by a human before the agent is invoked."
+    },
+    {
+      "role": "ZohoCorp domain accounts",
+      "capabilities": "Hard-blocked at account add, api call, and all scope commands regardless of invoker. Error code: ACCOUNT_DOMAIN_BLOCKED, exit 1. No override path exists."
+    }
+  ],
+  "functionalRequirements": [
+    {
+      "id": "FR-001",
+      "area": "Account management — PAT",
+      "version": "v1",
+      "priority": "High",
+      "description": "Add, list, remove, show, set-default account operations with PAT authentication.",
+      "details": [
+        "account add --name <n> --auth-type pat --token <t> [--domain <d>]: fetches email from Zoho user-info API for ZohoCorp domain check; stores PAT in OS keychain; writes metadata (without token) to accounts.json. --domain defaults to zoho.com.",
+        "account list: returns all accounts as JSON array with token values masked as '***'.",
+        "account remove --name <n>: deletes keychain secret and accounts.json entry; ACCOUNT_NOT_FOUND if missing.",
+        "account show --name <n>: returns full AccountEntry JSON with token masked as '***'.",
+        "account set-default --name <n>: sets is_default=true on named account; false on all others.",
+        "account re-auth --name <n>: stub in v1; fully activated with OAuth2 in v2.",
+        "All account operations support global --account override for per-command account selection."
+      ]
+    },
+    {
+      "id": "FR-002",
+      "area": "Keychain storage",
+      "version": "v1",
+      "priority": "High",
+      "description": "OS-native keychain via P/Invoke with AES-256-GCM encrypted-file fallback for headless environments.",
+      "details": [
+        "macOS: MacOsKeychainProvider — Security.framework (SecKeychainAddGenericPassword / SecKeychainFindGenericPassword).",
+        "Windows: WindowsKeychainProvider — advapi32.dll CredWrite / CredRead.",
+        "Linux: LinuxKeychainProvider — libsecret Secret Service API.",
+        "Fallback: EncryptedFileKeychainProvider — AES-256-GCM, key derived from machine entropy; activates automatically when OS keychain is unavailable.",
+        "No third-party NuGet keychain package — all implementations via direct P/Invoke.",
+        "Key naming convention: zapi-cli:<accountName>:<tokenType> (e.g., zapi-cli:work:pat).",
+        "Token values must never appear in accounts.json, stdout, stderr, or any trace file in plain text."
+      ]
+    },
+    {
+      "id": "FR-003",
+      "area": "API invocation",
+      "version": "v1",
+      "priority": "High",
+      "description": "Make authenticated HTTP requests to any Zoho product API with configurable method, path, headers, query params, and body.",
+      "details": [
+        "api call --base-url <url> --method <M> --path <P> [--body <json>|--body-file <file>] [--header k:v]... [--query k=v]... [--account <n>].",
+        "--base-url is required on every invocation; final URL assembled as <base-url><path>.",
+        "--body and --body-file are mutually exclusive; INVALID_ARGS if both supplied before any network I/O.",
+        "Host allowlist validated pre-request; HOST_NOT_ALLOWED (exit 1) if host not in allowlist.",
+        "ZohoCorp domain check applied to resolved account before any network activity.",
+        "Authorization: Zoho-oauthtoken <token> injected from resolved account's keychain secret.",
+        "Supported methods: GET, POST, PUT, PATCH, DELETE.",
+        "Returns HTTP response as structured JSON to stdout on success.",
+        "Exits 1 on HTTP 4xx/5xx with error response in stderr JSON envelope."
+      ]
+    },
+    {
+      "id": "FR-004",
+      "area": "Scope management",
+      "version": "v1 (scaffolded for v2)",
+      "priority": "Medium",
+      "description": "Record OAuth scope metadata per account; sets needs_reauth lifecycle flag.",
+      "details": [
+        "scope add --scope <s> [--account <n>]: appends scope string to account's scopes[]; sets needs_reauth=true; duplicate scopes not added.",
+        "scope remove --scope <s> [--account <n>]: removes scope; sets needs_reauth=true; SCOPE_NOT_FOUND if not present.",
+        "scope list [--account <n>]: returns scopes array as JSON; exits 0 even if empty.",
+        "api call targeting an account with needs_reauth=true returns NEEDS_REAUTH, exit 2, before any HTTP activity.",
+        "In v1, account re-auth is a stub; no token exchange attempted."
+      ]
+    },
+    {
+      "id": "FR-005",
+      "area": "Trace sessions",
+      "version": "v1",
+      "priority": "High",
+      "description": "Always-on session-scoped trace: api call auto-appends to the active session JSONL without per-call flags.",
+      "details": [
+        "trace session start --name <n>: creates active session; entry written to sessions.json; traces/<name>/trace.jsonl created empty.",
+        "While a session is active, every api call automatically appends an ApiTraceEntry to the session JSONL — no per-call flag required.",
+        "When no session is active, trace entries are silently dropped — no implicit session is created.",
+        "Starting a session when one is already active replaces the active session pointer; old session is preserved.",
+        "Authorization headers unconditionally excluded from all trace entries.",
+        "trace session list: returns JSON array of all sessions with name, start_time, entry_count, status.",
+        "trace session export --name <n> [--truncate-body <bytes>] [--type api|pex]: emits JSON array to stdout; non-destructive.",
+        "trace session close --name <n>: marks session as closed in sessions.json; JSONL preserved for export.",
+        "trace session remove --name <n>: deletes session entry and all associated trace files.",
+        "Export exits 1 with SESSION_NOT_FOUND if the named session does not exist."
+      ]
+    },
+    {
+      "id": "FR-006",
+      "area": "ZohoCorp domain hard-block",
+      "version": "v1",
+      "priority": "High",
+      "description": "Unconditional hard-block of all operations involving ZohoCorp-domain accounts.",
+      "details": [
+        "Detection rule: email.Split('@')[1].Split('.')[0].Equals(\"zohocorp\", OrdinalIgnoreCase). Covers all datacenter TLDs automatically.",
+        "Blocked at account add: check applied after email fetched from Zoho user-info API; block fires before any keychain write.",
+        "Blocked at api call (active account and --account override): check applied before any HTTP request.",
+        "Blocked at any scope subcommand: account resolved first; block fires before any mutation.",
+        "Error: ACCOUNT_DOMAIN_BLOCKED, exit 1, stderr JSON envelope.",
+        "Detection rule is a compile-time constant; cannot be disabled by flag, env var, or config.",
+        "Startup warning emitted to stderr if accounts.json contains a ZohoCorp-domain account legacy entry."
+      ]
+    },
+    {
+      "id": "FR-007",
+      "area": "Host allowlist / SSRF prevention",
+      "version": "v1",
+      "priority": "High",
+      "description": "Compile-time sealed allowlist of Zoho host suffixes; pre-request check prevents SSRF and credential exfiltration.",
+      "details": [
+        "Allowed suffixes: .zoho.com, .zoho.eu, .zoho.in, .zoho.com.au, .zohoapis.com, .zohoapis.in.",
+        "Check applied in ApiClient before every outgoing HTTP request — before any TCP connection or token read.",
+        "Hosts not matching any suffix produce HOST_NOT_ALLOWED, exit 1; no network I/O performed.",
+        "The allowlist is a static readonly sealed array in ZapiCli.Core — not extensible at runtime.",
+        "Suffix matching covers all current and future subdomains under each root automatically."
+      ]
+    },
+    {
+      "id": "FR-008",
+      "area": "JSON output contract",
+      "version": "v1",
+      "priority": "High",
+      "description": "All commands write only valid JSON to stdout (success) and stderr (error). No plain text in any code path.",
+      "details": [
+        "Success envelope: {\"status\":\"ok\",\"data\":<payload>}",
+        "Error envelope: {\"error\":\"<message>\",\"code\":\"<SYMBOLIC_CODE>\",\"exitCode\":<n>}",
+        "Symbolic error codes: ACCOUNT_NOT_FOUND, AUTH_FAILURE, NEEDS_REAUTH, HOST_NOT_ALLOWED, ACCOUNT_DOMAIN_BLOCKED, INVALID_ARGS, SESSION_NOT_FOUND, SCOPE_NOT_FOUND.",
+        "Exit codes: 0 = success, 1 = general error / security block, 2 = auth failure / needs-reauth.",
+        "No ANSI escape codes, progress spinners, or human-formatted text on stdout in any code path."
+      ]
+    },
+    {
+      "id": "FR-009",
+      "area": "Non-interactive mode",
+      "version": "v1",
+      "priority": "High",
+      "description": "Global --no-input flag prevents interactive prompts; required for agent-mode invocations.",
+      "details": [
+        "--no-input is a global flag accepted by all commands.",
+        "When set, any code path that would prompt for interactive input instead exits 1 with a structured JSON error.",
+        "Safe to always pass in agent invocations — has no effect on commands that never prompt.",
+        "Recommended default for all agent skill manifests."
+      ]
+    },
+    {
+      "id": "FR-010",
+      "area": "Utility commands",
+      "version": "v1",
+      "priority": "Low",
+      "description": "Lightweight utility subcommands for agent use.",
+      "details": [
+        "util time-ms: outputs {\"ts\": <unix_ms>} — current UTC time as Unix millisecond timestamp.",
+        "util uuid: outputs {\"uuid\": \"<uuid-v4-string>\"} — random RFC 4122 UUID v4."
+      ]
+    },
+    {
+      "id": "FR-011",
+      "area": "OAuth2 authentication",
+      "version": "v2",
+      "priority": "Medium",
+      "description": "OAuthProvider as a drop-in IAuthProvider replacement; API-based terminal flow; no browser required.",
+      "details": [
+        "OAuthProvider implements IAuthProvider; ApiClient and all command classes require no changes.",
+        "client_id and client_secret are compile-time constants in OAuthProvider.cs — never user-supplied.",
+        "account add --auth-type oauth triggers PKCE flow automatically; --token flag not accepted.",
+        "account re-auth --name <n>: exchanges new token via Zoho OAuth API; sets needs_reauth=false.",
+        "OAuth tokens stored in OS keychain: zapi-cli:<accountName>:oauth.",
+        "No browser window, redirect URL, or local HTTP server required at any point."
+      ]
+    },
+    {
+      "id": "FR-012",
+      "area": "Pex / WMS real-time event buffering",
+      "version": "v2",
+      "priority": "Medium",
+      "description": "Named Pex/WMS WebSocket connections with per-account JSONL event buffering and drain.",
+      "details": [
+        "pex connect [--account <n>]: opens Pex/WMS WebSocket; buffers events to <configDir>/zapi-cli/pex-buffer/<account>.jsonl.",
+        "pex drain [--account <n>]: atomically reads and truncates buffer; returns events as JSON array; appends pex trace entries to active session.",
+        "pex clear [--account <n>]: discards buffer without returning events.",
+        "pex listen [--account <n>]: streams events to stdout as JSONL (blocking; Ctrl+C to stop).",
+        "pex send --message <m> [--account <n>]: sends raw message over the Pex socket.",
+        "pex close [--account <n>]: closes WebSocket.",
+        "Token values never appear in Pex buffer files."
+      ]
+    },
+    {
+      "id": "FR-013",
+      "area": "API Registry",
+      "version": "v2",
+      "priority": "Low",
+      "description": "Local catalogue of named Zoho API endpoints with base URL, method, URL template, and purpose.",
+      "details": [
+        "api registry add --id <id> --base-url <url> --method <M> --url-template <t> --purpose <p>: upserts entry into registry.json.",
+        "api registry list: returns all entries as JSON array.",
+        "api registry show --id <id>: returns single entry.",
+        "api registry remove --id <id>: deletes entry; REGISTRY_ENTRY_NOT_FOUND if not exists.",
+        "Each registry entry carries a baseUrl field enabling multi-product entries in a single registry.",
+        "Enables --id desk-list-tickets shorthand form on api call in v2+"
+      ]
+    },
+    {
+      "id": "FR-014",
+      "area": "WebSocket support",
+      "version": "v2",
+      "priority": "Low",
+      "description": "Named generic WebSocket connections with connect, send, listen, and close subcommands.",
+      "details": [
+        "ws connect --url <url> --name <n> [--account <n>]: opens named WebSocket connection.",
+        "ws send --name <n> --message <m>: sends message over named connection.",
+        "ws listen --name <n>: streams incoming messages to stdout as JSONL (blocking).",
+        "ws close --name <n>: closes named connection."
+      ]
+    }
+  ],
+  "outputContract": {
+    "stdout": {
+      "format": "Valid JSON only",
+      "successEnvelope": "{\"status\":\"ok\",\"data\":<payload>}",
+      "notes": "No plain text, no ANSI escape sequences, no styled terminal output in any success code path."
+    },
+    "stderr": {
+      "format": "Valid JSON only",
+      "errorEnvelope": "{\"error\":\"<message>\",\"code\":\"<SYMBOLIC_CODE>\",\"exitCode\":<n>}",
+      "notes": "Authorization header values unconditionally excluded from all output and trace files."
+    },
+    "exitCodes": [
+      { "code": 0, "meaning": "Success" },
+      { "code": 1, "meaning": "General error or security block (ACCOUNT_DOMAIN_BLOCKED, HOST_NOT_ALLOWED, INVALID_ARGS, etc.)" },
+      { "code": 2, "meaning": "Auth failure or needs-reauth (NEEDS_REAUTH, AUTH_FAILURE)" }
+    ],
+    "errorCodes": [
+      "ACCOUNT_NOT_FOUND",
+      "ACCOUNT_DOMAIN_BLOCKED",
+      "AUTH_FAILURE",
+      "NEEDS_REAUTH",
+      "HOST_NOT_ALLOWED",
+      "INVALID_ARGS",
+      "SESSION_NOT_FOUND",
+      "SCOPE_NOT_FOUND",
+      "REGISTRY_ENTRY_NOT_FOUND"
+    ]
+  },
+  "commandTree": {
+    "description": "zapi-cli v1 command surface. Global flags: --account, --json, --no-input, --help, --version.",
+    "v1": [
+      "zapi-cli --help",
+      "zapi-cli --version",
+      "zapi-cli account add --name <n> --auth-type pat --token <t> [--domain <d>]",
+      "zapi-cli account list",
+      "zapi-cli account show --name <n>",
+      "zapi-cli account remove --name <n>",
+      "zapi-cli account set-default --name <n>",
+      "zapi-cli account re-auth --name <n>  (stub in v1)",
+      "zapi-cli scope add --scope <s> [--account <n>]",
+      "zapi-cli scope remove --scope <s> [--account <n>]",
+      "zapi-cli scope list [--account <n>]",
+      "zapi-cli api call --base-url <url> --method <M> --path <P> [--body <json>|--body-file <file>] [--header k:v]... [--query k=v]... [--account <n>]",
+      "zapi-cli trace session start --name <n>",
+      "zapi-cli trace session list",
+      "zapi-cli trace session export --name <n> [--truncate-body <bytes>] [--type api|pex]",
+      "zapi-cli trace session close --name <n>",
+      "zapi-cli trace session remove --name <n>",
+      "zapi-cli util time-ms",
+      "zapi-cli util uuid"
+    ],
+    "v2additions": [
+      "zapi-cli account add --auth-type oauth  (OAuth2 PKCE, no --token)",
+      "zapi-cli account re-auth --name <n>  (OAuth2 fully activated)",
+      "zapi-cli api registry add --id <id> --base-url <url> --method <M> --url-template <t> --purpose <p>",
+      "zapi-cli api registry list",
+      "zapi-cli api registry show --id <id>",
+      "zapi-cli api registry remove --id <id>",
+      "zapi-cli pex connect [--account <n>]",
+      "zapi-cli pex send --message <m> [--account <n>]",
+      "zapi-cli pex drain [--account <n>]",
+      "zapi-cli pex clear [--account <n>]",
+      "zapi-cli pex listen [--account <n>]",
+      "zapi-cli pex close [--account <n>]",
+      "zapi-cli ws connect --url <url> --name <n> [--account <n>]",
+      "zapi-cli ws send --name <n> --message <m>",
+      "zapi-cli ws listen --name <n>",
+      "zapi-cli ws close --name <n>"
+    ]
+  },
+  "dataStorage": {
+    "configDir": {
+      "macOS": "~/Library/Application Support/zapi-cli/",
+      "windows": "%LOCALAPPDATA%\\zapi-cli\\",
+      "linux": "~/.config/zapi-cli/"
+    },
+    "files": [
+      {
+        "path": "<configDir>/accounts.json",
+        "description": "Account metadata — name, domain, email, is_default, needs_reauth, scopes[], token_type. Token values never stored here.",
+        "permissions": "0600 on Unix; ACL-restricted on Windows"
+      },
+      {
+        "path": "<configDir>/traces/sessions.json",
+        "description": "Session registry — name, status (active/closed), start_time, entry_count."
+      },
+      {
+        "path": "<configDir>/traces/<session-name>/trace.jsonl",
+        "description": "Append-only JSONL trace entries for each session. Authorization headers always excluded."
+      },
+      {
+        "path": "<configDir>/keystore/<accountName>.bin",
+        "description": "AES-256-GCM encrypted PAT/OAuth token file — fallback when OS keychain is unavailable."
+      },
+      {
+        "path": "<configDir>/registry.json",
+        "description": "API registry catalogue — named endpoints with baseUrl, method, URL template, purpose (v2)."
+      },
+      {
+        "path": "<configDir>/pex-buffer/<account>.jsonl",
+        "description": "Pex/WMS event buffer per account (v2). Atomically read and truncated by pex drain."
+      }
+    ],
+    "keychainNaming": {
+      "pat": "zapi-cli:<accountName>:pat",
+      "oauth": "zapi-cli:<accountName>:oauth"
+    }
+  },
+  "technologyDecisions": [
+    {
+      "adr": "ADR-0001",
+      "decision": ".NET 10 / C# 13 as runtime and language",
+      "keyConsequence": "Cross-platform single binary via dotnet publish -r <rid> /p:PublishSingleFile=true --self-contained true; nullable reference types enforced; P/Invoke to OS keychain APIs is first-class without native addon build toolchain",
+      "source": "tech_spec/adr/adr-0001-runtime-and-language-selection.md"
+    },
+    {
+      "adr": "ADR-0002",
+      "decision": "Pluggable IAuthProvider with PatAuthProvider in v1; OAuthProvider as v2 drop-in",
+      "keyConsequence": "IAuthProvider decouples auth mechanics from ApiClient and command layer; adding OAuth in v2 requires no changes to ApiClient or any command; OAuth client_id / client_secret are compile-time constants, never user-supplied",
+      "source": "tech_spec/adr/adr-0002-pluggable-auth-interface-pat-first.md"
+    },
+    {
+      "adr": "ADR-0003",
+      "decision": "--base-url required on every api call; no product-to-subdomain derivation",
+      "keyConsequence": "Zero inference — caller has complete control over target URL; no stale product/datacenter mapping to maintain; ApiTraceEntry records base_url faithfully for multi-product session filtering",
+      "source": "tech_spec/adr/adr-0003-caller-supplied-base-url.md"
+    },
+    {
+      "adr": "ADR-0004",
+      "decision": "OS-native keychain via P/Invoke, no third-party NuGet keychain package",
+      "keyConsequence": "Security.framework (macOS), CredWrite/CredRead advapi32.dll (Windows), libsecret (Linux); AES-256-GCM encrypted file fallback for headless/CI; fully self-contained binary",
+      "source": "tech_spec/adr/adr-0004-os-keychain-for-secret-storage.md"
+    },
+    {
+      "adr": "ADR-0005",
+      "decision": "Hard-block ZohoCorp accounts — compile-time constant, no runtime override",
+      "keyConsequence": "SLD label detection covers all current and future datacenter TLDs; check enforced at account add (before keychain write) and api call (before HTTP request); not bypassable via flag, env var, or config",
+      "source": "tech_spec/adr/adr-0005-zohocorp-domain-hard-block.md"
+    },
+    {
+      "adr": "ADR-0006",
+      "decision": "Compile-time sealed HTTP host allowlist for SSRF prevention",
+      "keyConsequence": "Allowed suffixes: .zoho.com, .zoho.eu, .zoho.in, .zoho.com.au, .zohoapis.com, .zohoapis.in; HOST_NOT_ALLOWED pre-request if no match; eliminates SSRF risk and prevents credential exfiltration to non-Zoho hosts",
+      "source": "tech_spec/adr/adr-0006-host-allowlist-compile-time-control.md"
+    },
+    {
+      "adr": "ADR-0007",
+      "decision": "Always-on session-scoped trace model",
+      "keyConsequence": "No per-call --trace flag needed; silent drop when no session active; named developer-readable sessions; non-destructive export; Authorization header always excluded from JSONL entries",
+      "source": "tech_spec/adr/adr-0007-always-on-trace-session-design.md"
+    }
+  ],
+  "architecture": {
+    "solutionProjects": [
+      {
+        "name": "ZapiCli",
+        "type": "Console executable",
+        "role": "Entry point; DI composition root; Spectre.Console.Cli command tree registration; Program.cs"
+      },
+      {
+        "name": "ZapiCli.Core",
+        "type": "Class library",
+        "role": "Domain logic: IAuthProvider, PatAuthProvider, AccountStore, AccountConfig, ApiClient, ApiRegistry, TraceSession, TraceWriter, TraceEntry, TraceExporter, ZohoCorp domain-block utility, output contracts, error codes. Unit-testable with no OS or real HTTP dependencies."
+      },
+      {
+        "name": "ZapiCli.Keychain",
+        "type": "Class library",
+        "role": "IKeychainProvider + platform implementations: MacOsKeychainProvider (Security.framework), WindowsKeychainProvider (advapi32.dll), LinuxKeychainProvider (libsecret), EncryptedFileKeychainProvider (AES-256-GCM fallback)"
+      }
+    ],
+    "projectReferences": [
+      "ZapiCli → ZapiCli.Core",
+      "ZapiCli → ZapiCli.Keychain",
+      "ZapiCli.Core → ZapiCli.Keychain"
+    ],
+    "keyAbstractions": [
+      {
+        "interface": "IAuthProvider",
+        "implementations": ["PatAuthProvider (v1)", "OAuthProvider (v2)"],
+        "contract": "GetTokenAsync(accountName) → bearer token injected as Authorization: Zoho-oauthtoken <token>"
+      },
+      {
+        "interface": "IKeychainProvider",
+        "implementations": [
+          "MacOsKeychainProvider (Security.framework P/Invoke)",
+          "WindowsKeychainProvider (advapi32.dll P/Invoke)",
+          "LinuxKeychainProvider (libsecret P/Invoke)",
+          "EncryptedFileKeychainProvider (AES-256-GCM fallback)"
+        ],
+        "contract": "GetAsync / SetAsync / DeleteAsync"
+      },
+      {
+        "class": "ApiClient",
+        "role": "HTTP dispatch layer; enforces host allowlist (pre-request, pre-token-read), ZohoCorp block, needs_reauth block, and Authorization injection; wraps response in JSON envelope; calls TraceWriter if session active"
+      },
+      {
+        "class": "TraceWriter",
+        "role": "Appends ApiTraceEntry to active session JSONL file; unconditionally strips Authorization header; silently skips when no session is active"
+      },
+      {
+        "class": "AccountStore",
+        "role": "Reads and writes accounts.json; per-account CRUD; needs_reauth lifecycle management; is_default single-selection invariant"
+      }
+    ]
+  },
+  "milestones": {
+    "estimate": "Small — 1 day (solo engineer)",
+    "teamComposition": "1 engineer: full-stack C# / .NET 10, CLI framework, keychain P/Invoke, security logic, tests",
+    "phases": [
+      {
+        "phase": 1,
+        "name": "Core domain layer",
+        "timing": "Morning (~3 hours)",
+        "tasks": [
+          "Scaffold solution: ZapiCli, ZapiCli.Core, ZapiCli.Keychain projects with dotnet new and project references.",
+          "Implement IKeychainProvider + all four platform implementations (MacOsKeychainProvider, WindowsKeychainProvider, LinuxKeychainProvider, EncryptedFileKeychainProvider).",
+          "Implement IAuthProvider + PatAuthProvider.",
+          "Implement AccountStore (read/write accounts.json, per-account CRUD, needs_reauth lifecycle).",
+          "Implement ZohoCorp domain-block utility (compile-time constant, no runtime override)."
+        ]
+      },
+      {
+        "phase": 2,
+        "name": "API client + security + trace",
+        "timing": "Late morning (~2 hours)",
+        "tasks": [
+          "Implement ApiClient: host allowlist check (pre-request, pre-token-read), auth header injection, HttpClient wrapper, response serialization.",
+          "Wire TraceWriter into ApiClient: append ApiTraceEntry to active session JSONL when a session is open; silently drop when none is active.",
+          "Implement TraceSession (sessions.json index read/write), TraceWriter (append-only JSONL), TraceExporter (non-destructive JSON array export)."
+        ]
+      },
+      {
+        "phase": 3,
+        "name": "Command layer",
+        "timing": "Afternoon (~3 hours)",
+        "tasks": [
+          "Wire Spectre.Console.Cli in Program.cs; DI composition root.",
+          "Implement all account subcommands: add, list, remove, show, set-default.",
+          "Implement all scope subcommands: add, remove, list.",
+          "Implement api call.",
+          "Implement all trace session subcommands: start, list, export, close, remove.",
+          "Implement util time-ms and util uuid.",
+          "Enforce --no-input global flag; enforce JSON-only stdout and JSON-envelope stderr across all commands."
+        ]
+      },
+      {
+        "phase": 4,
+        "name": "Tests + smoke",
+        "timing": "Evening (~2 hours)",
+        "tasks": [
+          "Unit tests: AccountStoreTests, PatAuthProviderTests, ApiClientTests (allowlist, domain-block, token-masking, trace-append paths).",
+          "Smoke test: full agent workflow on local machine (account add → api call against a live Zoho API → trace export).",
+          "Verify self-contained publish: dotnet publish -r osx-arm64 /p:PublishSingleFile=true --self-contained true."
+        ]
+      }
+    ]
+  },
+  "successMetrics": {
+    "userCentric": [
+      "An agent can complete a multi-step Zoho API workflow (account resolve → api call → trace export) without any interactive prompt or error.",
+      "trace session export produces a valid, parseable JSON array after a multi-call session.",
+      "account add with a ZohoCorp email is rejected 100% of the time before any keychain write."
+    ],
+    "business": [
+      "Binary builds and runs successfully on all four RIDs: win-x64, osx-x64, osx-arm64, linux-x64.",
+      "All v1 commands are implemented and reachable via the CLI by end of day 1."
+    ],
+    "technical": [
+      "All stdout is valid, parseable JSON for every command path (success and error).",
+      "No PAT or OAuth token value appears in accounts.json, stdout, stderr, or any trace .jsonl file.",
+      "Host allowlist check fires pre-request, before any TCP connection is opened or any token is read from the keychain.",
+      "Unit tests pass for AccountStore, PatAuthProvider, and ApiClient (including allowlist and domain-block paths)."
+    ]
+  },
+  "userStories": [
+    {
+      "id": "ZAPI-001",
+      "title": "Add a PAT account",
+      "description": "As an AI agent or developer, I want to add a named Zoho account using a Personal Access Token so that subsequent API calls are authenticated without any interactive login flow.",
+      "acceptanceCriteria": [
+        "zapi-cli account add --name work --auth-type pat --token <PAT> succeeds and outputs {\"status\":\"ok\",\"data\":{\"name\":\"work\"}} to stdout.",
+        "The PAT is stored in the OS keychain (or encrypted file fallback) under the key zapi-cli:work:pat.",
+        "The PAT value is never written to accounts.json.",
+        "The Zoho user-info API is called to fetch the account email; if the email matches the ZohoCorp SLD, the command fails with ACCOUNT_DOMAIN_BLOCKED (exit 1) before any keychain write.",
+        "Supplying --token together with --auth-type oauth returns a validation error (exit 1).",
+        "--domain defaults to zoho.com if not provided."
+      ]
+    },
+    {
+      "id": "ZAPI-002",
+      "title": "List accounts",
+      "description": "As a developer, I want to list all configured accounts so that I can confirm what accounts are available and which is set as default.",
+      "acceptanceCriteria": [
+        "zapi-cli account list outputs a JSON array of account entries to stdout.",
+        "Token values are masked as '***' in the output.",
+        "The is_default field correctly reflects the active account.",
+        "Exits 0 on success; exits 1 if accounts.json is unreadable."
+      ]
+    },
+    {
+      "id": "ZAPI-003",
+      "title": "Remove an account",
+      "description": "As a developer, I want to remove a named account and its stored credentials so that no trace of that account remains on the machine.",
+      "acceptanceCriteria": [
+        "zapi-cli account remove --name work deletes the account entry from accounts.json and calls DeleteAsync on the keychain provider for the account's token key.",
+        "Output confirms removal as JSON to stdout.",
+        "If the account is not found, exits 1 with a JSON error indicating the account does not exist."
+      ]
+    },
+    {
+      "id": "ZAPI-004",
+      "title": "Show account details",
+      "description": "As a developer, I want to inspect a single account's metadata so that I can verify its configuration without exposing the token.",
+      "acceptanceCriteria": [
+        "zapi-cli account show --name work outputs the full AccountEntry JSON with \"token\": \"***\".",
+        "No token value appears anywhere in the output.",
+        "Exits 1 with a JSON error if the account is not found."
+      ]
+    },
+    {
+      "id": "ZAPI-005",
+      "title": "Set the default account",
+      "description": "As a developer, I want to designate one account as the default so that I don't have to pass --account on every command.",
+      "acceptanceCriteria": [
+        "zapi-cli account set-default --name work sets is_default: true on the named account and is_default: false on all others in accounts.json.",
+        "Output confirms the change as JSON.",
+        "Exits 1 if the named account does not exist."
+      ]
+    },
+    {
+      "id": "ZAPI-006",
+      "title": "Per-command account override",
+      "description": "As an AI agent, I want to override the active account for a single command so that I can operate on multiple accounts in one workflow without changing the default.",
+      "acceptanceCriteria": [
+        "Any command that resolves an account accepts --account <name> to override the default for that invocation only.",
+        "accounts.json is not mutated by the override.",
+        "If the named account does not exist, the command exits 1 with a JSON error."
+      ]
+    },
+    {
+      "id": "ZAPI-007",
+      "title": "Add a scope to an account",
+      "description": "As an AI agent or developer, I want to record OAuth scope strings on an account so that the scope list is available for future OAuth re-auth flows.",
+      "acceptanceCriteria": [
+        "zapi-cli scope add --scope ZohoDesk.Tickets.READ [--account work] appends the scope to the account's scopes array in accounts.json and sets needs_reauth: true.",
+        "Duplicate scope entries are not added.",
+        "Output confirms the updated scope list as JSON."
+      ]
+    },
+    {
+      "id": "ZAPI-008",
+      "title": "Remove a scope from an account",
+      "description": "As an AI agent or developer, I want to remove a scope from an account so that the scope list stays accurate.",
+      "acceptanceCriteria": [
+        "zapi-cli scope remove --scope ZohoDesk.Tickets.READ [--account work] removes the scope and sets needs_reauth: true.",
+        "If the scope is not present, exits 1 with a JSON error."
+      ]
+    },
+    {
+      "id": "ZAPI-009",
+      "title": "List scopes for an account",
+      "description": "As an AI agent, I want to list the scopes associated with an account so that I know what permissions are configured.",
+      "acceptanceCriteria": [
+        "zapi-cli scope list [--account work] outputs the account's scopes array as JSON.",
+        "Exits 0 even if the scopes array is empty."
+      ]
+    },
+    {
+      "id": "ZAPI-010",
+      "title": "Block API call when re-auth is required",
+      "description": "As the system, I want to block api call when the target account has pending scope changes so that the agent is notified to re-authenticate before making calls.",
+      "acceptanceCriteria": [
+        "api call targeting an account with needs_reauth: true exits 2 with NEEDS_REAUTH and a message directing the user to run account re-auth --name <account>.",
+        "No HTTP request is made; no token is read from the keychain."
+      ]
+    },
+    {
+      "id": "ZAPI-011",
+      "title": "Make a GET API call",
+      "description": "As an AI agent, I want to make an authenticated GET request to a Zoho product API so that I can retrieve data for analysis.",
+      "acceptanceCriteria": [
+        "zapi-cli api call --base-url https://cliq.zoho.com/api/v2 --method GET --path /channels constructs the URL as https://cliq.zoho.com/api/v2/channels, injects Authorization: Zoho-oauthtoken <PAT>, and returns the HTTP response as JSON to stdout.",
+        "Exits 0 on HTTP 2xx; exits 1 on HTTP 4xx/5xx with the error response included in the stderr JSON envelope.",
+        "If an active trace session exists, an ApiTraceEntry is appended to the session .jsonl (without the Authorization value)."
+      ]
+    },
+    {
+      "id": "ZAPI-012",
+      "title": "Make a POST API call with a JSON body",
+      "description": "As an AI agent, I want to POST a JSON payload to a Zoho product API to create or update resources.",
+      "acceptanceCriteria": [
+        "zapi-cli api call --base-url https://crm.zoho.com/crm/v5 --method POST --path /Leads --body '{\"data\":[{\"Last_Name\":\"Doe\"}]}' sends the body with Content-Type: application/json and returns the response JSON.",
+        "--body and --body-file supplied together exits 1 with a validation error before any network activity.",
+        "--body-file <path> reads the file and sends its contents as the request body."
+      ]
+    },
+    {
+      "id": "ZAPI-013",
+      "title": "Supply custom headers and query parameters",
+      "description": "As an AI agent, I want to add custom request headers and query parameters to an API call so that I can pass required metadata or pagination controls.",
+      "acceptanceCriteria": [
+        "--header X-Custom-Header:value is repeatable and appends the header to the outgoing request.",
+        "--query page=2 is repeatable and is appended to the request URL as a query string.",
+        "Custom headers do not overwrite the Authorization header."
+      ]
+    },
+    {
+      "id": "ZAPI-014",
+      "title": "Enforce host allowlist (SSRF prevention)",
+      "description": "As the system, I want to reject any api call whose target host is not in the Zoho allowlist so that the tool cannot be used to send Zoho credentials to arbitrary hosts.",
+      "acceptanceCriteria": [
+        "Any --base-url whose host does not end with .zoho.com, .zoho.eu, .zoho.in, .zoho.com.au, .zohoapis.com, or .zohoapis.in is rejected with HOST_NOT_ALLOWED (exit 1) before any TCP connection is opened or any token is read from the keychain.",
+        "The allowlist is hardcoded and cannot be extended without a source code change.",
+        "The check fires even if --no-input is not set."
+      ]
+    },
+    {
+      "id": "ZAPI-015",
+      "title": "Block ZohoCorp account operations",
+      "description": "As the system, I want to prevent any account whose email resolves to the ZohoCorp corporate domain from being used so that Zoho corporate infrastructure is never exposed to agent-driven API calls.",
+      "acceptanceCriteria": [
+        "account add fetching a ZohoCorp email from the Zoho user-info API exits 1 with ACCOUNT_DOMAIN_BLOCKED before writing to accounts.json or the keychain.",
+        "api call with an active or named ZohoCorp account exits 1 with ACCOUNT_DOMAIN_BLOCKED before any HTTP request.",
+        "scope add/remove/list targeting a ZohoCorp account exits 1 with ACCOUNT_DOMAIN_BLOCKED.",
+        "There is no flag, environment variable, or config value that bypasses the check.",
+        "A startup warning is emitted to stderr if accounts.json contains a ZohoCorp-domain account."
+      ]
+    },
+    {
+      "id": "ZAPI-016",
+      "title": "Start a named trace session",
+      "description": "As an AI agent, I want to start a named trace session before a workflow run so that all API calls in that run are automatically captured.",
+      "acceptanceCriteria": [
+        "zapi-cli trace session start --name desk-exploration-001 creates the session entry in sessions.json and the traces/desk-exploration-001/ directory with an empty trace.jsonl.",
+        "Subsequent api call commands automatically append entries to this session's .jsonl without any extra flag.",
+        "Starting a session when one is already active replaces the active session pointer (the old session is not destroyed).",
+        "Output confirms session creation as JSON."
+      ]
+    },
+    {
+      "id": "ZAPI-017",
+      "title": "Export a trace session",
+      "description": "As an AI agent or developer, I want to export a trace session as a JSON array so that I can inspect or pass the full call log to analysis tools.",
+      "acceptanceCriteria": [
+        "zapi-cli trace session export --name desk-exploration-001 emits a JSON array of ApiTraceEntry objects to stdout.",
+        "The export is non-destructive; the .jsonl file is not modified.",
+        "No Authorization header value appears in any entry's request_headers.",
+        "--truncate-body <bytes> trims response_body and request_body to the specified byte count.",
+        "--type api filters entries to API calls only.",
+        "Exits 1 with SESSION_NOT_FOUND if the named session does not exist."
+      ]
+    },
+    {
+      "id": "ZAPI-018",
+      "title": "List trace sessions",
+      "description": "As a developer, I want to list all trace sessions with their metadata so that I can identify which sessions contain relevant call data.",
+      "acceptanceCriteria": [
+        "zapi-cli trace session list outputs a JSON array with each session's name, start time, entry count, and status (active or closed).",
+        "Exits 0 even if no sessions exist (returns an empty array)."
+      ]
+    },
+    {
+      "id": "ZAPI-019",
+      "title": "Close a trace session",
+      "description": "As an AI agent, I want to close a trace session after a workflow run so that future API calls do not add entries to it.",
+      "acceptanceCriteria": [
+        "zapi-cli trace session close --name desk-exploration-001 marks the session status as closed in sessions.json.",
+        "The .jsonl file is preserved for future export.",
+        "api call commands after closing no longer append entries to the closed session (they are silently dropped if no new session is started)."
+      ]
+    },
+    {
+      "id": "ZAPI-020",
+      "title": "Remove a trace session",
+      "description": "As a developer, I want to delete a trace session and all its associated data to free up disk space.",
+      "acceptanceCriteria": [
+        "zapi-cli trace session remove --name desk-exploration-001 deletes the session entry from sessions.json and removes the traces/desk-exploration-001/ directory and its contents.",
+        "Exits 1 with SESSION_NOT_FOUND if the named session does not exist."
+      ]
+    },
+    {
+      "id": "ZAPI-021",
+      "title": "Non-interactive mode",
+      "description": "As an AI agent, I want to guarantee the CLI never prompts for interactive input so that automated invocations never block waiting for user input.",
+      "acceptanceCriteria": [
+        "--no-input is a global flag accepted by all commands.",
+        "When --no-input is set, any code path that would prompt for user input instead exits 1 with a structured JSON error.",
+        "The flag has no effect on commands that never prompt (safe to always pass)."
+      ]
+    },
+    {
+      "id": "ZAPI-022",
+      "title": "Structured JSON output contract",
+      "description": "As an AI agent, I want every CLI invocation to produce machine-parseable JSON so that I can reliably process results without text parsing.",
+      "acceptanceCriteria": [
+        "All successful output is written to stdout as valid JSON (object or array).",
+        "All errors are written to stderr as { \"error\": \"<message>\", \"code\": \"<CODE>\", \"exitCode\": <n> }.",
+        "Exit code 0 = success; exit code 1 = general error or security block; exit code 2 = auth failure or needs-reauth.",
+        "No ANSI escape codes, progress spinners, or human-formatted text appears on stdout."
+      ]
+    },
+    {
+      "id": "ZAPI-023",
+      "title": "Get current UTC time as millisecond timestamp",
+      "description": "As an AI agent, I want to retrieve the current UTC time as a Unix millisecond timestamp so that I can generate consistent timestamps for API payloads without depending on platform shell utilities.",
+      "acceptanceCriteria": [
+        "zapi-cli util time-ms outputs {\"ts\": <unix_ms>} to stdout.",
+        "The value is a valid Unix timestamp in milliseconds for the current UTC time.",
+        "Exits 0."
+      ]
+    },
+    {
+      "id": "ZAPI-024",
+      "title": "Generate a UUID v4",
+      "description": "As an AI agent, I want to generate a random UUID v4 so that I can create unique identifiers for API payloads or session names.",
+      "acceptanceCriteria": [
+        "zapi-cli util uuid outputs {\"uuid\": \"<uuid-v4-string>\"} to stdout.",
+        "The value is a valid RFC 4122 UUID v4.",
+        "Exits 0."
+      ]
+    }
+  ]
+}

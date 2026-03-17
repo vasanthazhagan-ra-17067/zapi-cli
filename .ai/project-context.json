@@ -1,0 +1,101 @@
+{
+  "project": {
+    "name": "zapi-cli",
+    "description": "Standalone cross-platform CLI binary providing a deterministic, scriptable interface to any Zoho product's REST APIs. Primary consumer is AI agents (GitHub Copilot CLI Skills, Claude Agent Skills). Manages multiple Zoho accounts, handles auth via a pluggable IAuthProvider interface (PAT in v1, OAuth2 in v2), and exposes a general-purpose HTTP API invoker where the caller supplies the full base URL at invocation time.",
+    "repository": "zapi-cli",
+    "language": "C# 13",
+    "runtime": ".NET 10",
+    "publishMode": "dotnet publish -r <rid> /p:PublishSingleFile=true --self-contained true",
+    "supportedRids": ["win-x64", "osx-x64", "osx-arm64", "linux-x64"]
+  },
+  "solutionLayout": {
+    "solutionFile": "src/zapi-cli.sln",
+    "projects": [
+      {
+        "name": "ZapiCli",
+        "path": "src/ZapiCli/ZapiCli.csproj",
+        "responsibility": "Entry point. Spectre.Console command wiring, Program.cs, DI registration. No business logic.",
+        "dependsOn": ["ZapiCli.Core", "ZapiCli.Keychain"]
+      },
+      {
+        "name": "ZapiCli.Core",
+        "path": "src/ZapiCli.Core/ZapiCli.Core.csproj",
+        "responsibility": "All domain logic: AccountStore, PatAuthProvider, ApiClient, TraceWriter, TraceSession, TraceExporter, ZohoCorp domain-block utility, output contracts, error codes. No Spectre.Console dependency. Unit-testable with no OS or real HTTP dependencies.",
+        "dependsOn": ["ZapiCli.Keychain"]
+      },
+      {
+        "name": "ZapiCli.Keychain",
+        "path": "src/ZapiCli.Keychain/ZapiCli.Keychain.csproj",
+        "responsibility": "IKeychainProvider interface + OS platform implementations (macOS Security.framework, Windows advapi32, Linux libsecret) + AES-256-GCM encrypted-file fallback. No dependency on Core or ZapiCli.",
+        "dependsOn": []
+      },
+      {
+        "name": "ZapiCli.Tests",
+        "path": "tests/ZapiCli.Tests/ZapiCli.Tests.csproj",
+        "responsibility": "xUnit unit tests for ZapiCli.Core and ZapiCli.Keychain using in-memory fakes. No real OS keychain or network access.",
+        "dependsOn": ["ZapiCli.Core", "ZapiCli.Keychain"]
+      }
+    ]
+  },
+  "techStack": {
+    "cliFramework": "Spectre.Console.Cli (latest stable)",
+    "json": "System.Text.Json (stdlib, .NET 10) — JsonNamingPolicy.SnakeCaseLower",
+    "di": "Microsoft.Extensions.DependencyInjection (latest stable)",
+    "logging": "Microsoft.Extensions.Logging + Microsoft.Extensions.Logging.Console",
+    "testing": "xUnit (latest stable)",
+    "keychain": "Direct P/Invoke to OS APIs — NO third-party NuGet keychain package"
+  },
+  "scopeBoundaries": {
+    "v1": [
+      "Three-project solution scaffold",
+      "IKeychainProvider + all platform implementations + AES-256-GCM fallback",
+      "IAuthProvider + PatAuthProvider",
+      "IOutputWriter + JSON output contract",
+      "account command group (add, list, remove, show, set-default, re-auth stub)",
+      "scope command group (add, remove, list)",
+      "api call command (--base-url required, caller-supplied, no derivation)",
+      "ZohoCorp account hard-block",
+      "HTTP host allowlist (SSRF prevention)",
+      "Trace system (TraceWriter, TraceSession, TraceExporter, trace session commands)",
+      "util commands (time-ms, uuid)"
+    ],
+    "v2": [
+      "OAuth2 authentication (OAuthProvider, account re-auth fully activated)",
+      "API registry (api registry list/add/show/remove)",
+      "Pex/WMS real-time events (pex connect/send/drain/clear/listen/close)",
+      "WebSocket support (ws connect/send/listen/close)"
+    ],
+    "deferred": [
+      "Native AOT",
+      "Interactive TUI / shell mode",
+      "Binary distribution, packaging, or publishing",
+      "GUI or web interface"
+    ]
+  },
+  "documentInventory": {
+    "prd": "tech_spec/prd.md",
+    "prdJson": "tech_spec/prd.json",
+    "techSpec": "tech_spec/tech_spec.md",
+    "brainstorming": "tech_spec/brainstorming.md",
+    "adrs": {
+      "ADR-0001": "tech_spec/adr/adr-0001-runtime-and-language-selection.md",
+      "ADR-0002": "tech_spec/adr/adr-0002-pluggable-auth-interface-pat-first.md",
+      "ADR-0003": "tech_spec/adr/adr-0003-caller-supplied-base-url.md",
+      "ADR-0004": "tech_spec/adr/adr-0004-os-keychain-for-secret-storage.md",
+      "ADR-0005": "tech_spec/adr/adr-0005-zohocorp-domain-hard-block.md",
+      "ADR-0006": "tech_spec/adr/adr-0006-host-allowlist-compile-time-control.md",
+      "ADR-0007": "tech_spec/adr/adr-0007-always-on-trace-session-design.md"
+    }
+  },
+  "configDirectories": {
+    "macOS": "~/Library/Application Support/zapi-cli/",
+    "windows": "%LOCALAPPDATA%\\zapi-cli\\",
+    "linux": "~/.config/zapi-cli/"
+  },
+  "buildRequirements": {
+    "treatWarningsAsErrors": true,
+    "nullable": "enable",
+    "implicitUsings": "enable",
+    "targetFramework": "net10.0"
+  }
+}

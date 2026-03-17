@@ -1,0 +1,50 @@
+{
+  "storyId": 4,
+  "title": "Account Command Group",
+  "description": "Implement all six account subcommands: add, list, remove, show, set-default, and re-auth (stub). These are the primary user-facing setup commands that a human developer runs before handing the tool to an AI agent.",
+  "status": "Not Started",
+  "dependsOn": [3],
+  "prerequisiteState": "Stories 1-3 complete. AccountStore, PatAuthProvider, ZohoCorpGuard, IOutputWriter, and DI are all working.",
+  "goal": "A developer can run zapi-cli account add --name work --auth-type pat --token <PAT> and have the account stored. All six account subcommands produce the correct JSON output, respect the ZohoCorp block, and mask PAT values in all output.",
+  "scope": [
+    "Create src/ZapiCli/Commands/AccountCommands.cs with AccountAddCommand, AccountListCommand, AccountRemoveCommand, AccountShowCommand, AccountSetDefaultCommand, AccountReAuthCommand",
+    "AccountAddSettings: --name (req), --auth-type (req, must be 'pat' in v1), --token (req for pat), --domain (default 'zoho.com'); Validate() rejects --auth-type oauth with a validation error; Validate() rejects --token supplied together with --auth-type oauth",
+    "AccountAddCommand.ExecuteAsync: (1) call Zoho user-info API GET https://accounts.{domain}/oauth/user/info with Authorization: Zoho-oauthtoken <token> to retrieve email; (2) call ZohoCorpGuard.AssertNotZohoCorp(email) — throws ACCOUNT_DOMAIN_BLOCKED before any write; (3) call PatAuthProvider.StoreTokenAsync to write to keychain; (4) create AccountEntry (no token) and append to AccountsRoot via AccountStore.SaveAsync; (5) WriteSuccess({name: <name>})",
+    "AccountListCommand.ExecuteAsync: loads AccountsRoot; maps each entry to an output DTO where token is '***'; WriteSuccess(accounts array)",
+    "AccountRemoveCommand.ExecuteAsync: load account entry; throw ACCOUNT_NOT_FOUND if not found; call PatAuthProvider.ClearTokenAsync; remove entry from accounts.json via AccountStore.SaveAsync; WriteSuccess confirmation",
+    "AccountShowCommand.ExecuteAsync: load account entry; throw ACCOUNT_NOT_FOUND if not found; return AccountEntry DTO with token masked as '***'",
+    "AccountSetDefaultCommand.ExecuteAsync: load AccountsRoot; set is_default=true on named account, false on all others; save; WriteSuccess confirmation; throw ACCOUNT_NOT_FOUND if missing",
+    "AccountReAuthCommand.ExecuteAsync: stub in v1 — throw ZapiCliException(NOT_IMPLEMENTED, 1) with message 're-auth is not yet supported; will be activated in v2 with OAuth2'",
+    "Register all commands under 'account' branch in Program.cs",
+    "Unit tests: account add with ZohoCorp email → ACCOUNT_DOMAIN_BLOCKED before keychain write; account remove clears keychain entry; account list masks token; account set-default sets only one default; account show masks token; ACCOUNT_NOT_FOUND on missing name"
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "account add --name work --auth-type pat --token <PAT> stores token in keychain and writes AccountEntry to accounts.json; outputs { \"status\": \"ok\", \"data\": { \"name\": \"work\" } }",
+    "account add with a ZohoCorp email from the user-info API → ACCOUNT_DOMAIN_BLOCKED (exit 1), no keychain write, no accounts.json mutation",
+    "account add --auth-type oauth → INVALID_ARGS (exit 1) in v1",
+    "account list returns all accounts with token masked as '***'",
+    "account remove deletes keychain entry and accounts.json entry; ACCOUNT_NOT_FOUND if missing",
+    "account show returns AccountEntry with '***' token value; ACCOUNT_NOT_FOUND if missing",
+    "account set-default ensures only one account has is_default=true at a time",
+    "account re-auth returns NOT_IMPLEMENTED (exit 1)",
+    "--domain defaults to 'zoho.com' when not supplied",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "Read ADR-0005 for the ZohoCorp block enforcement at account add — the check fires AFTER fetching the email from the Zoho user-info API but BEFORE any keychain write. See OQ-001 for the user-info API endpoint. The --domain flag determines both the keychain entry domain metadata and the accounts host used for the user-info call. The PAT token must never appear in accounts.json — only in the keychain. The accounts.json is the config store; the keychain is the secret store.",
+  "openItems": [
+    {
+      "item": "Zoho user-info API endpoint",
+      "defaultAssumption": "See OQ-001. Use GET https://accounts.{domain}/oauth/user/info with Authorization: Zoho-oauthtoken <token>. Parse 'Email' field from response. This endpoint is also subject to the host allowlist check (accounts.zoho.com ends with .zoho.com, so it passes)."
+    },
+    {
+      "item": "Account add HTTP call for user-info",
+      "defaultAssumption": "Use a simple HttpClient (not ApiClient) for the user-info call — ApiClient does not exist yet in this story's dependency chain. The user-info call uses a temporary HttpClient created in the command class or a helper, disposed after use."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/adr/adr-0005-zohocorp-domain-hard-block.md",
+    "tech_spec/prd.md (§ FR-001 Account management, § ZAPI-001–ZAPI-006 user stories)"
+  ],
+  "relevantOpenQuestions": ["OQ-001", "OQ-005"]
+}

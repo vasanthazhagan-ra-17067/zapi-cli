@@ -1,0 +1,50 @@
+{
+  "storyId": 11,
+  "title": "Pex / WMS Real-time Event Buffering + WebSocket Support",
+  "description": "Implement two v2 feature groups: (a) Pex/WMS named WebSocket connections with per-account JSONL event buffering and drain operations, and (b) generic named WebSocket connections (ws group) with connect, send, listen, and close. Both groups integrate with the trace session system for audit trail.",
+  "status": "Not Started",
+  "dependsOn": [7],
+  "version": "v2",
+  "phase": "Phase 4 — v2",
+  "prerequisiteState": "All v1 stories (1-8) completed. Trace system (TraceWriter, TraceSession) is fully working. OAuth2 (Story 10) should also be complete for full account support.",
+  "goal": "pex connect opens a Pex/WMS WebSocket and buffers events to a per-account JSONL file. pex drain atomically reads and truncates the buffer. ws connect/send/listen/close manage generic named WebSocket connections. All pex buffer files exclude token values.",
+  "scope": [
+    "Create src/ZapiCli.Core/Pex/PexTraceEntry.cs as a sealed record with Seq, Type (=>\"pex\"), Session, Timestamp, Account, RelatedApiSeq, HandlerClass, CallbackMethod, Payload",
+    "Create src/ZapiCli.Core/Pex/PexBufferWriter.cs: writes pex events to <configDir>/pex-buffer/<account>.jsonl; token values must never appear in buffer files",
+    "Create src/ZapiCli/Commands/PexCommands.cs: PexConnectCommand (opens Pex/WMS WebSocket), PexSendCommand (--message req), PexDrainCommand (atomically reads and truncates buffer; returns JSON array; appends PexTraceEntry to active trace session), PexClearCommand (discards buffer), PexListenCommand (streams JSONL to stdout, blocking), PexCloseCommand",
+    "pex connect uses account's PAT/OAuth token for WebSocket authentication; ZohoCorp block applies",
+    "pex drain appends a PexTraceEntry to the active trace session for each event drained (if a session is active)",
+    "Create src/ZapiCli/Commands/WsCommands.cs: WsConnectCommand (--url req, --name req, --account optional), WsSendCommand (--name req, --message req), WsListenCommand (--name req, blocking JSONL stream), WsCloseCommand (--name req)",
+    "ws connect validates the target URL against the host allowlist (same SSRF check as ApiClient)",
+    "Register pex commands under 'pex' branch and ws commands under 'ws' branch in Program.cs",
+    "Unit tests: pex drain returns buffered events and truncates buffer; pex drain with active session appends PexTraceEntry; pex buffer files contain no token values; ws connect with non-allowlisted host → HOST_NOT_ALLOWED"
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "pex connect opens a Pex/WMS WebSocket for the resolved account",
+    "pex drain atomically reads and empties the buffer; returns events as JSON array; appends PexTraceEntry to active trace session if one exists",
+    "pex clear discards the buffer without returning events",
+    "pex listen streams events as JSONL to stdout (blocking until Ctrl+C)",
+    "pex send --message <m> sends a raw message over the Pex socket",
+    "pex close closes the WebSocket",
+    "Token values do not appear in any pex buffer file",
+    "ws connect with a non-Zoho URL → HOST_NOT_ALLOWED, exit 1",
+    "ws send/listen/close work against a named connection",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "Read prd.json FR-012 for the Pex/WMS design and FR-014 for the WebSocket design. The pex drain command must be atomic — read all events, then truncate the file; agents depend on this to prevent event loss. PexTraceEntry is a distinct trace entry type from ApiTraceEntry (typeValue='pex'). The ws group validates URLs against the host allowlist just as ApiClient does (SSRF prevention applies equally to WebSocket connections).",
+  "openItems": [
+    {
+      "item": "Pex/WMS WebSocket authentication protocol",
+      "defaultAssumption": "Use the account's bearer token (PAT or OAuth) in the WebSocket handshake Authorization header. Consult Zoho Cliq Pex API documentation for the exact authentication mechanism."
+    },
+    {
+      "item": "Pex drain atomic truncation",
+      "defaultAssumption": "Read all lines from the buffer file into memory, then truncate the file to zero bytes (using FileStream with FileMode.Truncate or File.WriteAllText with empty string). Perform under a file lock to prevent concurrent drain/write races."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/prd.md (§ FR-012 Pex/WMS real-time, § FR-014 WebSocket, § commandTree v2additions)"
+  ],
+  "relevantOpenQuestions": []
+}
