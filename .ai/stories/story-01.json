@@ -2,7 +2,7 @@
   "storyId": 1,
   "title": "Three-Project Solution Scaffold + IKeychainProvider",
   "description": "Create the complete solution structure with three projects, correct project references, build properties, and a fully implemented IKeychainProvider abstraction with all four concrete platform implementations.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [],
   "prerequisiteState": "Empty repository. Only tech_spec/ and .ai/ folders exist. No src/ directory yet.",
   "goal": "Produce a compilable three-project .NET 10 solution where IKeychainProvider is fully defined and all four implementations (macOS, Windows, Linux, encrypted-file fallback) are correctly wired with runtime platform detection.",

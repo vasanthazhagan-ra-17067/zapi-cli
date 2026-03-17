@@ -2,7 +2,7 @@
   "storyId": 4,
   "title": "Account Command Group",
   "description": "Implement all six account subcommands: add, list, remove, show, set-default, and re-auth (stub). These are the primary user-facing setup commands that a human developer runs before handing the tool to an AI agent.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [3],
   "prerequisiteState": "Stories 1-3 complete. AccountStore, PatAuthProvider, ZohoCorpGuard, IOutputWriter, and DI are all working.",
   "goal": "A developer can run zapi-cli account add --name work --auth-type pat --token <PAT> and have the account stored. All six account subcommands produce the correct JSON output, respect the ZohoCorp block, and mask PAT values in all output.",

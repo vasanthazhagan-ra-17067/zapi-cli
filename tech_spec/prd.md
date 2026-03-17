@@ -66,11 +66,14 @@ All output is structured JSON to stdout and all errors are structured JSON to st
   - Never write token values to `accounts.json`, stdout, or any trace file.
   - List, show (with token masked as `***`), remove, and set a default account.
   - Support a per-command `--account` override flag on all commands that resolve an account.
-  - Capture the Zoho account email from the user-info API during `account add` for domain-blocking purposes.
+  - Capture the Zoho account email during `account add` by calling `GET /oauth/user/info` with the supplied token (PAT path) or the received OAuth access token (OAuth path). If no email is returned, `account add` fails with `EMAIL_REQUIRED` — fail closed.
 
 - **ZohoCorp domain hard-block** (Priority: P0 / Security)
 
   - Reject at `account add` any account whose email resolves to the `zohocorp` second-level domain label (covers `zohocorp.com`, `zohocorp.eu`, `zohocorp.in`, `zohocorp.com.au`, and any future TLDs).
+  - Email is sourced by calling `GET /oauth/user/info` with the token in both auth paths: PAT uses the supplied token; OAuth uses the access token received upon PKCE flow completion.
+  - `AaaServer.profile.READ` is mandated in the OAuth scope request to guarantee the email claim is returned from the user-info endpoint.
+  - **Fail closed**: if user-info returns no email (absent or empty), `account add` fails immediately with `EMAIL_REQUIRED` (exit 1) — the domain check is never skipped regardless of auth type.
   - Also block at `api call` and any `scope` command if the resolved account has a ZohoCorp email.
   - The detection rule and blocked-domain label are compile-time constants — not overridable by flag, environment variable, or config.
   - Return `ACCOUNT_DOMAIN_BLOCKED` (exit 1) on stderr as a JSON error envelope.
@@ -269,7 +272,9 @@ A GitHub Copilot agent is tasked with mapping the Zoho Desk ticket lifecycle. It
   - `zapi-cli account add --name work --auth-type pat --token <PAT>` succeeds and outputs `{"status":"ok","data":{"name":"work"}}` to stdout.
   - The PAT is stored in the OS keychain (or encrypted file fallback) under the key `zapi-cli:work:pat`.
   - The PAT value is never written to `accounts.json`.
-  - The Zoho user-info API is called to fetch the account email; if the email matches the ZohoCorp SLD, the command fails with `ACCOUNT_DOMAIN_BLOCKED` (exit 1) before any keychain write.
+  - The Zoho user-info API (`GET /oauth/user/info`) is called to fetch the account email; if the email matches the ZohoCorp SLD, the command fails with `ACCOUNT_DOMAIN_BLOCKED` (exit 1) before any keychain write.
+  - If the user-info API returns no email (for any auth type), the command fails with `EMAIL_REQUIRED` (exit 1) before any keychain write.
+  - For the OAuth path, `AaaServer.profile.READ` is mandated in the scope request to guarantee the email is returned; the received OAuth access token is used to call the user-info endpoint.
   - Supplying `--token` together with `--auth-type oauth` returns a validation error (exit 1).
   - `--domain` defaults to `zoho.com` if not provided.
 

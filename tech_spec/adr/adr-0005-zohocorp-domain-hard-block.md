@@ -40,6 +40,13 @@ email.Split('@')[1].Split('.')[0]
 
 This covers all datacenter TLDs (`zohocorp.com`, `zohocorp.eu`, `zohocorp.in`, `zohocorp.com.au`) and any future TLDs automatically — by matching the second-level domain label `"zohocorp"` rather than enumerating specific domains.
 
+**Email sourcing strategy (fail closed):**
+
+Both auth paths call the same `GET https://accounts.{domain}/oauth/user/info` endpoint to obtain the email:
+- **PAT path**: the supplied PAT is used as `Authorization: Zoho-oauthtoken <token>` to call the endpoint.
+- **OAuth path**: upon successful PKCE flow completion, an OAuth access token is received. That token is immediately used to call the user-info endpoint. `AaaServer.profile.READ` is mandated in the OAuth scope request to guarantee the email claim is returned.
+- **Fail closed rule**: if the user-info endpoint returns no email (absent, null, or empty string) regardless of auth type, `account add` must abort with `EMAIL_REQUIRED` (exit 1). The ZohoCorp check is never skipped — a missing email is an unverifiable identity.
+
 **Blocked entry points:**
 
 | Entry Point | Check Timing |
@@ -97,12 +104,18 @@ At startup, if `accounts.json` already contains a ZohoCorp-domain account (e.g.,
 - **ALT-007**: **Description**: Document that ZohoCorp accounts should not be used; rely on user judgment.
 - **ALT-008**: **Rejection Reason**: AI agents do not read documentation. The policy must be enforced in code, not communicated in prose.
 
+##### Rely on token introspection or JWT claims for email
+
+- **ALT-009**: **Description**: Decode the OAuth JWT access token and read the email from its claims, or use a token introspection endpoint, rather than making a dedicated `/oauth/user/info` call.
+- **ALT-010**: **Rejection Reason**: JWT email claims are not guaranteed to be present — their inclusion depends on OAuth scopes granted and Zoho’s token issuance policy. Token introspection is not a standard or consistently available endpoint across all Zoho datacenter variants. The dedicated `/oauth/user/info` endpoint with `AaaServer.profile.READ` scope is explicit, reliable, and consistent for both PAT and OAuth paths. It is also the documented approach (see IMP-002) for the PAT path, so reusing it for OAuth eliminates a code-path divergence.
+
 ## Implementation Notes
 
 - **IMP-001**: The detection function lives in `ZapiCli.Core` as a `static bool IsZohoCorpEmail(string email)` method — accessible to both `PatAuthProvider.StoreTokenAsync` and `ApiClient.CallAsync`.
-- **IMP-002**: Email is fetched from `https://accounts.zoho.com/oauth/user/info` (with the appropriate datacenter variant based on `--domain`) before any write operations in `account add`. If the fetch fails, `account add` must fail with `AUTH_FAILURE`, not skip the domain check.
+- **IMP-002**: Email is fetched from `https://accounts.{domain}/oauth/user/info` (datacenter-variant derived from `--domain`, e.g. `accounts.zoho.eu` for `--domain zoho.eu`) before any write operations in `account add`. For the PAT path, the supplied PAT is used as the bearer token; for the OAuth path, the access token received from the PKCE flow is used. Two distinct failure modes must be handled: (a) network or HTTP failure → fail with `AUTH_FAILURE`; (b) fetch succeeds but email field is absent or empty → fail with `EMAIL_REQUIRED`. Neither case may skip the ZohoCorp check.
 - **IMP-003**: The startup warning mechanism scans `accounts.json` on load and emits a stderr warning (not an error) for any ZohoCorp-domain account found. This allows unrelated commands (e.g., `account list`, `util uuid`) to still execute.
 - **IMP-004**: Unit tests must cover: `@zohocorp.com`, `@zohocorp.eu`, `@zohocorp.in`, `@zohocorp.com.au`, a plausible future `@zohocorp.jp`, and confirm that `@zoho.com`, `@gmail.com`, and `@example.zohocorp.com` are not blocked.
+- **IMP-005**: The OAuth PKCE flow in `OAuthProvider` must include `AaaServer.profile.READ` in the scope parameter of the authorization request. This scope is required to ensure the `/oauth/user/info` endpoint returns the `Email` field. If this scope is rejected or absent, the user-info call will return no email and `account add` must fail with `EMAIL_REQUIRED`.
 
 ## References
 

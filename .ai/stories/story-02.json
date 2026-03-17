@@ -2,7 +2,7 @@
   "storyId": 2,
   "title": "Output Contract + Error Infrastructure + Global Settings",
   "description": "Implement the JSON output contract, the IOutputWriter abstraction, ZapiCliException, GlobalSettings, and the Spectre.Console CommandApp with its global exception handler. This establishes the complete I/O skeleton that every subsequent command will depend on.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [1],
   "prerequisiteState": "Story 1 complete. Three projects compile. IKeychainProvider and all implementations exist. Program.cs stub exists.",
   "goal": "Produce a functional zapi-cli binary that correctly routes all output through IOutputWriter, converts exceptions to the JSON error envelope on stderr, and handles --help and --version with the correct exit codes.",

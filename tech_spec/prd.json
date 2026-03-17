@@ -237,7 +237,9 @@
         "Blocked at any scope subcommand: account resolved first; block fires before any mutation.",
         "Error: ACCOUNT_DOMAIN_BLOCKED, exit 1, stderr JSON envelope.",
         "Detection rule is a compile-time constant; cannot be disabled by flag, env var, or config.",
-        "Startup warning emitted to stderr if accounts.json contains a ZohoCorp-domain account legacy entry."
+        "Startup warning emitted to stderr if accounts.json contains a ZohoCorp-domain account legacy entry.",
+        "For the OAuth path: AaaServer.profile.READ is mandatory in the PKCE scope request to guarantee the email is returned from GET /oauth/user/info; the received OAuth access token is used to call this endpoint.",
+        "Fail closed: if user-info returns no email (absent or empty) for any auth type, account add fails with EMAIL_REQUIRED (exit 1) before any keychain write — the ZohoCorp check is never skipped."
       ]
     },
     {
@@ -304,7 +306,8 @@
         "account add --auth-type oauth triggers PKCE flow automatically; --token flag not accepted.",
         "account re-auth --name <n>: exchanges new token via Zoho OAuth API; sets needs_reauth=false.",
         "OAuth tokens stored in OS keychain: zapi-cli:<accountName>:oauth.",
-        "No browser window, redirect URL, or local HTTP server required at any point."
+        "No browser window, redirect URL, or local HTTP server required at any point.",
+        "After PKCE flow completion, an OAuth access token is received; this token is immediately used to call GET https://accounts.{domain}/oauth/user/info to fetch the account email for ZohoCorp domain validation (same email-sourcing strategy as the PAT path)."
       ]
     },
     {
@@ -371,6 +374,7 @@
     "errorCodes": [
       "ACCOUNT_NOT_FOUND",
       "ACCOUNT_DOMAIN_BLOCKED",
+      "EMAIL_REQUIRED",
       "AUTH_FAILURE",
       "NEEDS_REAUTH",
       "HOST_NOT_ALLOWED",

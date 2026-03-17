@@ -425,7 +425,7 @@ private const string ClientSecret = "PLACEHOLDER_CLIENT_SECRET";
 zapi-cli account add --name "work" --auth-type pat --token "xxx" [--domain "zoho.com"]
   1. Validate --token is present (error INVALID_ARGS if missing)
   2. Validate name is unique in accounts.json
-  3. Fetch email from Zoho user-info API; apply ZohoCorp domain check
+  3. Call GET https://accounts.{domain}/oauth/user/info with the PAT as bearer token; abort with EMAIL_REQUIRED if no email returned; apply ZohoCorp domain check
   4. Call PatAuthProvider.StoreTokenAsync("work", "xxx")
   5. Append AccountEntry (token_type = "pat") to accounts.json
   6. If no other account exists, set is_default = true
@@ -439,12 +439,14 @@ zapi-cli account add --name "work" --auth-type pat --token "xxx" [--domain "zoho
 zapi-cli account add --name "work" --auth-type oauth [--domain "zoho.com"]
   1. Reject if --token is supplied (error INVALID_ARGS)
   2. Validate name is unique in accounts.json
-  3. Initiate OAuth PKCE flow using hardcoded ClientId / ClientSecret
-  4. Fetch email from token introspection; apply ZohoCorp domain check
-  5. Store access + refresh tokens via OAuthProvider
-  6. Append AccountEntry (token_type = "oauth") to accounts.json
-  7. Write accounts.json
-  8. Output: { "status": "ok", "data": { "name": "work", "domain": "zoho.com", "auth_type": "oauth" } }
+  3. Initiate OAuth PKCE flow using hardcoded ClientId / ClientSecret; AaaServer.profile.READ mandated in scope request
+  4. A token is received upon successful OAuth PKCE flow completion
+  5. Call GET https://accounts.{domain}/oauth/user/info with the received token; abort with EMAIL_REQUIRED if no email returned
+  6. Apply ZohoCorp domain check on the returned email; abort with ACCOUNT_DOMAIN_BLOCKED if blocked
+  7. Store access + refresh tokens via OAuthProvider
+  8. Append AccountEntry (token_type = "oauth") to accounts.json
+  9. Write accounts.json
+  10. Output: { "status": "ok", "data": { "name": "work", "domain": "zoho.com", "auth_type": "oauth" } }
 ```
 
 ### Scope Change + Re-auth Flow
@@ -494,8 +496,10 @@ Covers `zohocorp.com`, `zohocorp.eu`, `zohocorp.in`, `zohocorp.com.au`, and all 
 
 ### Implementation
 
-- Check runs in `PatAuthProvider.StoreTokenAsync` and at the start of `ApiClient.CallAsync`.
-- On `account add`, email is retrieved from the Zoho user-info endpoint before the account is persisted, so the block applies even if the user does not supply their email explicitly.
+- **PAT path**: After the token is supplied, `GET https://accounts.{domain}/oauth/user/info` is called with `Authorization: Zoho-oauthtoken <token>` to retrieve the account email before the account is persisted.
+- **OAuth path**: Upon successful PKCE flow completion, an OAuth access token is received. That token is immediately used to call `GET https://accounts.{domain}/oauth/user/info`. `AaaServer.profile.READ` is mandated in the OAuth scope request to guarantee the email claim is returned.
+- **Fail closed**: If the user-info endpoint returns no email (for any auth type), `account add` must abort with `EMAIL_REQUIRED` (exit 1). The ZohoCorp check is never skipped — a missing email is treated as an unverifiable identity.
+- The domain-block check also runs at the start of `ApiClient.CallAsync` against the stored account email.
 - The check must NOT be bypassable via flags, environment variables, or config.
 
 ### Use Cases
@@ -506,6 +510,7 @@ Covers `zohocorp.com`, `zohocorp.eu`, `zohocorp.in`, `zohocorp.com.au`, and all 
 | UC-22 | `api call` resolves to a ZohoCorp account | Rejected before any HTTP request; exit 1 `ACCOUNT_DOMAIN_BLOCKED` |
 | UC-23 | `scope add/remove/list` targets a ZohoCorp account | Rejected; no mutation to `accounts.json`; exit 1 `ACCOUNT_DOMAIN_BLOCKED` |
 | UC-24 | Existing `accounts.json` already contains a ZohoCorp account | Any command resolving to that account is rejected; warning emitted on startup |
+| UC-25 | `account add` (OAuth path) where user-info returns no email | Rejected before any token storage; exit 1 `EMAIL_REQUIRED` |
 
 **Error output (stderr):**
 
@@ -764,6 +769,7 @@ Token value is **never** included in any output. `account show` displays `"token
 | `IO_ERROR` | 1 | File system failure (accounts.json read/write) |
 | `KEYCHAIN_ERROR` | 2 | OS keychain operation failed |
 | `ACCOUNT_DOMAIN_BLOCKED` | 1 | Account email is a ZohoCorp domain |
+| `EMAIL_REQUIRED` | 1 | User-info API returned no email; ZohoCorp check cannot be completed — `account add` aborted |
 | `HOST_NOT_ALLOWED` | 1 | Outgoing URL host not in the allowlist |
 
 ### Exit Codes
@@ -783,6 +789,7 @@ Token value is **never** included in any output. `account show` displays `"token
 - HTTP errors from `ApiClient`: non-2xx responses are converted to `API_ERROR` with the response body included in `"detail"`.
 - `--token` supplied when `--auth-type oauth`: fail immediately with `INVALID_ARGS`.
 - `--token` missing when `--auth-type pat`: fail immediately with `INVALID_ARGS`.
+- User-info fetch at `account add` (both PAT and OAuth): if the Zoho user-info API returns no email, `account add` must fail with `EMAIL_REQUIRED` — the ZohoCorp check is never skipped. Network/HTTP failure fetching user-info fails with `AUTH_FAILURE`.
 - Cancellation (`Ctrl+C`): graceful cancellation via `CancellationTokenSource`; exit code `1`.
 
 ---

@@ -2,7 +2,7 @@
   "storyId": 6,
   "title": "Scope Management Command Group",
   "description": "Implement the three scope subcommands (add, remove, list) that record OAuth scope metadata on accounts and set the needs_reauth lifecycle flag. These commands scaffold the OAuth2 re-auth flow for v2 while providing scope tracking in v1.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [4, 5],
   "prerequisiteState": "Stories 1-5 complete. AccountStore, PatAuthProvider, ZohoCorpGuard, account commands, and ApiClient are all working.",
   "goal": "scope add, scope remove, and scope list correctly mutate the account's scopes[] in accounts.json, set needs_reauth appropriately, and are blocked for ZohoCorp-domain accounts.",

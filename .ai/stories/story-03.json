@@ -2,7 +2,7 @@
   "storyId": 3,
   "title": "AccountStore + PatAuthProvider + ZohoCorp Block",
   "description": "Implement the account persistence layer (AccountStore reads/writes accounts.json), the PAT authentication provider (PatAuthProvider bridges IAuthProvider → IKeychainProvider), and the ZohoCorp domain hard-block utility. This is the security-critical core used by every subsequent feature.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [1, 2],
   "prerequisiteState": "Stories 1-2 complete. IKeychainProvider, IOutputWriter, ZapiCliException, and ErrorCodes all exist. DI is wired in Program.cs.",
   "goal": "AccountStore correctly reads and writes accounts.json (0600 perms on Unix). PatAuthProvider stores and retrieves PAT tokens via IKeychainProvider. ZohoCorpGuard.AssertNotZohoCorp() throws ACCOUNT_DOMAIN_BLOCKED unconditionally for zohocorp-domain emails.",

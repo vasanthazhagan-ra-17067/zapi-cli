@@ -4,8 +4,9 @@
       "id": "OQ-001",
       "question": "What is the exact Zoho user-info API endpoint that returns the authenticated user's email address given a PAT?",
       "context": "Required at account add to validate the PAT and retrieve the email for the ZohoCorp domain check. Must be called before any account data is persisted. The domain defaults to zoho.com but may be overridden via --domain.",
-      "defaultAssumption": "Use the Zoho Accounts API: GET https://accounts.{domain}/oauth/user/info with the PAT as Authorization: Zoho-oauthtoken <token>. The response contains an 'Email' field. Derive the accounts host from the account --domain parameter (e.g. zoho.com → accounts.zoho.com, zoho.eu → accounts.zoho.eu).",
-      "status": "Open"
+      "defaultAssumption": "Use the Zoho Accounts API: GET https://accounts.{domain}/oauth/user/info with the PAT as Authorization: Zoho-oauthtoken <token>. The response contains an 'Email' field. Derive the accounts host from the account --domain parameter (e.g. zoho.com → accounts.zoho.com, zoho.eu → accounts.zoho.eu). For OAuth path, AaaServer.profile.READ must be included in the PKCE scope request to guarantee the Email field is returned.",
+      "status": "Resolved",
+      "resolution": "Confirmed: call GET https://accounts.{domain}/oauth/user/info with the token (PAT or OAuth access token) via Authorization: Zoho-oauthtoken <token>. For PAT path the supplied token is used directly. For OAuth path the access token received from the PKCE flow is used; AaaServer.profile.READ must be in the scope request to guarantee the Email field is returned. If no email is returned (for any auth type), fail with EMAIL_REQUIRED (exit 1) — the ZohoCorp check is never skipped."
     },
     {
       "id": "OQ-002",
