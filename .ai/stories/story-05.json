@@ -2,8 +2,11 @@
   "storyId": 5,
   "title": "ApiClient + Host Allowlist + api call Command",
   "description": "Implement ApiClient with the compile-time host allowlist (SSRF prevention) and ZohoCorp block at dispatch, plus the api call command with full flag support including --base-url. This is the primary value-delivery story — AI agents depend on this to invoke any Zoho product REST endpoint.",
-  "status": "Not Started",
-  "dependsOn": [3, 4],
+  "status": "Done",
+  "dependsOn": [
+    3,
+    4
+  ],
   "prerequisiteState": "Stories 1-4 complete. AccountStore, PatAuthProvider, ZohoCorpGuard, and all account commands are working. DI registered.",
   "goal": "zapi-cli api call --base-url https://cliq.zoho.com/api/v2 --method GET --path /channels returns the Zoho API response in the JSON success envelope. All security controls (host allowlist check pre-request before any token read, ZohoCorp block) fire before any network I/O.",
   "scope": [
@@ -56,5 +59,8 @@
     "tech_spec/adr/adr-0006-host-allowlist-compile-time-control.md",
     "tech_spec/prd.md (§ FR-003 API invocation, § FR-007 Host allowlist, § ZAPI-011–ZAPI-014)"
   ],
-  "relevantOpenQuestions": ["OQ-007", "OQ-009"]
+  "relevantOpenQuestions": [
+    "OQ-007",
+    "OQ-009"
+  ]
 }
