@@ -1,4 +1,4 @@
-# zapi-cli — Technical Specification
+# znet — Technical Specification
 
 > **Status:** Draft
 > **Derived from:** `tech_spec/brainstorming.md`
@@ -27,13 +27,14 @@
 
 ## 1. Project Overview
 
-**zapi-cli** is a standalone, multi-platform CLI binary for interacting with **any Zoho product's REST APIs**. It manages multiple Zoho accounts, handles authentication via a pluggable `IAuthProvider` interface, and exposes a general-purpose HTTP API invoker where the caller supplies the full base URL at invocation time.
+**znet** is a standalone, multi-platform CLI binary for interacting with **any Zoho product's REST APIs**. It manages multiple Zoho accounts, handles authentication via a pluggable `IAuthProvider` interface, and exposes a general-purpose HTTP API invoker where the caller supplies the full base URL at invocation time.
 
 **Primary consumer:** AI Agents via GitHub Copilot CLI Skills.
 
 **Scope:**
-- v1: Account management (PAT auth), scope management, REST API invocation (`--base-url` required), trace sessions, utility commands
-- Future: OAuth2 re-auth, WebSocket connections, Pex real-time chat, API Registry
+- **P1 (v1):** Account management (OAuth Self-Client), REST API invocation (`--url` required), utility commands, ZohoCorp account blocking
+- **P2:** Scope management, trace sessions, API Registry
+- **P3 (future):** WebSocket connections, Pex real-time chat
 
 ---
 
@@ -54,7 +55,7 @@
 ## 3. Project Structure
 
 ```
-zapi-cli/
+znet/
 ├── src/
 │   ├── ZapiCli/                              ← Entry point + Spectre command wiring
 │   │   ├── ZapiCli.csproj
@@ -62,7 +63,7 @@ zapi-cli/
 │   │   └── Commands/
 │   │       ├── AccountCommands.cs            ← add, list, remove, show, set-default, re-auth
 │   │       ├── ScopeCommands.cs              ← add, remove, list
-│   │       ├── ApiCommands.cs                ← api call (--base-url required)
+│   │       ├── ApiCommands.cs                ← api call (--url required)
 │   │       ├── ApiRegistryCommands.cs        ← api registry list/add/show/remove
 │   │       ├── PexCommands.cs                ← pex connect/send/drain/clear/listen/close
 │   │       ├── TraceCommands.cs              ← trace session start/list/export/close/remove
@@ -72,19 +73,19 @@ zapi-cli/
 │   │   ├── ZapiCli.Core.csproj
 │   │   ├── Auth/
 │   │   │   ├── IAuthProvider.cs
-│   │   │   └── PatAuthProvider.cs
+│   │   │   └── OAuthProvider.cs
 │   │   ├── Accounts/
 │   │   │   ├── AccountStore.cs               ← JSON config read/write
 │   │   │   └── AccountConfig.cs              ← AccountEntry model + AccountsRoot DTO
 │   │   ├── Api/
 │   │   │   ├── ApiClient.cs                  ← HttpClient wrapper; injects auth; host allowlist; writes trace entries
-│   │   │   └── ApiRegistry.cs                ← registry.json read/write (entries carry baseUrl field)
+│   │   │   └── ApiRegistry.cs                ← registry.json read/write (entries carry full `url` field)
 │   │   ├── Pex/
 │   │   │   └── PexBuffer.cs                  ← per-account JSONL event buffer (future)
 │   │   └── Trace/
 │   │       ├── TraceSession.cs               ← session index read/write (sessions.json)
 │   │       ├── TraceWriter.cs                ← append-only JSONL writer for trace entries
-│   │       ├── TraceEntry.cs                 ← record types: ApiTraceEntry (carries baseUrl), PexTraceEntry
+│   │       └── TraceEntry.cs                 ← record types: ApiTraceEntry (url + base_url for traceability), PexTraceEntry
 │   │       └── TraceExporter.cs              ← reads JSONL, emits JSON array with optional filters
 │   │
 │   └── ZapiCli.Keychain/                     ← OS keychain abstraction
@@ -99,7 +100,7 @@ zapi-cli/
     └── ZapiCli.Tests/
         ├── ZapiCli.Tests.csproj
         ├── AccountStoreTests.cs
-        ├── PatAuthProviderTests.cs
+│       ├── OAuthProviderTests.cs
         └── ApiClientTests.cs
 ```
 
@@ -118,7 +119,7 @@ ZapiCli.Core  →  ZapiCli.Keychain
 ### Root
 
 ```
-zapi-cli [global-flags] <group> <subcommand> [flags]
+znet [global-flags] <group> <subcommand> [flags]
 ```
 
 ### Global Flags
@@ -137,21 +138,13 @@ zapi-cli [global-flags] <group> <subcommand> [flags]
 
 | Subcommand | Flags | Description |
 |-----------|-------|-------------|
-| `add` | `--name` (req), `--auth-type pat\|oauth` (req), `--token` (req when `--auth-type pat`), `--domain` (default: `zoho.com`) | Add a new account |
+| `add` | `--name` (req), `--token` (req), `--client-id` (req), `--client-secret` (req), `--dc` (default: `us`; values: `us\|eu\|in\|au\|cn\|jp\|sa\|uk\|ca`) | Add a new OAuth Self-Client account |
 | `list` | — | List all configured accounts (token masked) |
-| `remove` | `--name` (req) | Remove account + clear keychain secret |
+| `remove` | `--name` (req) | Revoke token via Zoho OAuth revoke endpoint, clear keychain secrets, remove account |
 | `show` | `--name` (req) | Show account details (token masked as `***`) |
 | `set-default` | `--name` (req) | Set active/default account |
-| `re-auth` | `--name` (req) | Re-authenticate after scope change *(OAuth — v2)* |
+| `re-auth` | `--name` (req) | Re-authenticate: refresh access token via Zoho OAuth using stored client credentials |
 
-#### `account add` flag rules
-
-| `--auth-type` | `--token` | Behaviour |
-|---------------|-----------|-----------|
-| `pat` | Required | Token stored in OS keychain via `PatAuthProvider` |
-| `oauth` | Not accepted (error if supplied) | OAuth PKCE flow triggered automatically using compile-time credentials |
-
-> **Note:** OAuth client credentials (`client_id`, `client_secret`) are compile-time constants in `OAuthProvider.cs`. Replace `PLACEHOLDER_CLIENT_ID` and `PLACEHOLDER_CLIENT_SECRET` before distributing the binary.
 
 ---
 
@@ -161,8 +154,8 @@ All scope subcommands target an account. `--account` defaults to the active acco
 
 | Subcommand | Flags | Description |
 |-----------|-------|-------------|
-| `add` | `--scope` (req), `[--account]` | Add an OAuth scope to an account |
-| `remove` | `--scope` (req), `[--account]` | Remove an OAuth scope from an account |
+| `add` | `--scope` (req, comma-separated), `[--account]` | Add one or more OAuth scopes to an account |
+| `remove` | `--scope` (req, comma-separated), `[--account]` | Remove one or more OAuth scopes from an account |
 | `list` | `[--account]` | List all scopes for an account |
 
 Adding or removing a scope sets `needs_reauth = true` on that account.
@@ -173,13 +166,12 @@ Adding or removing a scope sets `needs_reauth = true` on that account.
 
 #### `api call`
 
-`--base-url` is **required** on every invocation. The final request URL is assembled as `<base-url><path>`.
+`--url` is **required** on every invocation. The full endpoint URL is supplied directly by the caller.
 
 | Flag | Required | Type | Description |
 |------|----------|------|-------------|
-| `--base-url` | **Yes** | string | Root URL of the target Zoho product API (e.g. `https://desk.zoho.com/api/v1`) |
+| `--url` | **Yes** | string | Full URL of the target Zoho API endpoint (e.g. `https://desk.zoho.com/api/v1/tickets`) |
 | `--method` | Yes | `GET\|POST\|PUT\|PATCH\|DELETE` | HTTP method |
-| `--path` | Yes | string | Resource path relative to `--base-url` (e.g. `/tickets`) |
 | `--body` | No | string | Inline JSON request body |
 | `--body-file` | No | string | Path to a JSON file to use as request body |
 | `--header` | No | `key:value` | Additional request header (repeatable) |
@@ -191,39 +183,37 @@ Adding or removing a scope sets `needs_reauth = true` on that account.
 **Examples:**
 
 ```sh
-zapi-cli api call --base-url "https://cliq.zoho.com/api/v2" --method GET --path "/channels"
-zapi-cli api call --base-url "https://desk.zoho.com/api/v1" --method GET --path "/tickets"
-zapi-cli api call --base-url "https://crm.zoho.com/crm/v5" --method POST --path "/Leads" --body '{"data":[{"Last_Name":"Doe"}]}'
+znet api call --url "https://cliq.zoho.com/api/v2/channels" --method GET
+znet api call --url "https://desk.zoho.com/api/v1/tickets" --method GET
+znet api call --url "https://crm.zoho.com/crm/v5/Leads" --method POST --body '{"data":[{"Last_Name":"Doe"}]}'
 ```
 
-#### `api registry` *(Future)*
+#### `api registry` *(P2)*
 
-Each registry entry carries a `baseUrl` field since entries can span multiple Zoho products.
+Each registry entry has a single `url` field (full endpoint URL), consistent with `api call --url`.
 
 | Subcommand | Flags | Description |
 |-----------|-------|-------------|
 | `list` | — | List all registered API entries |
-| `add` | `--id` (req), `--base-url` (req), `--method` (req), `--url-template` (req), `--purpose` (req) | Upsert an endpoint entry (add or overwrite by id) |
+| `add` | `--id` (req), `--url` (req), `--method` (req), `--purpose` (req) | Upsert an endpoint entry (add or overwrite by id) |
 | `show` | `--id` (req) | Show a single entry by id |
 | `remove` | `--id` (req) | Delete an entry by id |
 
-Storage: `<configDir>/zapi-cli/registry.json`
+Storage: `<configDir>/znet/registry.json`
 
 ```json
 {
   "apis": [
     {
       "id": "cliq-list-channels",
-      "baseUrl": "https://cliq.zoho.com/api/v2",
+      "url": "https://cliq.zoho.com/api/v2/channels",
       "method": "GET",
-      "urlTemplate": "/channels",
       "purpose": "Returns all Cliq channels the authenticated user can access"
     },
     {
       "id": "desk-list-tickets",
-      "baseUrl": "https://desk.zoho.com/api/v1",
+      "url": "https://desk.zoho.com/api/v1/tickets",
       "method": "GET",
-      "urlTemplate": "/tickets",
       "purpose": "Returns all Desk tickets for the authenticated user's org"
     }
   ]
@@ -245,7 +235,7 @@ Storage: `<configDir>/zapi-cli/registry.json`
 
 ### Group: `pex` *(Future)*
 
-> Pex is Zoho Cliq's proprietary real-time protocol. Events are buffered to `<configDir>/zapi-cli/pex-buffer/<account>.jsonl`. `drain` atomically reads and truncates this file.
+> Pex is Zoho Cliq's proprietary real-time protocol. Events are buffered to `<configDir>/znet/pex-buffer/<account>.jsonl`. `drain` atomically reads and truncates this file.
 
 | Subcommand | Flags | Description |
 |-----------|-------|-------------|
@@ -289,16 +279,16 @@ Storage: `<configDir>/zapi-cli/registry.json`
 public sealed record AccountEntry
 {
     public required string Name { get; init; }
-    public required string Domain { get; init; }           // e.g. "zoho.com" — used for OAuth token endpoints only
-    public string? Email { get; init; }                    // captured from Zoho user-info API at account add
+    public required string Dc { get; init; }               // datacenter short name: us, eu, in, au, cn, jp, sa, uk, ca
+    public string? Email { get; init; }                    // fetched from Zoho user-info at account add; used for ZohoCorp domain block
+    public string? Zuid { get; init; }                     // fetched from Zoho user-info at account add; Zoho User ID (ZUIDSTRING)
     public List<string> Scopes { get; init; } = [];
-    public required string TokenType { get; init; }        // "pat" | "oauth"
     public bool IsDefault { get; init; }
     public bool NeedsReauth { get; init; }
 }
 ```
 
-> `Domain` is used for OAuth token endpoint resolution only. It is **not** used to derive an API base URL — the caller supplies `--base-url` directly on every `api call`.
+> `Dc` maps to the Zoho Accounts URL for token endpoint resolution (e.g. `us` → `https://accounts.zoho.com`). It is **not** used to derive an API base URL — the caller supplies `--url` directly on every `api call`.
 
 ### `AccountsRoot` (accounts.json root)
 
@@ -316,19 +306,19 @@ public sealed record AccountsRoot
   "accounts": [
     {
       "name": "work",
-      "domain": "zoho.com",
+      "dc": "us",
       "email": "user@example.com",
+      "zuidstring": "1234567890",
       "scopes": ["ZohoCliq.Channels.READ", "ZohoDesk.Tickets.WRITE"],
-      "token_type": "pat",
       "is_default": true,
       "needs_reauth": false
     },
     {
       "name": "personal",
-      "domain": "zoho.eu",
+      "dc": "eu",
       "email": "user@personal.com",
+      "zuidstring": "9876543210",
       "scopes": [],
-      "token_type": "pat",
       "is_default": false,
       "needs_reauth": false
     }
@@ -397,62 +387,41 @@ public interface IAuthProvider
 }
 ```
 
-### v1 — `PatAuthProvider`
+### v1 — `OAuthProvider` (Self-Client)
 
 - Implements `IAuthProvider`.
-- `StoreTokenAsync` → writes to OS keychain under key `zapi-cli:<accountName>:pat`.
-- `GetTokenAsync` → reads from OS keychain by the same key.
-- `ClearTokenAsync` → deletes from OS keychain.
+- User supplies `--token`, `--client-id`, `--client-secret` at `account add` time.
+- `StoreTokenAsync` → writes access token + client credentials to OS keychain under key `znet:<accountName>:oauth`.
+- `GetTokenAsync` → reads access token from OS keychain by the same key.
+- `ClearTokenAsync` → deletes all stored credentials from OS keychain.
 - Token injected into requests as: `Authorization: Zoho-oauthtoken <token>`.
-
-### v2 (Future) — `OAuthProvider`
-
-```csharp
-// TODO: Replace placeholders before distributing the binary
-private const string ClientId = "PLACEHOLDER_CLIENT_ID";
-private const string ClientSecret = "PLACEHOLDER_CLIENT_SECRET";
-```
-
-- OAuth client credentials are **compile-time constants** — not user input, not runtime config.
-- PKCE flow runs entirely in terminal (no browser).
-- Access + refresh tokens stored in OS keychain under `zapi-cli:<accountName>:oauth`.
+- `account re-auth` uses stored `client-id` + `client-secret` to call Zoho OAuth token refresh endpoint and update the stored access token.
 
 ### `account add` Flow
 
-#### PAT path (`--auth-type pat`)
+#### OAuth Self-Client flow
 
 ```
-zapi-cli account add --name "work" --auth-type pat --token "xxx" [--domain "zoho.com"]
-  1. Validate --token is present (error INVALID_ARGS if missing)
+znet account add --name "work" --token "xxx" --client-id "yyy" --client-secret "zzz" [--dc us]
+  1. Validate --token, --client-id, --client-secret are all present (error INVALID_ARGS if any missing)
   2. Validate name is unique in accounts.json
-  3. Call GET https://accounts.{domain}/oauth/user/info with the PAT as bearer token; abort with EMAIL_REQUIRED if no email returned; apply ZohoCorp domain check
-  4. Call PatAuthProvider.StoreTokenAsync("work", "xxx")
-  5. Append AccountEntry (token_type = "pat") to accounts.json
-  6. If no other account exists, set is_default = true
-  7. Write accounts.json (permissions: 0600 on Unix)
-  8. Output: { "status": "ok", "data": { "name": "work", "domain": "zoho.com", "auth_type": "pat" } }
-```
-
-#### OAuth path (`--auth-type oauth`)
-
-```
-zapi-cli account add --name "work" --auth-type oauth [--domain "zoho.com"]
-  1. Reject if --token is supplied (error INVALID_ARGS)
-  2. Validate name is unique in accounts.json
-  3. Initiate OAuth PKCE flow using hardcoded ClientId / ClientSecret; AaaServer.profile.READ mandated in scope request
-  4. A token is received upon successful OAuth PKCE flow completion
-  5. Call GET https://accounts.{domain}/oauth/user/info with the received token; abort with EMAIL_REQUIRED if no email returned
-  6. Apply ZohoCorp domain check on the returned email; abort with ACCOUNT_DOMAIN_BLOCKED if blocked
-  7. Store access + refresh tokens via OAuthProvider
-  8. Append AccountEntry (token_type = "oauth") to accounts.json
-  9. Write accounts.json
-  10. Output: { "status": "ok", "data": { "name": "work", "domain": "zoho.com", "auth_type": "oauth" } }
+  3. Resolve Accounts URL from --dc (default: us → https://accounts.zoho.com)
+  4. Call GET https://accounts.zoho.<dc-domain>/oauth/user/info with --token as bearer token
+     → abort with EMAIL_REQUIRED if no email or ZUIDSTRING returned
+     → abort with AUTH_FAILURE on network/HTTP error
+  5. Apply ZohoCorp domain check on the returned email; abort with ACCOUNT_DOMAIN_BLOCKED if blocked
+  6. Call OAuthProvider.StoreTokenAsync: writes token + client-id + client-secret to OS keychain
+     under key: znet:work:oauth
+  7. Append AccountEntry (dc, email, zuidstring, scopes=[]) to accounts.json
+  8. If no other account exists, set is_default = true
+  9. Write accounts.json (permissions: 0600 on Unix)
+  10. Output: { "status": "ok", "data": { "name": "work", "dc": "us" } }
 ```
 
 ### Scope Change + Re-auth Flow
 
 ```
-zapi-cli scope add --scope "ZohoDesk.Tickets.READ" [--account "work"]
+znet scope add --scope "ZohoDesk.Tickets.READ" [--account "work"]
   1. Resolve target account (--account or default)
   2. Add scope to AccountEntry.Scopes if not already present
   3. Set AccountEntry.NeedsReauth = true
@@ -463,11 +432,12 @@ Next api call on account "work":
   1. Load AccountEntry for "work"
   2. If NeedsReauth == true → write error to stderr + exit 2
 
-zapi-cli account re-auth --name "work"   [v2 OAuth only]
-  1. Exchange new token via Zoho OAuth API using OAuthProvider
-  2. Store updated tokens in OS keychain
-  3. Set AccountEntry.NeedsReauth = false
-  4. Write accounts.json
+znet account re-auth --name "work"
+  1. Read stored client-id + client-secret from OS keychain for account "work"
+  2. Call Zoho OAuth token refresh endpoint using stored credentials
+  3. Store updated access token in OS keychain
+  4. Set AccountEntry.NeedsReauth = false
+  5. Write accounts.json
 ```
 
 ---
@@ -496,8 +466,8 @@ Covers `zohocorp.com`, `zohocorp.eu`, `zohocorp.in`, `zohocorp.com.au`, and all 
 
 ### Implementation
 
-- **PAT path**: After the token is supplied, `GET https://accounts.{domain}/oauth/user/info` is called with `Authorization: Zoho-oauthtoken <token>` to retrieve the account email before the account is persisted.
-- **OAuth path**: Upon successful PKCE flow completion, an OAuth access token is received. That token is immediately used to call `GET https://accounts.{domain}/oauth/user/info`. `AaaServer.profile.READ` is mandated in the OAuth scope request to guarantee the email claim is returned.
+- **At `account add`:** The supplied `--token` is used to call `GET https://accounts.zoho.<dc-domain>/oauth/user/info`. Both the `email` and `ZUIDSTRING` are extracted before the account is persisted.
+- `AaaServer.profile.READ` must be included in the token's granted scopes to guarantee both fields are returned.
 - **Fail closed**: If the user-info endpoint returns no email (for any auth type), `account add` must abort with `EMAIL_REQUIRED` (exit 1). The ZohoCorp check is never skipped — a missing email is treated as an unverifiable identity.
 - The domain-block check also runs at the start of `ApiClient.CallAsync` against the stored account email.
 - The check must NOT be bypassable via flags, environment variables, or config.
@@ -506,11 +476,11 @@ Covers `zohocorp.com`, `zohocorp.eu`, `zohocorp.in`, `zohocorp.com.au`, and all 
 
 | ID | Scenario | Behaviour |
 |----|----------|-----------|
-| UC-21 | `account add` with a `@zohocorp.com` PAT | Rejected immediately; keychain write never happens; exit 1 `ACCOUNT_DOMAIN_BLOCKED` |
+| UC-21 | `account add` with a `@zohocorp.com` token | Rejected immediately; keychain write never happens; exit 1 `ACCOUNT_DOMAIN_BLOCKED` |
 | UC-22 | `api call` resolves to a ZohoCorp account | Rejected before any HTTP request; exit 1 `ACCOUNT_DOMAIN_BLOCKED` |
 | UC-23 | `scope add/remove/list` targets a ZohoCorp account | Rejected; no mutation to `accounts.json`; exit 1 `ACCOUNT_DOMAIN_BLOCKED` |
 | UC-24 | Existing `accounts.json` already contains a ZohoCorp account | Any command resolving to that account is rejected; warning emitted on startup |
-| UC-25 | `account add` (OAuth path) where user-info returns no email | Rejected before any token storage; exit 1 `EMAIL_REQUIRED` |
+| UC-25 | `account add` where user-info returns no email | Rejected before any token storage; exit 1 `EMAIL_REQUIRED` |
 
 **Error output (stderr):**
 
@@ -526,9 +496,9 @@ Covers `zohocorp.com`, `zohocorp.eu`, `zohocorp.in`, `zohocorp.com.au`, and all 
 
 | Platform | Config Directory |
 |----------|-----------------|
-| macOS | `~/Library/Application Support/zapi-cli/` |
-| Windows | `%LOCALAPPDATA%\zapi-cli\` |
-| Linux | `~/.config/zapi-cli/` |
+| macOS | `~/Library/Application Support/znet/` |
+| Windows | `%LOCALAPPDATA%\znet\` |
+| Linux | `~/.config/znet/` |
 
 Path resolution uses `Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)` on macOS/Linux and `Environment.SpecialFolder.LocalApplicationData` on Windows.
 
@@ -573,9 +543,9 @@ public interface IKeychainProvider
     Task DeleteAsync(string key, CancellationToken ct = default);
 }
 
-// Key format: "zapi-cli:<accountName>:<tokenType>"
-// e.g.        "zapi-cli:work:pat"
-//             "zapi-cli:work:oauth"
+// Key format: "znet:<accountName>:oauth"
+// e.g.        "znet:work:oauth"
+//             "znet:personal:oauth"
 ```
 
 **Platform implementations:**
@@ -610,13 +580,13 @@ The allowlist is a sealed compile-time constant in `ZapiCli.Core` — not config
 
 ### `ApiClient`
 
-The base URL is fully supplied by the caller via `--base-url`. There is no URL derivation from the account's `Domain` field.
+The full URL is supplied by the caller via `--url`. There is no URL derivation from the account's `Dc` field.
 
 ```csharp
 public sealed class ApiClient
 {
-    // Assembles final URL as: <baseUrl><path>
     // Validates the host against the allowlist before sending
+    // Checks ZohoCorp domain block on the resolved account before sending
     // Injects: Authorization: Zoho-oauthtoken <token>
     // Injects: Content-Type: application/json  (for POST/PUT/PATCH)
     // Appends trace entry to active session (if any)
@@ -626,9 +596,8 @@ public sealed class ApiClient
 
 public sealed record ApiRequest
 {
-    public required string BaseUrl { get; init; }          // supplied by --base-url
+    public required string Url { get; init; }              // full endpoint URL supplied by --url
     public required string Method { get; init; }
-    public required string Path { get; init; }
     public string? Body { get; init; }
     public Dictionary<string, string> Headers { get; init; } = [];
     public Dictionary<string, string> QueryParams { get; init; } = [];
@@ -641,18 +610,6 @@ public sealed record ApiResponse
     public required string Body { get; init; }             // raw JSON string from server
     public bool IsSuccess => StatusCode is >= 200 and < 300;
 }
-```
-
-### URL Assembly
-
-```
---base-url "https://desk.zoho.com/api/v1"
---path     "/tickets"
-→ Final URL: "https://desk.zoho.com/api/v1/tickets"
-
---base-url "https://cliq.zoho.com/api/v2"
---path     "/channels"
-→ Final URL: "https://cliq.zoho.com/api/v2/channels"
 ```
 
 ---
@@ -672,7 +629,7 @@ public sealed record ApiResponse
 ### Storage Layout
 
 ```
-<configDir>/zapi-cli/traces/
+<configDir>/znet/traces/
   sessions.json                 ← index: name, startTime, entryCount, status (active | closed)
   <session-name>/
     trace.jsonl                 ← one JSON object per line (append-only)
@@ -704,15 +661,15 @@ public sealed record ApiResponse
 
 ```
 Session start:
-  zapi-cli trace session start --name "<FeatureName>-<YYYY-MM-DD>"
+  znet trace session start --name "<FeatureName>-<YYYY-MM-DD>"
 
 ... agent fires api calls — entries auto-appended ...
 
 Session complete:
-  zapi-cli trace session export --name "<FeatureName>-<YYYY-MM-DD>"
+  znet trace session export --name "<FeatureName>-<YYYY-MM-DD>"
     → agent captures stdout → saves to api-trace.json
 
-  zapi-cli trace session close --name "<FeatureName>-<YYYY-MM-DD>"
+  znet trace session close --name "<FeatureName>-<YYYY-MM-DD>"
 ```
 
 ### Export Options
@@ -741,8 +698,8 @@ For `account list`:
 {
   "status": "ok",
   "data": [
-    { "name": "work", "domain": "zoho.com", "token_type": "pat", "is_default": true, "needs_reauth": false, "scope_count": 2 },
-    { "name": "personal", "domain": "zoho.eu", "token_type": "pat", "is_default": false, "needs_reauth": false, "scope_count": 0 }
+    { "name": "work", "dc": "us", "email": "user@example.com", "is_default": true, "needs_reauth": false, "scope_count": 2 },
+    { "name": "personal", "dc": "eu", "email": "user@personal.com", "is_default": false, "needs_reauth": false, "scope_count": 0 }
   ]
 }
 ```
@@ -765,7 +722,7 @@ Token value is **never** included in any output. `account show` displays `"token
 | `AUTH_FAILURE` | 2 | Keychain read failed or token rejected by API |
 | `NEEDS_REAUTH` | 2 | Account has pending scope changes |
 | `API_ERROR` | 1 | Non-2xx response from Zoho API |
-| `INVALID_ARGS` | 1 | Missing or conflicting flags (e.g. `--token` with `--auth-type oauth`) |
+| `INVALID_ARGS` | 1 | Missing or conflicting flags (e.g. missing `--client-id` at `account add`) |
 | `IO_ERROR` | 1 | File system failure (accounts.json read/write) |
 | `KEYCHAIN_ERROR` | 2 | OS keychain operation failed |
 | `ACCOUNT_DOMAIN_BLOCKED` | 1 | Account email is a ZohoCorp domain |
@@ -787,9 +744,8 @@ Token value is **never** included in any output. `account show` displays `"token
 - All exceptions are caught at the top-level command executor and converted to the JSON error envelope written to stderr.
 - `--no-input` flag: any code path that would prompt must throw with code `INVALID_ARGS` instead.
 - HTTP errors from `ApiClient`: non-2xx responses are converted to `API_ERROR` with the response body included in `"detail"`.
-- `--token` supplied when `--auth-type oauth`: fail immediately with `INVALID_ARGS`.
-- `--token` missing when `--auth-type pat`: fail immediately with `INVALID_ARGS`.
-- User-info fetch at `account add` (both PAT and OAuth): if the Zoho user-info API returns no email, `account add` must fail with `EMAIL_REQUIRED` — the ZohoCorp check is never skipped. Network/HTTP failure fetching user-info fails with `AUTH_FAILURE`.
+- Any of `--token`, `--client-id`, `--client-secret` missing at `account add`: fail immediately with `INVALID_ARGS`.
+- User-info fetch at `account add`: if the Zoho user-info API returns no email or ZUIDSTRING, `account add` must fail with `EMAIL_REQUIRED` — the ZohoCorp check is never skipped. Network/HTTP failure fetching user-info fails with `AUTH_FAILURE`.
 - Cancellation (`Ctrl+C`): graceful cancellation via `CancellationTokenSource`; exit code `1`.
 
 ---
@@ -813,14 +769,14 @@ No external keychain NuGet — platform keychain access is implemented via direc
 
 ## 14. Non-Goals (v1)
 
-- No OAuth2 implementation — PAT only (`--auth-type pat`).
-- No browser-based auth or redirect flows.
-- No WebSocket or Pex support (future Epics 4 & 6).
-- No API Registry (future Epic 7).
+- No browser-based auth or redirect flows — Self-Client OAuth only (user supplies token + client credentials).
+- No WebSocket or Pex support (P3 — future).
+- No API Registry (P2 — next phase).
+- No scope management (P2 — next phase).
+- No trace sessions (P2 — next phase).
 - No TUI / interactive shell mode.
 - No plugin system or extensibility hooks.
 - No Native AOT publishing.
 - No multi-account simultaneous API calls (one active account per invocation).
 - No sync/caching layer — all API calls are live.
-- `trace` and `util` commands are implemented in v1; `pex`, `ws`, and `api registry` are deferred.
-- No product-alias shortcuts for `--base-url` — full URL required on every `api call` in v1.
+- No product-alias shortcuts for `--url` — full URL required on every `api call`.
