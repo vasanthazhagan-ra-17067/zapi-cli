@@ -143,7 +143,7 @@ znet [global-flags] <group> <subcommand> [flags]
 | `remove` | `--name` (req) | Revoke token via Zoho OAuth revoke endpoint, clear keychain secrets, remove account |
 | `show` | `--name` (req) | Show account details (token masked as `***`) |
 | `set-default` | `--name` (req) | Set active/default account |
-| `re-auth` | `--name` (req) | Re-authenticate: refresh access token via Zoho OAuth using stored client credentials |
+| `re-auth` | `--name` (req) | Manually trigger token refresh for an account (also triggered automatically on expiry / scope change) |
 
 
 ---
@@ -420,6 +420,8 @@ znet account add --name "work" --token "xxx" --client-id "yyy" --client-secret "
 
 ### Scope Change + Re-auth Flow
 
+> **Auto-refresh principle:** Re-authentication is triggered **automatically** whenever a token is expired or scope changes are pending. The user never needs to run `account re-auth` manually in normal operation. The command remains available for explicit/forced refresh.
+
 ```
 znet scope add --scope "ZohoDesk.Tickets.READ" [--account "work"]
   1. Resolve target account (--account or default)
@@ -428,16 +430,26 @@ znet scope add --scope "ZohoDesk.Tickets.READ" [--account "work"]
   4. Write accounts.json
   5. Output: { "status": "ok", "data": { "account": "work", "scopes": [...] } }
 
-Next api call on account "work":
+Next api call on account "work"  (NeedsReauth == true  OR  401 received from Zoho):
   1. Load AccountEntry for "work"
-  2. If NeedsReauth == true → write error to stderr + exit 2
+  2. Detect re-auth needed: NeedsReauth == true  OR  API returned 401
+  3. Auto-refresh:
+     a. Read stored client-id + client-secret from OS keychain
+     b. Call Zoho OAuth token endpoint using stored credentials + current AccountEntry.Scopes
+     c. Store new access token in OS keychain
+     d. Set AccountEntry.NeedsReauth = false; write accounts.json
+  4. Retry the API request with the new token
+  5. Return the result normally
+  
+  If auto-refresh itself fails (invalid client credentials, revoked app, etc.):
+  → write error to stderr + exit 2 with AUTH_FAILURE
 
-znet account re-auth --name "work"
+znet account re-auth --name "work"  (explicit / forced)
   1. Read stored client-id + client-secret from OS keychain for account "work"
-  2. Call Zoho OAuth token refresh endpoint using stored credentials
+  2. Call Zoho OAuth token endpoint using stored credentials + current AccountEntry.Scopes
   3. Store updated access token in OS keychain
-  4. Set AccountEntry.NeedsReauth = false
-  5. Write accounts.json
+  4. Set AccountEntry.NeedsReauth = false; write accounts.json
+  5. Output: { "status": "ok", "data": { "name": "work" } }
 ```
 
 ---
@@ -686,27 +698,59 @@ Session complete:
 
 All output goes through a central `IOutputWriter` interface so tests can capture it without console side effects.
 
-### stdout — Success
+### stdout — general rule
 
-```json
-{ "status": "ok", "data": <raw API response or command result> }
+**No wrapper envelope.** Every command prints its result as plain JSON directly to stdout:
+
+| Command category | stdout |
+|---|---|
+| **`api call`** | Raw Zoho API response body, byte-for-byte as received |
+| **`account add/remove/re-auth`** | Raw Zoho API response body from the Zoho endpoint called (user-info, revoke, token-refresh) |
+| **`account list/show/set-default`** | Plain JSON — just the data object/array, no wrapper |
+| **`scope add/remove/list`** | Plain JSON — just the data object/array, no wrapper |
+| **`trace` commands** | Plain JSON result of the trace operation |
+| **`util` commands** | Plain JSON result (e.g. `{"ts": 1710000000000}`) |
+| **`api registry` commands** | Plain JSON result |
+
+Examples:
+
+```
+# api call (HTTP 200) — raw passthrough:
+{"channels":[{"id":"ch_001","name":"general"}]}
+
+# account add — raw Zoho user-info response:
+{"ZPUID":"1234567890","Email":"user@example.com","Display_Name":"User Name"}
+
+# account list — plain JSON array:
+[
+  {"name":"work","dc":"us","email":"user@example.com","is_default":true,"needs_reauth":false,"scope_count":2},
+  {"name":"personal","dc":"eu","email":"user@personal.com","is_default":false,"needs_reauth":false,"scope_count":0}
+]
+
+# scope list — plain JSON array:
+["ZohoCliq.Channels.READ","ZohoDesk.Tickets.WRITE"]
+
+# util time-ms:
+{"ts":1742256000000}
 ```
 
-For `account list`:
+Token / client-secret values are **never** included in any output. `account show` displays `"token": "***"`.
 
-```json
-{
-  "status": "ok",
-  "data": [
-    { "name": "work", "dc": "us", "email": "user@example.com", "is_default": true, "needs_reauth": false, "scope_count": 2 },
-    { "name": "personal", "dc": "eu", "email": "user@personal.com", "is_default": false, "needs_reauth": false, "scope_count": 0 }
-  ]
-}
+### stdout — HTTP errors (`api call` and Zoho-calling account commands)
+
+On HTTP 4xx / 5xx, the Zoho response body is still written to stdout as-is. The HTTP status is additionally reported on stderr as `API_ERROR`. Exit code is `1`.
+
 ```
-
-Token value is **never** included in any output. `account show` displays `"token": "***"`.
+stdout: {"code":"CHANNEL_NOT_FOUND","message":"Channel not found"}
+stderr: {"error":"API returned 404 Not Found","code":"API_ERROR","httpStatus":404,"exitCode":1}
+```
 
 ### stderr — Error Envelope
+
+All pre-call and internal failures are written as a JSON error envelope to **stderr**. This covers:
+- Errors that occur **before** any HTTP request is sent (host not allowed, ZohoCorp block, auth failure, invalid args)
+- Errors retrieving or refreshing credentials
+- CLI-level failures (file I/O, missing account, keychain errors)
 
 ```json
 { "error": "<human-readable message>", "code": "<ERROR_CODE>", "exitCode": <0|1|2> }
@@ -719,9 +763,9 @@ Token value is **never** included in any output. `account show` displays `"token
 | `ACCOUNT_NOT_FOUND` | 1 | Named account does not exist |
 | `ACCOUNT_ALREADY_EXISTS` | 1 | `account add` with duplicate name |
 | `NO_DEFAULT_ACCOUNT` | 1 | No active account set and `--account` not provided |
-| `AUTH_FAILURE` | 2 | Keychain read failed or token rejected by API |
-| `NEEDS_REAUTH` | 2 | Account has pending scope changes |
-| `API_ERROR` | 1 | Non-2xx response from Zoho API |
+| `AUTH_FAILURE` | 2 | Auto-refresh failed (invalid client credentials, revoked app, or keychain error) |
+| `NEEDS_REAUTH` | 2 | Auto-refresh attempted but failed; account cannot be used until re-authenticated |
+| `API_ERROR` | 1 | HTTP 4xx/5xx from Zoho API; response body still written to stdout |
 | `INVALID_ARGS` | 1 | Missing or conflicting flags (e.g. missing `--client-id` at `account add`) |
 | `IO_ERROR` | 1 | File system failure (accounts.json read/write) |
 | `KEYCHAIN_ERROR` | 2 | OS keychain operation failed |
@@ -743,7 +787,9 @@ Token value is **never** included in any output. `account show` displays `"token
 
 - All exceptions are caught at the top-level command executor and converted to the JSON error envelope written to stderr.
 - `--no-input` flag: any code path that would prompt must throw with code `INVALID_ARGS` instead.
-- HTTP errors from `ApiClient`: non-2xx responses are converted to `API_ERROR` with the response body included in `"detail"`.
+- HTTP errors from `ApiClient` (`api call`): response body is always written to stdout as-is; a separate `API_ERROR` envelope is written to stderr with the HTTP status code; exit code 1.
+- HTTP 401 from Zoho during `api call`: automatically attempt token refresh using stored client credentials; if successful, retry the request once and write the retried response body to stdout. If refresh also fails, emit `AUTH_FAILURE` to stderr, exit 2.
+- `NeedsReauth == true` on `api call`: automatically trigger token refresh before executing the request (same flow as 401). If refresh fails, emit `AUTH_FAILURE` to stderr, exit 2.
 - Any of `--token`, `--client-id`, `--client-secret` missing at `account add`: fail immediately with `INVALID_ARGS`.
 - User-info fetch at `account add`: if the Zoho user-info API returns no email or ZUIDSTRING, `account add` must fail with `EMAIL_REQUIRED` — the ZohoCorp check is never skipped. Network/HTTP failure fetching user-info fails with `AUTH_FAILURE`.
 - Cancellation (`Ctrl+C`): graceful cancellation via `CancellationTokenSource`; exit code `1`.

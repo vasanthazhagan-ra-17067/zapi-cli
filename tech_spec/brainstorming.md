@@ -70,6 +70,7 @@ znet account add --name "work" --token "xxx" --client-id "yyy" --client-secret "
 znet api call --url "https://cliq.zoho.com/api/v2/channels" --method GET
   → resolves active account
   → fetches token from OS keychain via OAuthProvider
+  → if token expired (401) or needs_reauth == true: auto-refresh token using stored client-id + client-secret, then retry
   → injects as Authorization: Zoho-oauthtoken <token>
 
 znet scope add --account "work" --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
@@ -140,9 +141,11 @@ znet account re-auth --name "work"
 - Stored per-account in `accounts.json` alongside other metadata (secrets are never stored in JSON).
 - All scope commands operate on a specific account (via `--account` flag or the active/default account).
 - Adding or removing a scope sets `needs_reauth = true` on **that account**.
-- On the next `api call` with `needs_reauth = true`: the CLI outputs an error guiding the user to run `account re-auth`.
+- On the next `api call` with `needs_reauth = true`: the CLI automatically refreshes the token using stored client credentials, then proceeds with the call.
 
 #### Re-auth Trigger Flow
+
+> **Auto-refresh:** Re-authentication is triggered **automatically** — no manual command needed in normal operation.
 
 ```
 znet scope add --account "work" --scope "ZohoDesk.Reports.READ,ZohoCliq.Channels.READ"
@@ -150,15 +153,23 @@ znet scope add --account "work" --scope "ZohoDesk.Reports.READ,ZohoCliq.Channels
   └─ update scopes[] for account "work" in accounts.json
   └─ set needs_reauth = true on account "work"
 
-next api call using account "work"
-  └─ error to stderr:
-     { "error": "Account 'work' has scope changes pending. Run: znet account re-auth --name work",
-       "code": "NEEDS_REAUTH", "exitCode": 2 }
+next api call using account "work"  (needs_reauth == true  OR  401 from Zoho)
+  └─ detect re-auth needed
+  └─ auto-refresh:
+       read client-id + client-secret from OS keychain
+       call Zoho OAuth token endpoint with stored credentials + current scopes
+       store new token in OS keychain
+       set needs_reauth = false, write accounts.json
+  └─ retry API call with new token → return result normally
 
-znet account re-auth --name "work"
-  └─ (OAuth) exchange new token via Zoho OAuth API
-  └─ update OS keychain for account "work"
-  └─ set needs_reauth = false on account "work"
+  if auto-refresh fails (revoked app, bad credentials):
+  └─ error to stderr: { "error": "Token refresh failed ...", "code": "AUTH_FAILURE", "exitCode": 2 }
+
+znet account re-auth --name "work"  (explicit / forced — also called automatically)
+  └─ reads stored client-id + client-secret from OS keychain
+  └─ calls Zoho OAuth token endpoint with current scopes
+  └─ updates OS keychain for account "work"
+  └─ sets needs_reauth = false on account "work"
 ```
 
 ---
@@ -224,26 +235,31 @@ The outgoing request host must end with one of the following suffixes. Any call 
 
 ### Output Contract
 
-- **stdout:** JSON always (structured result or success envelope).
-- **stderr:** JSON error envelope on all failures.
-- **Exit codes:** `0` = success, `1` = general error, `2` = auth failure / needs-reauth.
+- **stdout:** No wrapper. Every command prints plain JSON directly:
+  - Commands that call a Zoho API (`api call`, `account add`, `account remove`, `account re-auth`): raw Zoho API response body, as-is.
+  - Local-only commands (`account list/show/set-default`, `scope add/remove/list`, `trace`, `util`, `api registry`): plain JSON data object or array, no envelope.
+- **stderr:** JSON error envelope for all pre-call failures and internal errors (auth, host check, ZohoCorp block, invalid args, keychain, I/O). For HTTP errors, the response body still goes to stdout; the HTTP status is reported on stderr.
+- **Exit codes:** `0` = success, `1` = general / HTTP error, `2` = auth failure.
 
-#### Success Example
+#### Success Examples
 
-```json
-{
-  "status": "ok",
-  "data": { ... }
-}
+```
+# api call / account add — raw Zoho response:
+{"channels":[{"id":"ch_001","name":"general"}]}
+
+# account list — plain JSON array (no wrapper):
+[{"name":"work","dc":"us","email":"user@example.com","is_default":true}]
+
+# scope list — plain JSON array:
+["ZohoCliq.Channels.READ","ZohoDesk.Tickets.WRITE"]
 ```
 
 #### Error Envelope (stderr)
 
 ```json
 { "error": "account 'nonexistent' not found", "code": "ACCOUNT_NOT_FOUND", "exitCode": 1 }
-{ "error": "authentication failed", "code": "AUTH_FAILURE", "exitCode": 2 }
+{ "error": "token refresh failed — check client credentials with 'znet account re-auth'", "code": "AUTH_FAILURE", "exitCode": 2 }
 { "error": "API returned 403 Forbidden", "code": "API_ERROR", "detail": "...", "exitCode": 1 }
-{ "error": "Account 'work' has scope changes pending. Run: znet account re-auth --name work", "code": "NEEDS_REAUTH", "exitCode": 2 }
 { "error": "ZohoCorp accounts are not permitted. Use a personal or external Zoho account.", "code": "ACCOUNT_DOMAIN_BLOCKED", "exitCode": 1 }
 { "error": "Host 'evil.example.com' is not in the allowed Zoho domain list.", "code": "HOST_NOT_ALLOWED", "exitCode": 1 }
 ```
@@ -269,7 +285,7 @@ The outgoing request host must end with one of the following suffixes. Any call 
 | UC-3 | `znet account remove --name "work"` | Revoke token via Zoho OAuth revoke endpoint, then clear keychain secrets and remove account |
 | UC-4 | `znet account show --name "work"` | Show account details (token and secrets masked as `***`) |
 | UC-5 | `znet account set-default --name "work"` | Set the active/default account |
-| UC-6 | `znet account re-auth --name "work"` | Re-authenticate: exchange new token via Zoho OAuth using stored client credentials |
+| UC-6 | `znet account re-auth --name "work"` | Manually refresh token using stored client credentials (also triggered automatically on 401 or scope change) |
 
 #### Epic 2 — General-Purpose API Invocation `[P1]`
 
