@@ -3,7 +3,7 @@
     {
       "storyId": 1,
       "title": "Three-Project Solution Scaffold + IKeychainProvider",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [],
       "version": "v1",
       "phase": "Phase 1 — Foundation"
@@ -11,7 +11,7 @@
     {
       "storyId": 2,
       "title": "Output Contract + Error Infrastructure + Global Settings",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [1],
       "version": "v1",
       "phase": "Phase 1 — Foundation"
@@ -19,7 +19,7 @@
     {
       "storyId": 3,
       "title": "AccountStore + OAuthProvider + ZohoCorp Block + DcResolver",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [1, 2],
       "version": "v1",
       "phase": "Phase 2 — Account & API"
@@ -27,7 +27,7 @@
     {
       "storyId": 4,
       "title": "Account Command Group (add, list, remove, show, set-default, re-auth)",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [3],
       "version": "v1",
       "phase": "Phase 2 — Account & API"
@@ -35,7 +35,7 @@
     {
       "storyId": 5,
       "title": "ApiClient + api call Command",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [3, 4],
       "version": "v1",
       "phase": "Phase 2 — Account & API"
@@ -43,7 +43,7 @@
     {
       "storyId": 6,
       "title": "Utility Commands (util time-ms, util uuid)",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [2],
       "version": "v1",
       "phase": "Phase 3 — Utility"

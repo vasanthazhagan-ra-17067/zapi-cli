@@ -1,1 +1,256 @@
-[]
+[
+  {
+    "storyId": 1,
+    "title": "Three-Project Solution Scaffold + IKeychainProvider",
+    "status": "Completed",
+    "completedDate": "2026-03-18",
+    "filesCreatedOrModified": [
+      { "path": "src/zapi-cli.sln", "action": "created" },
+      { "path": "src/ZapiCli/ZapiCli.csproj", "action": "created" },
+      { "path": "src/ZapiCli/Program.cs", "action": "created" },
+      { "path": "src/ZapiCli/DependencyInjectionRegistrar.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/ZapiCli.Core.csproj", "action": "created" },
+      { "path": "src/ZapiCli.Keychain/ZapiCli.Keychain.csproj", "action": "created" },
+      { "path": "src/ZapiCli.Keychain/IKeychainProvider.cs", "action": "created" },
+      { "path": "src/ZapiCli.Keychain/MacOsKeychainProvider.cs", "action": "created" },
+      { "path": "src/ZapiCli.Keychain/WindowsKeychainProvider.cs", "action": "created" },
+      { "path": "src/ZapiCli.Keychain/LinuxKeychainProvider.cs", "action": "created" },
+      { "path": "src/ZapiCli.Keychain/EncryptedFileKeychainProvider.cs", "action": "created" },
+      { "path": "src/ZapiCli.Keychain/KeychainProviderFactory.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/ZapiCli.Tests.csproj", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/PlaceholderTests.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Fakes/InMemoryKeychainProvider.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "IKeychainProvider.DeleteAsync returns Task (not Task<bool>) as specified in story scope",
+      "KeychainProviderFactory.Create(string configDir) takes a non-optional configDir — configDir resolved in Program.cs via EncryptedFileKeychainProvider.GetDefaultConfigDir()",
+      "macOS config dir resolved as ~/Library/Application Support/zapi-cli using UserProfile + manual path, not Environment.SpecialFolder.ApplicationData (which gives ~/.config on macOS)",
+      "DllImport used instead of LibraryImport for Security.framework P/Invoke — byte[] service/account name params avoid MarshalAs complexity",
+      "InMemoryKeychainProvider is thread-safe (uses lock) per story requirement",
+      "EncryptedFileKeychainProvider salt is 'zapi-cli' (not 'cliq-cli')",
+      "LinuxKeychainProvider sentinel probe key is '__zapi_cli_probe__'",
+      "Spectre.Console.Cli 0.49.1 used (same version as cliq-cli)"
+    ],
+    "openQuestionsResolved": [
+      { "id": "OQ-005", "resolution": "Used SHA256(MachineName + MachineGuid + 'zapi-cli') as AES-256 key. IV is first 12 bytes of .bin file, then ciphertext, then 16-byte GCM tag. MachineGuid: ioreg on macOS, HKLM registry on Windows, /etc/machine-id on Linux." },
+      { "id": "OQ-006", "resolution": "LinuxKeychainProvider.TryCreate() catches DllNotFoundException and any other error. Performs sentinel probe on init. Returns false to signal fallback to EncryptedFileKeychainProvider." }
+    ],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "1 passing",
+      "commandsWorking": []
+    }
+  },
+  {
+    "storyId": 2,
+    "title": "Output Contract + Error Infrastructure + Global Settings",
+    "status": "Completed",
+    "completedDate": "2026-03-18",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/IOutputWriter.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/JsonOutputWriter.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/InMemoryOutputWriter.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/ZapiCliException.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/ZapiCli.Core.csproj", "action": "modified" },
+      { "path": "src/ZapiCli/Commands/GlobalSettings.cs", "action": "created" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
+      { "path": "src/ZapiCli/ZapiCli.csproj", "action": "modified" },
+      { "path": "tests/ZapiCli.Tests/OutputWriterTests.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "ErrorCodes uses 'static readonly string' fields with SCREAMING_SNAKE_CASE names (ACCOUNT_NOT_FOUND etc.) as specified in story, not PascalCase like cliq-cli",
+      "IOutputWriter has WriteJson (no envelope wrapper, serializes directly), WriteRaw (verbatim passthrough), WriteError (to stderr) — differs from cliq-cli's WriteSuccess wrapper",
+      "InMemoryOutputWriter.ErrorRecord is a nested sealed record exposing Message, Code, ExitCode for clean test assertions",
+      "OutputJsonOptions is an internal static class in JsonOutputWriter.cs — shared by InMemoryOutputWriter via same ZapiCli.Core namespace",
+      "ErrorEnvelope uses [JsonPropertyName] attributes to override SnakeCaseLower: 'error', 'code', 'exitCode' (camelCase, not 'exit_code')",
+      "Exception handling uses config.SetExceptionHandler (Spectre pattern) rather than try/catch around RunAsync",
+      "Microsoft.Extensions.Http added to ZapiCli.csproj for services.AddHttpClient()",
+      "Microsoft.Extensions.Logging + Microsoft.Extensions.Logging.Console added to ZapiCli.Core.csproj per story spec"
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "12 passing",
+      "commandsWorking": []
+    }
+  },
+  {
+    "storyId": 3,
+    "title": "AccountStore + OAuthProvider + ZohoCorp Block + DcResolver",
+    "status": "Completed",
+    "completedDate": "2026-03-18",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountsRoot.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Accounts/IAccountStore.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountStore.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Security/ZohoCorpGuard.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Auth/DcResolver.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Auth/OAuthCredentials.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Auth/IAuthProvider.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Auth/OAuthProvider.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/ZapiCli.Core.csproj", "action": "modified" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
+      { "path": "tests/ZapiCli.Tests/AccountStoreTests.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "AccountStore constructor takes (string configDir, ILogger<AccountStore>) — no production parameterless constructor; configDir injected from Program.cs via EncryptedFileKeychainProvider.GetDefaultConfigDir(), avoiding cross-project dependency",
+      "OAuthCredentials uses camelCase JsonSerializerOptions (JsonNamingPolicy.CamelCase) for keychain blob — distinct from SnakeCaseLower options for user-visible output (OQ-002)",
+      "AccountEntry.Zuid annotated with [JsonPropertyName(\"zuidstring\")] to match Zoho API convention",
+      "ZohoCorpGuard is internal static class in ZapiCli.Core.Security namespace — never exposed to ZapiCli layer",
+      "DcResolver is internal static class in ZapiCli.Core.Auth namespace — maps 9 dc short names to Zoho Accounts base URLs",
+      "OAuthProvider.RefreshTokenAsync uses form-encoded POST to DcResolver.GetAccountsBaseUrl(dc)+'/oauth/v2/token' per OQ-003",
+      "Microsoft.Extensions.Http 10.0.0 added to ZapiCli.Core.csproj for IHttpClientFactory injection in OAuthProvider",
+      "AccountStore on Unix: File.SetUnixFileMode with UserRead|UserWrite (0600) after SaveAsync",
+      "AccountStore on Windows: FileSecurity + FileSystemAccessRule FullControl for current user, wrapped in try/catch with LogWarning fallback (OQ-007)"
+    ],
+    "openQuestionsResolved": [
+      { "id": "OQ-002", "resolution": "Keychain blob uses camelCase JSON: { \"accessToken\": \"...\", \"clientId\": \"...\", \"clientSecret\": \"...\" }. OAuthCredentials deserialized with CamelCase JsonSerializerOptions." },
+      { "id": "OQ-003", "resolution": "RefreshTokenAsync: form-encoded POST to <dcBaseUrl>/oauth/v2/token with grant_type=client_credentials&client_id=...&client_secret=...&scope=<comma-joined>. Parses 'access_token' from JSON response." },
+      { "id": "OQ-007", "resolution": "Windows ACL: FileSecurity with SetAccessRuleProtection(isProtected:true, preserveInheritance:false) + FileSystemAccessRule(currentUser, FullControl, Allow). Wrapped in try/catch; logs warning on failure, does not abort SaveAsync." }
+    ],
+    "issuesEncountered": [
+      { "issue": "Test file missing 'using ZapiCli.Keychain' causing CS0246 for IKeychainProvider in FakeHttpClientFactory", "resolution": "Added 'using ZapiCli.Keychain' to AccountStoreTests.cs imports" }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "44 passing",
+      "commandsWorking": []
+    }
+  },
+  {
+    "storyId": 4,
+    "title": "Account Command Group (add, list, remove, show, set-default, re-auth)",
+    "status": "Completed",
+    "completedDate": "2026-03-18",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/Accounts/AccountListView.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountShowView.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "created" },
+      { "path": "src/ZapiCli/Commands/AccountCommands.cs", "action": "created" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
+      { "path": "src/ZapiCli/ZapiCli.csproj", "action": "modified" },
+      { "path": "tests/ZapiCli.Tests/ZapiCli.Tests.csproj", "action": "modified" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeHttpMessageHandler.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/AccountCommandTests.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "Business logic extracted to IAccountService/AccountService in ZapiCli.Core per ADR-0007 'no business logic in ZapiCli' rule. Command classes are thin delegates.",
+      "AccountAddSettings.Validate() throws CommandRuntimeException via Spectre internals; added 'is CommandRuntimeException → INVALID_ARGS' handler in Program.cs SetExceptionHandler to emit correct JSON error code.",
+      "AccountListView has no Token property by design — compile-time guarantee that no token reaches output. AccountShowView.Token is unconditionally '***'.",
+      "ZohoCorp block runs AFTER user-info fetch (to obtain email) but BEFORE any keychain write or accounts.json mutation — step order enforced in AccountService.AddAccountAsync.",
+      "Token revocation in RemoveAccountAsync is best-effort: wrapped in try/catch; logs warning on failure but always continues with local cleanup.",
+      "FakeHttpClientFactory in tests ignores the 'name' parameter and returns the same HttpClient for all CreateClient() calls — sufficient for unit testing.",
+      "InternalsVisibleTo(ZapiCli.Tests) added to ZapiCli.csproj to enable unit testing of internal AccountCommands.AccountAddSettings.Validate().",
+      "ZapiCli.Tests.csproj now references ZapiCli (the CLI exe project) to allow testing command settings classes."
+    ],
+    "openQuestionsResolved": [
+      { "id": "OQ-001", "resolution": "Used { 'status':'ok', 'data':{ 'name':'<name>', 'dc':'<dc>' } } envelope as authoritative output for account add per defaultAssumption. Same wrapper for remove/set-default/re-auth." },
+      { "id": "OQ-004", "resolution": "GET {baseUrl}/oauth/user/info with Authorization: Zoho-oauthtoken <token>. Parses 'Email' and 'ZPUID' fields. Missing email → EMAIL_REQUIRED exit 1." },
+      { "id": "OQ-008", "resolution": "POST {baseUrl}/oauth/v2/token/revoke with form body token=<access_token>. Non-200 response → log warning and continue local cleanup." }
+    ],
+    "issuesEncountered": [
+      {
+        "issue": "Spectre CommandRuntimeException (from Validate() failure) was falling through to the INTERNAL_ERROR handler",
+        "resolution": "Added explicit 'is Spectre.Console.Cli.CommandRuntimeException → INVALID_ARGS' branch in Program.cs SetExceptionHandler, placed before the generic handler."
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "63 passing",
+      "commandsWorking": [
+        "account add",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth"
+      ]
+    }
+  },
+  {
+    "storyId": 5,
+    "title": "ApiClient + api call Command",
+    "status": "Completed",
+    "completedDate": "2026-03-18",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/Api/ApiRequest.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Api/ApiResponse.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Api/ApiClient.cs", "action": "created" },
+      { "path": "src/ZapiCli/Commands/ApiCommands.cs", "action": "created" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeAccountStore.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/ApiClientTests.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs", "action": "modified" }
+    ],
+    "keyDecisionsMade": [
+      "IOutputWriter omitted from ApiClient constructor — the story spec listed it but ApiClient has no output responsibility; commands write via IOutputWriter. Omitting it prevents CS0169/IDE0052 warnings. Output is always handled by ApiCallCommand.",
+      "AllowedHostSuffixes is a private static readonly string[] — NOT a const array (arrays cannot be const in C#), but is compile-time fixed and has no runtime override path (ADR-0004).",
+      "ValidateHost is marked internal (not private) to allow direct unit testing in ZapiCli.Tests via InternalsVisibleTo — avoids testing entire CallAsync for pure suffix-check scenarios.",
+      "HttpClient lifetime: stored in IHttpClientFactory and retrieved via CreateClient('zapi-api') — never disposed by ApiClient (IHttpClientFactory manages handler lifetime). Named client registered with 30s timeout.",
+      "Query parameter encoding uses Uri.EscapeDataString + UriBuilder instead of System.Web.HttpUtility.ParseQueryString — avoids any potential cross-platform System.Web concerns while being functionally equivalent.",
+      "Content-Type auto-injection: StringContent is created with 'application/json' as default media type; caller can override via --header 'Content-Type:...' which is applied before body construction.",
+      "NeedsReauth flow: after RefreshTokenAsync, LoadAsync + mutate root + SaveAsync pattern persists the updated NeedsReauth=false. Re-fetch of account after NeedsReauth clear ensures any concurrent changes are respected.",
+      "FakeAuthProvider.SetToken convenience method added for unit test ergonomics.",
+      "FakeAccountStore added to ZapiCli.Tests/Fakes/ as a simple in-memory IAccountStore for ApiClient unit tests."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "ApiCommands.cs compiled without 'using Spectre.Console' — ValidationResult is in Spectre.Console namespace, not Spectre.Console.Cli",
+        "resolution": "Added 'using Spectre.Console;' to the top of ApiCommands.cs"
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "77 passing",
+      "commandsWorking": [
+        "account add",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call"
+      ]
+    }
+  },
+  {
+    "storyId": 6,
+    "title": "Utility Commands (util time-ms, util uuid)",
+    "status": "Completed",
+    "completedDate": "2026-03-18",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli/Commands/UtilCommands.cs", "action": "created" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
+      { "path": "tests/ZapiCli.Tests/UtilCommandTests.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "Both command classes live in a single static class UtilCommands in UtilCommands.cs — consistent with the ApiCommands and AccountCommands pattern.",
+      "CommandContext parameter passed as null! in unit tests — Spectre's CommandContext has no public constructor useful for testing and these commands don't use context.",
+      "WriteJson called with anonymous objects { ts } and { uuid } — SnakeCaseLower serializer renders 'ts' and 'uuid' correctly without any [JsonPropertyName] override."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "81 passing",
+      "commandsWorking": [
+        "account add",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call",
+        "util time-ms",
+        "util uuid"
+      ]
+    }
+  }
+]
