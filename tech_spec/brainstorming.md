@@ -1,4 +1,4 @@
-# znet — Brainstorming
+# zapi-cli — Brainstorming
 
 > **Status:** Brainstorming complete — ready for technical spec phase.
 > **Date:** 2026-03-17
@@ -7,16 +7,16 @@
 
 ## Project Vision
 
-**znet** is a standalone, C# multi-platform CLI tool for interacting with **any Zoho product's REST APIs**. It manages multiple Zoho accounts, handles OAuth authentication via a pluggable interface, and exposes a general-purpose HTTP API invoker where the caller supplies the full URL at invocation time.
+**zapi-cli** is a standalone, C# multi-platform CLI tool for interacting with **any Zoho product's REST APIs**. It manages multiple Zoho accounts, handles OAuth authentication via a pluggable interface, and exposes a general-purpose HTTP API invoker where the caller supplies the full URL at invocation time.
 
 **Primary consumer:** AI Agents, invoked as GitHub Copilot **CLI Skills**.
 
 ```sh
-znet account add --name "work" --token "myToken" --client-id "myClientId" --client-secret "myClientSecret"
-znet account set-default --name "work"
-znet api call --url "https://cliq.zoho.com/api/v2/channels" --method GET
-znet api call --url "https://desk.zoho.com/api/v1/tickets" --method GET
-znet api call --url "https://crm.zoho.com/crm/v5/Leads" --method POST --body '{"data":[{"Last_Name":"Doe"}]}'
+zapi-cli account add --name "work" --token "myToken" --client-id "myClientId" --client-secret "myClientSecret"
+zapi-cli account set-default --name "work"
+zapi-cli api call --url "https://cliq.zoho.com/api/v2/channels" --method GET
+zapi-cli api call --url "https://desk.zoho.com/api/v1/tickets" --method GET
+zapi-cli api call --url "https://crm.zoho.com/crm/v5/Leads" --method POST --body '{"data":[{"Last_Name":"Doe"}]}'
 ```
 
 **Why this exists:**
@@ -62,22 +62,22 @@ public class OAuthProvider : IAuthProvider { ... }
 #### OAuth Flow (v1)
 
 ```
-znet account add --name "work" --token "xxx" --client-id "yyy" --client-secret "zzz"
+zapi-cli account add --name "work" --token "xxx" --client-id "yyy" --client-secret "zzz"
   → --token, --client-id, --client-secret are all required; --dc defaults to "us"
   → writes account metadata to accounts.json
-  → stores token + client credentials in OS keychain under key: znet:work:oauth
+  → stores token + client credentials in OS keychain under key: zapi-cli:work:oauth
 
-znet api call --url "https://cliq.zoho.com/api/v2/channels" --method GET
+zapi-cli api call --url "https://cliq.zoho.com/api/v2/channels" --method GET
   → resolves active account
   → fetches token from OS keychain via OAuthProvider
   → if token expired (401) or needs_reauth == true: auto-refresh token using stored client-id + client-secret, then retry
   → injects as Authorization: Zoho-oauthtoken <token>
 
-znet scope add --account "work" --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
+zapi-cli scope add --account "work" --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
   → updates scopes[] for that account in accounts.json
   → sets needs_reauth = true on the account
 
-znet account re-auth --name "work"
+zapi-cli account re-auth --name "work"
   → calls Zoho OAuth token refresh/exchange API using stored client-id + client-secret
   → stores new tokens in OS keychain
   → clears needs_reauth flag
@@ -88,7 +88,7 @@ znet account re-auth --name "work"
 ### Accounts
 
 - **Multi-account:** Yes — multiple Zoho accounts can be configured simultaneously.
-- **Active account:** Set via `znet account set-default --name "work"` — persisted in `accounts.json`.
+- **Active account:** Set via `zapi-cli account set-default --name "work"` — persisted in `accounts.json`.
 - **Per-command override:** `--account "personal"` flag available on any command.
 
 #### Account Metadata Fields
@@ -148,7 +148,7 @@ znet account re-auth --name "work"
 > **Auto-refresh:** Re-authentication is triggered **automatically** — no manual command needed in normal operation.
 
 ```
-znet scope add --account "work" --scope "ZohoDesk.Reports.READ,ZohoCliq.Channels.READ"
+zapi-cli scope add --account "work" --scope "ZohoDesk.Reports.READ,ZohoCliq.Channels.READ"
   └─ parse comma-separated list → ["ZohoDesk.Reports.READ", "ZohoCliq.Channels.READ"]
   └─ update scopes[] for account "work" in accounts.json
   └─ set needs_reauth = true on account "work"
@@ -165,7 +165,7 @@ next api call using account "work"  (needs_reauth == true  OR  401 from Zoho)
   if auto-refresh fails (revoked app, bad credentials):
   └─ error to stderr: { "error": "Token refresh failed ...", "code": "AUTH_FAILURE", "exitCode": 2 }
 
-znet account re-auth --name "work"  (explicit / forced — also called automatically)
+zapi-cli account re-auth --name "work"  (explicit / forced — also called automatically)
   └─ reads stored client-id + client-secret from OS keychain
   └─ calls Zoho OAuth token endpoint with current scopes
   └─ updates OS keychain for account "work"
@@ -178,18 +178,18 @@ znet account re-auth --name "work"  (explicit / forced — also called automatic
 
 | What | Location | Format |
 |------|----------|--------|
-| Account metadata | `<configDir>/znet/accounts.json` | Plain JSON |
+| Account metadata | `<configDir>/zapi-cli/accounts.json` | Plain JSON |
 | Secrets (tokens) | OS Keychain (platform-native) | OS-managed, not on disk |
-| Keychain key format | `znet:<accountName>:<tokenType>` | — |
-| Keychain fallback | `<configDir>/znet/keystore/` (encrypted file) | Encrypted JSON |
+| Keychain key format | `zapi-cli:<accountName>:<tokenType>` | — |
+| Keychain fallback | `<configDir>/zapi-cli/keystore/` (encrypted file) | Encrypted JSON |
 
 **Platform config directory (`<configDir>`):**
 
 | Platform | Path |
 |----------|------|
-| macOS | `~/Library/Application Support/znet/` |
-| Windows | `%LOCALAPPDATA%\znet\` |
-| Linux | `~/.config/znet/` |
+| macOS | `~/Library/Application Support/zapi-cli/` |
+| Windows | `%LOCALAPPDATA%\zapi-cli\` |
+| Linux | `~/.config/zapi-cli/` |
 
 **Security rules:**
 - `accounts.json` written with restrictive permissions (`0600` on Unix, ACL-restricted on Windows).
@@ -258,7 +258,7 @@ The outgoing request host must end with one of the following suffixes. Any call 
 
 ```json
 { "error": "account 'nonexistent' not found", "code": "ACCOUNT_NOT_FOUND", "exitCode": 1 }
-{ "error": "token refresh failed — check client credentials with 'znet account re-auth'", "code": "AUTH_FAILURE", "exitCode": 2 }
+{ "error": "token refresh failed — check client credentials with 'zapi-cli account re-auth'", "code": "AUTH_FAILURE", "exitCode": 2 }
 { "error": "API returned 403 Forbidden", "code": "API_ERROR", "detail": "...", "exitCode": 1 }
 { "error": "ZohoCorp accounts are not permitted. Use a personal or external Zoho account.", "code": "ACCOUNT_DOMAIN_BLOCKED", "exitCode": 1 }
 { "error": "Host 'evil.example.com' is not in the allowed Zoho domain list.", "code": "HOST_NOT_ALLOWED", "exitCode": 1 }
@@ -280,12 +280,12 @@ The outgoing request host must end with one of the following suffixes. Any call 
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-1 | `znet account add --name "work" --token "xxx" --client-id "yyy" --client-secret "zzz"` | Add an OAuth account; `--dc` optional, defaults to `us` (`us`, `eu`, `in`, `au`, `cn`, `jp`, `sa`, `uk`, `ca`) |
-| UC-2 | `znet account list` | List all configured accounts |
-| UC-3 | `znet account remove --name "work"` | Revoke token via Zoho OAuth revoke endpoint, then clear keychain secrets and remove account |
-| UC-4 | `znet account show --name "work"` | Show account details (token and secrets masked as `***`) |
-| UC-5 | `znet account set-default --name "work"` | Set the active/default account |
-| UC-6 | `znet account re-auth --name "work"` | Manually refresh token using stored client credentials (also triggered automatically on 401 or scope change) |
+| UC-1 | `zapi-cli account add --name "work" --token "xxx" --client-id "yyy" --client-secret "zzz"` | Add an OAuth account; `--dc` optional, defaults to `us` (`us`, `eu`, `in`, `au`, `cn`, `jp`, `sa`, `uk`, `ca`) |
+| UC-2 | `zapi-cli account list` | List all configured accounts |
+| UC-3 | `zapi-cli account remove --name "work"` | Revoke token via Zoho OAuth revoke endpoint, then clear keychain secrets and remove account |
+| UC-4 | `zapi-cli account show --name "work"` | Show account details (token and secrets masked as `***`) |
+| UC-5 | `zapi-cli account set-default --name "work"` | Set the active/default account |
+| UC-6 | `zapi-cli account re-auth --name "work"` | Manually refresh token using stored client credentials (also triggered automatically on 401 or scope change) |
 
 #### Epic 2 — General-Purpose API Invocation `[P1]`
 
@@ -293,13 +293,13 @@ The `--url` flag is **required** on every `api call`. It is the complete URL of 
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-7 | `znet api call --url "https://cliq.zoho.com/api/v2/channels" --method GET` | GET request to Cliq |
-| UC-8 | `znet api call --url "https://desk.zoho.com/api/v1/tickets" --method GET` | GET request to Desk |
-| UC-9 | `znet api call --url "https://crm.zoho.com/crm/v5/Leads" --method POST --body '{"data":[...]}'` | POST with inline JSON body |
-| UC-10 | `znet api call --url "https://desk.zoho.com/api/v1/tickets" --method POST --body-file ./req.json` | POST with body from file |
-| UC-11 | `znet api call --url "https://desk.zoho.com/api/v1/tickets" --method PUT --header "X-Custom: val"` | Custom request headers |
-| UC-12 | `znet api call --url "https://desk.zoho.com/api/v1/tickets" --method GET --account "personal"` | Override account for a single call |
-| UC-13 | `znet api call --url "https://desk.zoho.com/api/v1/tickets" --method GET --query "status=open"` | Append query parameters |
+| UC-7 | `zapi-cli api call --url "https://cliq.zoho.com/api/v2/channels" --method GET` | GET request to Cliq |
+| UC-8 | `zapi-cli api call --url "https://desk.zoho.com/api/v1/tickets" --method GET` | GET request to Desk |
+| UC-9 | `zapi-cli api call --url "https://crm.zoho.com/crm/v5/Leads" --method POST --body '{"data":[...]}'` | POST with inline JSON body |
+| UC-10 | `zapi-cli api call --url "https://desk.zoho.com/api/v1/tickets" --method POST --body-file ./req.json` | POST with body from file |
+| UC-11 | `zapi-cli api call --url "https://desk.zoho.com/api/v1/tickets" --method PUT --header "X-Custom: val"` | Custom request headers |
+| UC-12 | `zapi-cli api call --url "https://desk.zoho.com/api/v1/tickets" --method GET --account "personal"` | Override account for a single call |
+| UC-13 | `zapi-cli api call --url "https://desk.zoho.com/api/v1/tickets" --method GET --query "status=open"` | Append query parameters |
 
 #### `api call` Flags
 
@@ -317,8 +317,8 @@ The `--url` flag is **required** on every `api call`. It is the complete URL of 
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-14 | `znet util time-ms` | Current UTC time as a Unix millisecond timestamp (`{"ts": 1710000000000}`) |
-| UC-15 | `znet util uuid` | Generate a random UUID v4 |
+| UC-14 | `zapi-cli util time-ms` | Current UTC time as a Unix millisecond timestamp (`{"ts": 1710000000000}`) |
+| UC-15 | `zapi-cli util uuid` | Generate a random UUID v4 |
 
 #### Epic 4 — ZohoCorp Account Restriction `[P1]`
 
@@ -363,9 +363,9 @@ All scope commands operate on a specific account. `--account` defaults to the ac
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-16 | `znet scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ" [--account "work"]` | Add one or more scopes (comma-separated) to an account |
-| UC-17 | `znet scope remove --scope "ZohoDesk.Tickets.READ" [--account "work"]` | Remove one or more scopes (comma-separated) from an account |
-| UC-18 | `znet scope list [--account "work"]` | List scopes for an account |
+| UC-16 | `zapi-cli scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ" [--account "work"]` | Add one or more scopes (comma-separated) to an account |
+| UC-17 | `zapi-cli scope remove --scope "ZohoDesk.Tickets.READ" [--account "work"]` | Remove one or more scopes (comma-separated) from an account |
+| UC-18 | `zapi-cli scope list [--account "work"]` | List scopes for an account |
 
 #### Epic 6 — Trace Sessions `[P2]`
 
@@ -375,11 +375,11 @@ All scope commands operate on a specific account. `--account` defaults to the ac
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-19 | `znet trace session start --name "Desk-Tickets-2026-03-17"` | Create and activate a named trace session |
-| UC-20 | `znet trace session list` | List all sessions: name, start time, entry count, status |
-| UC-21 | `znet trace session export --name "Desk-Tickets-2026-03-17"` | Dump full session trace to stdout as a JSON array |
-| UC-22 | `znet trace session close --name "Desk-Tickets-2026-03-17"` | Mark session inactive — stops auto-appending; file preserved |
-| UC-23 | `znet trace session remove --name "Desk-Tickets-2026-03-17"` | Delete session entry and all trace files |
+| UC-19 | `zapi-cli trace session start --name "Desk-Tickets-2026-03-17"` | Create and activate a named trace session |
+| UC-20 | `zapi-cli trace session list` | List all sessions: name, start time, entry count, status |
+| UC-21 | `zapi-cli trace session export --name "Desk-Tickets-2026-03-17"` | Dump full session trace to stdout as a JSON array |
+| UC-22 | `zapi-cli trace session close --name "Desk-Tickets-2026-03-17"` | Mark session inactive — stops auto-appending; file preserved |
+| UC-23 | `zapi-cli trace session remove --name "Desk-Tickets-2026-03-17"` | Delete session entry and all trace files |
 
 #### Epic 7 — API Registry `[P2]`
 
@@ -389,10 +389,10 @@ All scope commands operate on a specific account. `--account` defaults to the ac
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-24 | `znet api registry list` | List all registered API entries |
-| UC-25 | `znet api registry add --id "desk-list-tickets" --url "https://desk.zoho.com/api/v1/tickets" --method GET --purpose "..."` | Upsert an entry (add or overwrite by id) |
-| UC-26 | `znet api registry show --id "desk-list-tickets"` | Show a single entry by id |
-| UC-27 | `znet api registry remove --id "desk-list-tickets"` | Delete an entry by id |
+| UC-24 | `zapi-cli api registry list` | List all registered API entries |
+| UC-25 | `zapi-cli api registry add --id "desk-list-tickets" --url "https://desk.zoho.com/api/v1/tickets" --method GET --purpose "..."` | Upsert an entry (add or overwrite by id) |
+| UC-26 | `zapi-cli api registry show --id "desk-list-tickets"` | Show a single entry by id |
+| UC-27 | `zapi-cli api registry remove --id "desk-list-tickets"` | Delete an entry by id |
 
 ---
 
@@ -402,25 +402,25 @@ All scope commands operate on a specific account. `--account` defaults to the ac
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-17 | `znet ws connect --url "wss://..." --name "ws-1"` | Open a named WebSocket connection |
-| UC-18 | `znet ws send --name "ws-1" --message '{"type":"ping"}'` | Send a message via the connection |
-| UC-19 | `znet ws listen --name "ws-1"` | Stream incoming messages to stdout as JSON lines |
-| UC-20 | `znet ws close --name "ws-1"` | Close the connection |
+| UC-17 | `zapi-cli ws connect --url "wss://..." --name "ws-1"` | Open a named WebSocket connection |
+| UC-18 | `zapi-cli ws send --name "ws-1" --message '{"type":"ping"}'` | Send a message via the connection |
+| UC-19 | `zapi-cli ws listen --name "ws-1"` | Stream incoming messages to stdout as JSON lines |
+| UC-20 | `zapi-cli ws close --name "ws-1"` | Close the connection |
 
 #### Epic 9 — Pex / Real-time Chat `[P3]`
 
-> Pex is Zoho Cliq's proprietary real-time protocol. Included as a future epic since `znet` can host Cliq-specific protocol extensions without breaking the product-agnostic API layer.
+> Pex is Zoho Cliq's proprietary real-time protocol. Included as a future epic since `zapi-cli` can host Cliq-specific protocol extensions without breaking the product-agnostic API layer.
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-25 | `znet pex connect --account "work"` | Open a Pex/WMS WebSocket for the named account |
-| UC-26 | `znet pex send --account "work" --message '{"type":"ping"}'` | Send a raw message over the Pex socket |
-| UC-27 | `znet pex drain --account "work"` | Return all buffered Pex callback events since last drain, then clear the buffer |
-| UC-28 | `znet pex clear --account "work"` | Discard all buffered Pex events without returning them |
-| UC-29 | `znet pex listen --account "work"` | Stream incoming Pex events to stdout as newline-delimited JSON (blocking) |
-| UC-30 | `znet pex close --account "work"` | Close the Pex WebSocket for the named account |
+| UC-25 | `zapi-cli pex connect --account "work"` | Open a Pex/WMS WebSocket for the named account |
+| UC-26 | `zapi-cli pex send --account "work" --message '{"type":"ping"}'` | Send a raw message over the Pex socket |
+| UC-27 | `zapi-cli pex drain --account "work"` | Return all buffered Pex callback events since last drain, then clear the buffer |
+| UC-28 | `zapi-cli pex clear --account "work"` | Discard all buffered Pex events without returning them |
+| UC-29 | `zapi-cli pex listen --account "work"` | Stream incoming Pex events to stdout as newline-delimited JSON (blocking) |
+| UC-30 | `zapi-cli pex close --account "work"` | Close the Pex WebSocket for the named account |
 
-**Buffer model:** Pex events are appended to `<configDir>/znet/pex-buffer/<account>.jsonl`. `drain` atomically reads and truncates this file.
+**Buffer model:** Pex events are appended to `<configDir>/zapi-cli/pex-buffer/<account>.jsonl`. `drain` atomically reads and truncates this file.
 
 ---
 
@@ -428,7 +428,7 @@ All scope commands operate on a specific account. `--account` defaults to the ac
 
 > A persistent `registry.json` of known API endpoints (`id`, `method`, `url`, `purpose`). Agents use it to discover prerequisite endpoints without re-documenting them each session. `url` is the full endpoint URL (including path), consistent with `api call --url`.
 
-**Storage:** `<configDir>/znet/registry.json`
+**Storage:** `<configDir>/zapi-cli/registry.json`
 
 ```json
 {
@@ -451,10 +451,10 @@ All scope commands operate on a specific account. `--account` defaults to the ac
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-31 | `znet api registry list` | List all registered API entries |
-| UC-32 | `znet api registry add --id "desk-list-tickets" --url "https://desk.zoho.com/api/v1/tickets" --method GET --purpose "..."` | Upsert an entry (add or overwrite by id) |
-| UC-33 | `znet api registry show --id "desk-list-tickets"` | Show a single entry by id |
-| UC-34 | `znet api registry remove --id "desk-list-tickets"` | Delete an entry by id |
+| UC-31 | `zapi-cli api registry list` | List all registered API entries |
+| UC-32 | `zapi-cli api registry add --id "desk-list-tickets" --url "https://desk.zoho.com/api/v1/tickets" --method GET --purpose "..."` | Upsert an entry (add or overwrite by id) |
+| UC-33 | `zapi-cli api registry show --id "desk-list-tickets"` | Show a single entry by id |
+| UC-34 | `zapi-cli api registry remove --id "desk-list-tickets"` | Delete an entry by id |
 
 ---
 
@@ -473,7 +473,7 @@ All scope commands operate on a specific account. `--account` defaults to the ac
 #### Storage
 
 ```
-<configDir>/znet/traces/
+<configDir>/zapi-cli/traces/
   sessions.json               ← index: name, startTime, entryCount, status (active | closed)
   <session-name>/
     trace.jsonl               ← one JSON object per line (append-only)
@@ -526,11 +526,11 @@ All scope commands operate on a specific account. `--account` defaults to the ac
 
 | ID | Command | Description |
 |----|---------|-------------|
-| UC-37 | `znet trace session start --name "Desk-Tickets-2026-03-17"` | Create and activate a named trace session |
-| UC-38 | `znet trace session list` | List all sessions: name, start time, entry count, status |
-| UC-39 | `znet trace session export --name "Desk-Tickets-2026-03-17"` | Dump full session trace to stdout as a JSON array |
-| UC-40 | `znet trace session close --name "Desk-Tickets-2026-03-17"` | Mark session inactive — stops auto-appending; file preserved |
-| UC-41 | `znet trace session remove --name "Desk-Tickets-2026-03-17"` | Delete session entry and all trace files |
+| UC-37 | `zapi-cli trace session start --name "Desk-Tickets-2026-03-17"` | Create and activate a named trace session |
+| UC-38 | `zapi-cli trace session list` | List all sessions: name, start time, entry count, status |
+| UC-39 | `zapi-cli trace session export --name "Desk-Tickets-2026-03-17"` | Dump full session trace to stdout as a JSON array |
+| UC-40 | `zapi-cli trace session close --name "Desk-Tickets-2026-03-17"` | Mark session inactive — stops auto-appending; file preserved |
+| UC-41 | `zapi-cli trace session remove --name "Desk-Tickets-2026-03-17"` | Delete session entry and all trace files |
 
 **Optional export flags:**
 - `--truncate-body <bytes>` — truncate `requestBody` and `responseBody` per entry.
@@ -546,7 +546,7 @@ Trace entries are silently dropped — no implicit session created.
 ## Command Reference
 
 ```
-znet [--account <name>] [--json] [--no-input] [--help] [--version]
+zapi-cli [--account <name>] [--json] [--no-input] [--help] [--version]
          <group> <subcommand> [flags]
 
 account add flags:
@@ -635,7 +635,7 @@ util subcommands:
 ### Suggested Project Structure
 
 ```
-znet/
+zapi-cli/
 ├── src/
 │   ├── ZapiCli/                          ← Entry point + Spectre command wiring
 │   │   ├── Program.cs
@@ -691,16 +691,16 @@ znet/
 
 5. **AI Skill packaging** — The binary is the delivery unit for both GitHub Copilot CLI Skills and Claude Agent Skills:
 
-   **GitHub Copilot CLI Skill (`awesome-copilot/skills/znet/SKILL.md`)**
-   - `name`: `znet`; `description`: wraps the purpose and all command groups.
+   **GitHub Copilot CLI Skill (`awesome-copilot/skills/zapi-cli/SKILL.md`)**
+   - `name`: `zapi-cli`; `description`: wraps the purpose and all command groups.
    - List all command groups and their flags, emphasising that `--url` is required on every `api call`.
    - Bundle the pre-built binary (or a shell wrapper that locates it on `PATH`).
    - The skill must NOT expose token values — all auth is handled by the binary.
-   - Expected usage: agent calls `znet <group> <subcommand> [flags]` as a subprocess and parses stdout JSON.
+   - Expected usage: agent calls `zapi-cli <group> <subcommand> [flags]` as a subprocess and parses stdout JSON.
 
    **Installation prerequisite note (in skill instructions):**
-   > Before using this skill, install `znet`:
-   > - macOS/Linux: `dotnet tool install -g znet` (or download the release binary and add to PATH)
+   > Before using this skill, install `zapi-cli`:
+   > - macOS/Linux: `dotnet tool install -g zapi-cli` (or download the release binary and add to PATH)
    > - Windows: same via `winget` or direct binary download
 
 6. **Datacenter auto-detection** — When adding an account, consider auto-detecting the datacenter from the token/user info API response instead of requiring manual `--dc` input.

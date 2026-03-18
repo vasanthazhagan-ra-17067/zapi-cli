@@ -1,0 +1,68 @@
+{
+  "storyId": 8,
+  "title": "Trace System + trace session Commands",
+  "description": "Implement the complete named-session trace infrastructure: TraceEntry records, TraceWriter (append-only JSONL with Authorization exclusion), TraceSession (sessions.json index with file-locked seq counter), TraceExporter (JSONL → JSON array with optional filters), passive auto-append in ApiClient, and all five trace session subcommands.",
+  "status": "Not Started",
+  "dependsOn": [5],
+  "prerequisiteState": "Stories 1-5 complete. ApiClient is deployed and working. IOutputWriter wired. No trace infrastructure exists yet.",
+  "goal": "After 'zapi-cli trace session start --name my-session', every subsequent api call automatically appends a trace entry to trace.jsonl with the Authorization header excluded. 'zapi-cli trace session export --name my-session' returns the complete call log as a JSON array. Sessions survive process exits.",
+  "scope": [
+    "Create src/ZapiCli.Core/Trace/TraceEntry.cs with ApiTraceEntry and PexTraceEntry sealed records exactly as defined in tech_spec.md §5 Data Models. ApiTraceEntry fields: Seq (int), Type ('api' constant), Session (required string), Timestamp (required DateTimeOffset), DurationMs (int), Account (required string), Method (required string), BaseUrl (required string — scheme+host+port only, no path), Url (required string — full URL), RequestHeaders (Dictionary<string,string> — Authorization EXCLUDED), RequestBody (string?), ResponseStatus (int), ResponseHeaders (Dictionary<string,string>), ResponseBody (string?), Error (string?). PexTraceEntry fields: Seq, Type ('pex'), Session, Timestamp, Account, RelatedApiSeq (int?), HandlerClass (required string), CallbackMethod (required string), Payload (required string).",
+    "Create src/ZapiCli.Core/Trace/TraceSession.cs: manages sessions.json at <configDir>/traces/sessions.json. Internal model: TraceSessionEntry sealed record with Name, StartTime (DateTimeOffset), EntryCount (int), Status ('active'|'closed'). Methods: Task<string?> GetActiveSessionNameAsync(ct); Task StartSessionAsync(string name, ct) — validates name (see OQ-009), throws if name already exists; Task CloseSessionAsync(string name, ct); Task RemoveSessionAsync(string name, ct) — deletes sessions.json entry AND the <session-name>/ directory; Task<IReadOnlyList<TraceSessionEntry>> ListSessionsAsync(ct); Task<int> IncrementEntryCountAsync(string name, ct) — returns new seq; uses named Mutex for concurrency (see OQ-010).",
+    "Session name validation in StartSessionAsync: allow only [a-zA-Z0-9_.-], max 64 chars; throw ZapiCliException(INVALID_ARGS, 1) if invalid.",
+    "Create src/ZapiCli.Core/Trace/TraceWriter.cs: constructor injects ITraceSession, ILogger<TraceWriter>. Methods: Task AppendApiEntryAsync(ApiTraceEntry entry, ct), Task AppendPexEntryAsync(PexTraceEntry entry, ct). Implementation: (1) GetActiveSessionNameAsync — if null, return silently; (2) IncrementEntryCountAsync for seq; (3) Write one serialized JSON line to <configDir>/traces/<session-name>/trace.jsonl (append mode, create dir if needed); (4) Authorization key is explicitly REMOVED from entry.RequestHeaders before serialization — this must happen in TraceWriter, not in ApiClient. All failures caught and logged at Warning level — never rethrow.",
+    "Create src/ZapiCli.Core/Trace/ITraceSession.cs interface exposing the TraceSession contract for DI injection and testability.",
+    "Create src/ZapiCli.Core/Trace/TraceExporter.cs: Task<IReadOnlyList<JsonElement>> ExportAsync(string name, int? truncateBodyBytes, string? typeFilter, ct). Reads trace.jsonl line by line, deserializes each to JsonElement, applies optional typeFilter (api|pex), optionally truncates request_body and response_body string fields to truncateBodyBytes. Returns list. If session not found, throws ZapiCliException(ACCOUNT_NOT_FOUND scoped to session context, with code SESSION_NOT_FOUND exit 1 — add SESSION_NOT_FOUND to ErrorCodes).",
+    "Integrate TraceWriter into ApiClient.CallAsync: inject ITraceWriter (interface) into ApiClient constructor. After receiving the response (success or caught exception), build ApiTraceEntry and call TraceWriter.AppendApiEntryAsync. The BaseUrl field = uri.GetLeftPart(UriPartial.Authority) (scheme + host + port, no path). Authorization must NEVER appear in the entry's RequestHeaders. Trace write failure must NOT propagate — catch and log only.",
+    "Add ITraceWriter interface to Core for DI.",
+    "Create src/ZapiCli/Commands/TraceCommands.cs with five command classes.",
+    "StartSessionSettings: [CommandOption(\"--name\")] required string Name. StartSessionCommand.ExecuteAsync: calls TraceSession.StartSessionAsync; WriteJson({ status=\"ok\", data = { name, start_time, status=\"active\" } }).",
+    "ListSessionsCommand.ExecuteAsync: calls TraceSession.ListSessionsAsync; WriteJson the array of { name, start_time, entry_count, status } objects.",
+    "ExportSessionSettings: [CommandOption(\"--name\")] required string Name, [CommandOption(\"--truncate-body\")] int? TruncateBody, [CommandOption(\"--type\")] string? Type. ExportSessionCommand.ExecuteAsync: calls TraceExporter.ExportAsync; IOutputWriter.WriteJson the resulting list.",
+    "CloseSessionSettings: [CommandOption(\"--name\")] required string Name. CloseSessionCommand.ExecuteAsync: TraceSession.CloseSessionAsync; WriteJson({ status=\"ok\", data = { name } }).",
+    "RemoveSessionSettings: [CommandOption(\"--name\")] required string Name. RemoveSessionCommand.ExecuteAsync: TraceSession.RemoveSessionAsync (deletes dir + sessions.json entry); WriteJson({ status=\"ok\", data = { name } }).",
+    "Register ITraceSession (TraceSession) and ITraceWriter (TraceWriter) as singletons in Program.cs DI. Register all five commands under 'trace session' in CommandApp.",
+    "Unit tests: Authorization absent from exported entries (TraceWriter strips it); session name validation rejects 'bad/name'; if no active session api call succeeds with no trace file created; export is non-destructive (trace.jsonl byte count unchanged after export); --truncate-body 50 truncates body fields in export output but trace.jsonl retains full content; session list returns correct entryCount; RemoveSession deletes the directory."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "trace session start --name test returns success; sessions.json entry created with status 'active'",
+    "api call after session start appends exactly one entry to trace.jsonl",
+    "Exported trace entry does NOT contain an 'authorization' key in request_headers",
+    "trace session export returns a JSON array; trace.jsonl byte count is identical before and after (non-destructive)",
+    "trace session export --type api returns only entries with type='api'",
+    "trace session export --truncate-body 100 truncates body fields in output; .jsonl file retains full content",
+    "trace session close marks session status='closed' in sessions.json; trace.jsonl preserved",
+    "trace session remove deletes sessions.json entry and the session directory including trace.jsonl",
+    "trace session start with invalid name (e.g. 'bad/name') → INVALID_ARGS, exit 1",
+    "api call when no session is active → proceeds normally, no trace file created, no error",
+    "Concurrent trace appends integrity maintained via Mutex (sessions.json entryCount correct)",
+    "TraceWriter failure (e.g. disk full) does NOT propagate to the api call result",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "Read ADR-0008 if it exists (trace sessions design). The Authorization exclusion MUST be in TraceWriter.AppendApiEntryAsync — copy the RequestHeaders dictionary and remove 'authorization' (case-insensitive key) before serializing. The BaseUrl in ApiTraceEntry = uri.GetLeftPart(UriPartial.Authority) = scheme+host+port only (e.g. 'https://desk.zoho.com', not 'https://desk.zoho.com/api/v1'). Trace storage path: <configDir>/traces/ (NOT <configDir>/zapi-cli/traces/ — no extra subdirectory). Sessions file: <configDir>/traces/sessions.json. Session entries dir: <configDir>/traces/<session-name>/trace.jsonl. TraceWriter must inject ITraceSession (not the concrete class) for testability. The Mutex name for concurrent seq safety is 'Global\\zapi-cli-trace-<sessionName>' (see OQ-010).",
+  "openItems": [
+    {
+      "item": "Session name validation character set",
+      "defaultAssumption": "See OQ-009. Allow [a-zA-Z0-9_.-], max 64 chars. Throw ZapiCliException(INVALID_ARGS, 1) on violation."
+    },
+    {
+      "item": "Concurrent seq counter safety",
+      "defaultAssumption": "See OQ-010. Named Mutex: 'Global\\\\zapi-cli-trace-<sessionName>'. WaitOne(2000) — if timeout, drop the entry silently. ReleaseMutex in finally."
+    },
+    {
+      "item": "Trace write failure isolation",
+      "defaultAssumption": "Wrap all TraceWriter operations in try/catch. On any failure, log at Warning level. Never rethrow. The api call must complete successfully even if trace writing fails."
+    },
+    {
+      "item": "SESSION_NOT_FOUND error code",
+      "defaultAssumption": "Add SESSION_NOT_FOUND to ErrorCodes with exit 1. Used by TraceExporter when the session name does not exist in sessions.json."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/tech_spec.md §5 Data Models (ApiTraceEntry, PexTraceEntry)",
+    "tech_spec/tech_spec.md §10 Trace Sessions",
+    "tech_spec/tech_spec.md §4 CLI Structure (trace session commands)"
+  ],
+  "relevantOpenQuestions": ["OQ-009", "OQ-010"]
+}

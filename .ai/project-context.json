@@ -1,0 +1,149 @@
+{
+  "project": {
+    "name": "zapi-cli",
+    "binaryName": "zapi-cli",
+    "description": "Standalone cross-platform CLI binary providing a scriptable interface to any Zoho product's REST APIs. Primary consumer is AI agents (GitHub Copilot CLI Skills, Claude Agent Skills). Manages multiple Zoho accounts via OAuth Self-Client authentication and exposes a general-purpose HTTP API invoker where the caller supplies the full URL at invocation time.",
+    "repository": "zapi-cli",
+    "language": "C# 13+",
+    "runtime": ".NET 10",
+    "publishMode": "dotnet publish -r <rid> /p:PublishSingleFile=true --self-contained true",
+    "supportedRids": ["win-x64", "osx-x64", "osx-arm64", "linux-x64"]
+  },
+  "solutionLayout": {
+    "solutionFile": "src/zapi-cli.sln",
+    "projects": [
+      {
+        "name": "ZapiCli",
+        "path": "src/ZapiCli/ZapiCli.csproj",
+        "responsibility": "Entry point. Spectre.Console command wiring, Program.cs, DI registration. No business logic.",
+        "dependsOn": ["ZapiCli.Core", "ZapiCli.Keychain"]
+      },
+      {
+        "name": "ZapiCli.Core",
+        "path": "src/ZapiCli.Core/ZapiCli.Core.csproj",
+        "responsibility": "All domain logic: AccountStore, OAuthProvider, ApiClient, TraceWriter, TraceSession, TraceExporter, ApiRegistry. No Spectre.Console dependency.",
+        "dependsOn": ["ZapiCli.Keychain"]
+      },
+      {
+        "name": "ZapiCli.Keychain",
+        "path": "src/ZapiCli.Keychain/ZapiCli.Keychain.csproj",
+        "responsibility": "IKeychainProvider interface + OS platform implementations + AES-256-GCM fallback. No dependency on Core or ZapiCli.",
+        "dependsOn": []
+      },
+      {
+        "name": "ZapiCli.Tests",
+        "path": "tests/ZapiCli.Tests/ZapiCli.Tests.csproj",
+        "responsibility": "xUnit unit tests for ZapiCli.Core and ZapiCli.Keychain using in-memory fakes. No real OS keychain or network access.",
+        "dependsOn": ["ZapiCli.Core", "ZapiCli.Keychain"]
+      }
+    ]
+  },
+  "techStack": {
+    "cliFramework": "Spectre.Console.Cli (latest stable)",
+    "json": "System.Text.Json (stdlib, .NET 10) — JsonNamingPolicy.SnakeCaseLower",
+    "di": "Microsoft.Extensions.DependencyInjection (latest stable)",
+    "logging": "Microsoft.Extensions.Logging + Microsoft.Extensions.Logging.Console",
+    "testing": "xUnit (latest stable)",
+    "keychain": "Direct P/Invoke to OS APIs — NO third-party NuGet keychain package"
+  },
+  "authModel": {
+    "v1": "OAuth Self-Client — user supplies --token (initial access token), --client-id, --client-secret at account add. Stored as a single JSON blob in OS keychain under key 'zapi-cli:<accountName>:oauth'. Auto-refresh via stored client-id + client-secret on 401 or NeedsReauth=true.",
+    "keychainKeyFormat": "zapi-cli:<accountName>:oauth",
+    "keychainValueFormat": "JSON: { \"access_token\": \"...\", \"client_id\": \"...\", \"client_secret\": \"...\" }",
+    "tokenHeaderFormat": "Authorization: Zoho-oauthtoken <access_token>"
+  },
+  "scopeBoundaries": {
+    "v1": [
+      "Three-project solution scaffold",
+      "IKeychainProvider + all platform implementations + AES-256-GCM fallback",
+      "IAuthProvider + OAuthProvider (Self-Client) with auto-refresh on 401 / NeedsReauth",
+      "IOutputWriter + no-wrapper JSON output contract",
+      "AccountStore + AccountEntry with Dc + Zuid fields",
+      "account command group (add, list, remove, show, set-default, re-auth)",
+      "ApiClient with host allowlist + ZohoCorp block",
+      "api call command (--url required, full URL every invocation)",
+      "util commands (time-ms, uuid)"
+    ],
+    "v2": [
+      "Scope management (scope add, remove, list)",
+      "Trace system (TraceWriter, TraceSession, TraceExporter, trace session commands)",
+      "API Registry (api registry list/add/show/remove)"
+    ],
+    "v3Future": [
+      "WebSocket connections (ws connect/send/listen/close)",
+      "Pex/WMS real-time event buffering (pex connect/send/drain/clear/listen/close)"
+    ],
+    "deferred": [
+      "Native AOT",
+      "Interactive TUI / shell mode",
+      "CI/CD pipeline automation",
+      "Browser-based OAuth flows"
+    ]
+  },
+  "outputContract": {
+    "principle": "No success wrapper envelope. All successful output to stdout is plain JSON — no { status, data } wrappers.",
+    "stdoutByCommand": {
+      "apiCall_success": "Raw Zoho API response body, byte-for-byte as received",
+      "apiCall_httpError": "Raw Zoho response body on stdout; API_ERROR envelope on stderr; exit 1",
+      "accountAdd": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\", \"dc\": \"<dc>\" } }",
+      "accountList": "JSON array of account objects (token masked)",
+      "accountShow": "JSON object for the account (token masked as ***)",
+      "accountSetDefault": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\" } }",
+      "accountRemove": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\" } }",
+      "accountReAuth": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\" } }",
+      "scopeCommands": "Plain JSON object/array",
+      "traceCommands": "Plain JSON result",
+      "utilCommands": "Plain JSON — e.g. {\"ts\": 1742256000000} or {\"uuid\": \"...\"}",
+      "apiRegistryCommands": "Plain JSON result"
+    },
+    "stderrErrorEnvelope": "{ \"error\": \"<human-readable>\", \"code\": \"<ERROR_CODE>\", \"exitCode\": <N> }",
+    "note": "OQ-001 flags a contradiction: output contract table says account add returns raw Zoho user-info body, but the account add flow step 10 says { status, data }. Resolve at Story 4 implementation time."
+  },
+  "dcToAccountsUrl": {
+    "us": "https://accounts.zoho.com",
+    "eu": "https://accounts.zoho.eu",
+    "in": "https://accounts.zoho.in",
+    "au": "https://accounts.zoho.com.au",
+    "cn": "https://accounts.zoho.com.cn",
+    "jp": "https://accounts.zoho.jp",
+    "sa": "https://accounts.zoho.sa",
+    "uk": "https://accounts.zoho.uk",
+    "ca": "https://accounts.zohocloud.ca"
+  },
+  "hostAllowlist": [
+    "zoho.com",
+    "zoho.eu",
+    "zoho.in",
+    "zoho.com.au",
+    "zohoapis.com",
+    "zohoapis.in"
+  ],
+  "documentInventory": {
+    "prd": "tech_spec/prd.md",
+    "techSpec": "tech_spec/tech_spec.md",
+    "brainstorming": "tech_spec/brainstorming.md",
+    "adrs": {
+      "ADR-0001": "tech_spec/docs/adr/adr-0001-technology-stack.md",
+      "ADR-0002": "tech_spec/docs/adr/adr-0002-oauth-self-client-authentication.md",
+      "ADR-0003": "tech_spec/docs/adr/adr-0003-zohocorp-domain-block.md",
+      "ADR-0004": "tech_spec/docs/adr/adr-0004-host-allowlist.md",
+      "ADR-0005": "tech_spec/docs/adr/adr-0005-os-keychain-abstraction.md",
+      "ADR-0006": "tech_spec/docs/adr/adr-0006-full-url-required.md",
+      "ADR-0007": "tech_spec/docs/adr/adr-0007-three-layer-project-structure.md",
+      "ADR-0008": "tech_spec/docs/adr/adr-0008-output-contract.md"
+    }
+  },
+  "configDirectories": {
+    "macOS": "~/Library/Application Support/zapi-cli/",
+    "windows": "%LOCALAPPDATA%\\zapi-cli\\",
+    "linux": "~/.config/zapi-cli/"
+  },
+  "buildRequirements": {
+    "treatWarningsAsErrors": true,
+    "nullable": "enable",
+    "implicitUsings": "enable",
+    "targetFramework": "net10.0",
+    "outputType": "Exe (ZapiCli only)",
+    "assemblyName": "zapi-cli"
+  }
+}

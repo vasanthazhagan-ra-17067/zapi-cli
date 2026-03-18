@@ -1,0 +1,33 @@
+{
+  "storyId": 6,
+  "title": "Utility Commands (util time-ms, util uuid)",
+  "description": "Implement the two utility commands: util time-ms outputs the current UTC time as a Unix millisecond timestamp, and util uuid generates a random UUID v4. These are stateless, have no dependencies on accounts or auth, and depend only on the output contract established in Story 2.",
+  "status": "Not Started",
+  "dependsOn": [2],
+  "prerequisiteState": "Stories 1 and 2 complete. IOutputWriter, ZapiCliException, GlobalSettings, and Program.cs CommandApp all exist. No account or auth infrastructure required.",
+  "goal": "zapi-cli util time-ms outputs {\"ts\": <unix ms timestamp>} and zapi-cli util uuid outputs {\"uuid\": \"<uuid v4>\"} on stdout as plain JSON. Both commands exit 0.",
+  "scope": [
+    "Create src/ZapiCli/Commands/UtilCommands.cs with two command classes.",
+    "UtilTimeMsSettings inherits GlobalSettings (no extra flags).",
+    "UtilTimeMsCommand extends AsyncCommand<UtilTimeMsSettings>: call DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); WriteJson(new { ts = timestampMs }). Exit 0.",
+    "UtilUuidSettings inherits GlobalSettings (no extra flags).",
+    "UtilUuidCommand extends AsyncCommand<UtilUuidSettings>: call Guid.NewGuid().ToString(); WriteJson(new { uuid = guidString }). Exit 0.",
+    "Register both commands under the 'util' branch in Program.cs CommandApp.",
+    "Unit tests: UtilTimeMsCommand returns a long > 0 in the ts field; the value is within 5 seconds of DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); UtilUuidCommand returns a non-empty string in the uuid field that parses as a valid Guid."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "zapi-cli util time-ms outputs {\"ts\": <number>} on stdout, number is a positive long, exit 0",
+    "zapi-cli util uuid outputs {\"uuid\": \"<xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>\"} on stdout, exit 0",
+    "Neither command touches accounts.json, keychain, or network",
+    "Both commands respect --no-input without any different behaviour (they are always non-interactive)",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "These are simple utility commands with no domain logic. Use Guid.NewGuid().ToString() for UUID v4. Use DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() for the Unix ms timestamp. Both output via IOutputWriter.WriteJson with anonymous objects — the snake_case serializer will correctly render 'ts' and 'uuid'. Register with the correct Spectre command tree: zapi-cli util time-ms and zapi-cli util uuid.",
+  "openItems": [],
+  "sourceReferences": [
+    "tech_spec/tech_spec.md §4 CLI Structure (util commands)",
+    "tech_spec/tech_spec.md §11 Output Contract"
+  ],
+  "relevantOpenQuestions": []
+}

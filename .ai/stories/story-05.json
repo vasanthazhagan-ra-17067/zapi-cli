@@ -1,0 +1,69 @@
+{
+  "storyId": 5,
+  "title": "ApiClient + api call Command",
+  "description": "Implement ApiClient with the compile-time host allowlist, ZohoCorp block at dispatch, automatic token refresh on 401 or NeedsReauth=true, and the api call command with full flag support. This is the primary value-delivery story — AI agents depend on this to invoke any Zoho product REST endpoint.",
+  "status": "Not Started",
+  "dependsOn": [3, 4],
+  "prerequisiteState": "Stories 1-4 complete. AccountStore, OAuthProvider, ZohoCorpGuard, all account commands working. DI registered. IOutputWriter wired.",
+  "goal": "zapi-cli api call --url 'https://cliq.zoho.com/api/v2/channels' --method GET returns the raw Zoho API response body on stdout. All security controls (host allowlist, ZohoCorp block, auto-refresh) fire before or during the HTTP call.",
+  "scope": [
+    "Create src/ZapiCli.Core/Api/ApiRequest.cs sealed record: Url (required string — full endpoint URL from --url), Method (required string), Body (string?), Headers (Dictionary<string, string> = new()), QueryParams (Dictionary<string, string> = new()), AccountName (required string).",
+    "Create src/ZapiCli.Core/Api/ApiResponse.cs sealed record: StatusCode (int), Body (required string — raw JSON from server), IsSuccess (computed: StatusCode is >= 200 and < 300).",
+    "Create src/ZapiCli.Core/Api/ApiClient.cs: constructor injects IAuthProvider, IAccountStore, IOutputWriter, IHttpClientFactory, ILogger<ApiClient>.",
+    "ApiClient sealed class with private static readonly string[] AllowedHostSuffixes = [\"zoho.com\", \"zoho.eu\", \"zoho.in\", \"zoho.com.au\", \"zohoapis.com\", \"zohoapis.in\"]. This array is a compile-time constant — NOT read from config, NOT overridable at runtime.",
+    "ApiClient private static void ValidateHost(Uri uri): uri.Host must end with (case-insensitive) one of AllowedHostSuffixes; also reject bare host == suffix (e.g. 'zoho.com' with no subdomain). On failure throw ZapiCliException(HOST_NOT_ALLOWED, 1).",
+    "ApiClient public Task<ApiResponse> CallAsync(ApiRequest request, CancellationToken ct) implementation: (1) Load AccountEntry via IAccountStore.FindAsync(request.AccountName) — throw ACCOUNT_NOT_FOUND if null; (2) ZohoCorpGuard.AssertNotZohoCorp(account.Email); (3) If account.NeedsReauth=true: call IAuthProvider.RefreshTokenAsync + update AccountEntry.NeedsReauth=false + IAccountStore.SaveAsync; (4) Parse and validate URL: new Uri(request.Url) — ValidateHost(uri); (5) Get token: IAuthProvider.GetTokenAsync(request.AccountName); (6) Build HttpRequestMessage — apply query params via UriBuilder, apply extra headers from request.Headers, inject Authorization: Zoho-oauthtoken <token>, inject Content-Type: application/json for POST/PUT/PATCH; (7) Send via HttpClient; (8) If 401: attempt auto-refresh via IAuthProvider.RefreshTokenAsync, update token, RETRY ONCE, if retry also 401 throw ZapiCliException(AUTH_FAILURE, 2); (9) Read response body as string; (10) Return ApiResponse(statusCode, body).",
+    "ApiClient must NEVER include the Authorization header in trace entries (Story 8 concern — note this now so it is enforced from the start).",
+    "Create src/ZapiCli/Commands/ApiCommands.cs with ApiCallCommand extending AsyncCommand<ApiCallSettings>.",
+    "ApiCallSettings inherits GlobalSettings: [CommandOption(\"--url\")] required string Url, [CommandOption(\"--method\")] required string Method (validated: GET|POST|PUT|PATCH|DELETE case-insensitive), [CommandOption(\"--body\")] string? Body, [CommandOption(\"--body-file\")] string? BodyFile, [CommandOption(\"--header\")] List<string> Headers (repeatable, format 'key:value'), [CommandOption(\"--query\")] List<string> QueryParams (repeatable, format 'key=value'). Validate(): if both --body and --body-file set → INVALID_ARGS; if --body-file set, read file contents (IO_ERROR if file not found).",
+    "ApiCallCommand.ExecuteAsync: resolve account name (settings.Account ?? default account name via IAccountStore.GetDefaultAsync); parse --header list into Dictionary<string, string>; parse --query list into Dictionary<string, string>; build ApiRequest; call ApiClient.CallAsync; on ApiResponse.IsSuccess → IOutputWriter.WriteRaw(response.Body) + return 0; on non-2xx → IOutputWriter.WriteRaw(response.Body) to stdout AND IOutputWriter.WriteError('API returned {statusCode} {reasonPhrase}', API_ERROR, 1) to stderr + return 1.",
+    "Register ApiClient as scoped (or singleton) with IHttpClientFactory in Program.cs DI. Use services.AddHttpClient<ApiClient>() with 30-second timeout.",
+    "Unit tests: ValidateHost rejects 'https://evil.com/api'; ValidateHost accepts 'https://cliq.zoho.com/api/v2/channels'; ValidateHost rejects bare 'https://zoho.com/api' (no allowable subdomain? — actually 'zoho.com' IS in the suffix list so https://cliq.zoho.com passes; https://evil.com fails); ZohoCorp account → ACCOUNT_DOMAIN_BLOCKED before HTTP dispatch; NeedsReauth=true → RefreshTokenAsync called before request; 401 response → single auto-refresh + single retry; --body and --body-file together → INVALID_ARGS before network call; non-2xx response writes body to stdout AND error envelope to stderr."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "api call --url 'https://cliq.zoho.com/api/v2/channels' --method GET with valid credentials returns raw Zoho response on stdout, exit 0",
+    "api call --url 'https://evil.com/api' --method GET → HOST_NOT_ALLOWED on stderr, exit 1, no HttpClient.SendAsync called",
+    "api call with a ZohoCorp-domain account (injected) → ACCOUNT_DOMAIN_BLOCKED, exit 1, no HTTP dispatch",
+    "api call when account.NeedsReauth=true → IAuthProvider.RefreshTokenAsync called, NeedsReauth set to false, request proceeds",
+    "api call receiving 401 → auto-refresh + single retry; if retry also 401 → AUTH_FAILURE on stderr exit 2",
+    "api call with --body and --body-file together → INVALID_ARGS on stderr, exit 1, no network call",
+    "api call non-2xx → raw Zoho error body on stdout AND API_ERROR envelope on stderr, exit 1",
+    "Authorization header is injected by ApiClient; command class never sets Authorization",
+    "AllowedHostSuffixes is a static readonly array — no environment variable, config file, or runtime override path exists",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "Read ADR-0004 (host allowlist) for the compile-time allowlist design and the exact ValidateHost logic. Read ADR-0002 for the auto-refresh flow — on 401: refresh token, retry ONCE. On NeedsReauth=true: refresh before the request (not after). The order in CallAsync: (1) load account, (2) ZohoCorp check, (3) NeedsReauth check + pre-refresh, (4) URL parse + ValidateHost, (5) get token, (6) build request, (7) send, (8) if 401 → post-refresh + single retry. Note: ValidateHost checks that the host ENDS WITH one of the suffixes (using string.EndsWith with StringComparison.OrdinalIgnoreCase). A host like 'evil-zoho.com' must fail because it does not end with 'zoho.com' — ensure the suffix check is 'host == suffix || host.EndsWith(\".\" + suffix)'. The output for api call: raw Zoho response body via WriteRaw (not WriteJson — WriteRaw skips any re-serialization). For non-2xx, BOTH the body (stdout) and the error envelope (stderr) are written.",
+  "openItems": [
+    {
+      "item": "HttpClient lifetime",
+      "defaultAssumption": "Register via services.AddHttpClient<ApiClient>(). Set 30-second Timeout via HttpClient.Timeout. Never create new HttpClient instances inside CallAsync."
+    },
+    {
+      "item": "Content-Type injection logic",
+      "defaultAssumption": "For POST, PUT, PATCH: inject Content-Type: application/json automatically if not already present in request.Headers. For GET, DELETE: omit Content-Type."
+    },
+    {
+      "item": "Query parameter URL encoding",
+      "defaultAssumption": "Use UriBuilder with HttpUtility.ParseQueryString to safely encode query parameters. Preserve any existing query string in the --url and append additional params from --query."
+    },
+    {
+      "item": "Header parsing from --header list",
+      "defaultAssumption": "Split on first ':' character only. Key = part before first ':', value = everything after (trimmed). If no ':' present, throw INVALID_ARGS."
+    },
+    {
+      "item": "ValidateHost suffix boundary check",
+      "defaultAssumption": "Check: host.Equals(suffix, OrdinalIgnoreCase) || host.EndsWith(\".\" + suffix, OrdinalIgnoreCase). This prevents 'evil-zoho.com' or 'notzoho.com' from passing."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/docs/adr/adr-0002-oauth-self-client-authentication.md",
+    "tech_spec/docs/adr/adr-0003-zohocorp-domain-block.md",
+    "tech_spec/docs/adr/adr-0004-host-allowlist.md",
+    "tech_spec/tech_spec.md §4 CLI Structure (api call flags)",
+    "tech_spec/tech_spec.md §9 API Client",
+    "tech_spec/tech_spec.md §11 Output Contract",
+    "tech_spec/tech_spec.md §12 Error Handling"
+  ],
+  "relevantOpenQuestions": []
+}

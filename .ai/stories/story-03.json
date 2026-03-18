@@ -1,0 +1,68 @@
+{
+  "storyId": 3,
+  "title": "AccountStore + OAuthProvider + ZohoCorp Block + DcResolver",
+  "description": "Implement the full account persistence layer, OAuth credential management, ZohoCorp domain hard-block, and datacenter URL resolver. This is the security-critical core story — all higher-level commands depend on it for account resolution, credential retrieval, and domain enforcement.",
+  "status": "Not Started",
+  "dependsOn": [1, 2],
+  "prerequisiteState": "Stories 1 and 2 complete. IKeychainProvider, IOutputWriter, ZapiCliException, ErrorCodes all exist and compile. Program.cs DI wiring is in place.",
+  "goal": "Produce a working AccountStore that persists AccountEntry records to accounts.json with correct permissions, a ZohoCorpGuard that unconditionally blocks ZohoCorp-domain accounts, a DcResolver that maps DC short names to Zoho Accounts URLs, and an OAuthProvider that stores/retrieves the full OAuth credential bundle (access_token + client_id + client_secret) as a single JSON blob in the OS keychain.",
+  "scope": [
+    "Create src/ZapiCli.Core/Accounts/AccountEntry.cs as a sealed record: Name (required string), Dc (required string — 'us'|'eu'|'in'|'au'|'cn'|'jp'|'sa'|'uk'|'ca'), Email (string?), Zuid (string? — stored as 'zuidstring' in JSON), Scopes (List<string> = []), IsDefault (bool), NeedsReauth (bool). NO Token, ClientId, or ClientSecret properties — credentials are keychain-only.",
+    "Create src/ZapiCli.Core/Accounts/AccountsRoot.cs as a sealed record: Accounts (List<AccountEntry> = []).",
+    "Create src/ZapiCli.Core/Accounts/IAccountStore.cs: LoadAsync, SaveAsync, FindAsync(string name), GetDefaultAsync methods.",
+    "Create src/ZapiCli.Core/Accounts/AccountStore.cs implementing IAccountStore: reads/writes accounts.json at <configDir>/accounts.json using System.Text.Json with SnakeCaseLower. On Unix sets 0600 via File.SetUnixFileMode. On Windows applies NTFS user-only ACL via FileSecurity (see OQ-007). GetDefaultAsync throws ZapiCliException(NO_DEFAULT_ACCOUNT, 1) if no default account.",
+    "Create src/ZapiCli.Core/Security/ZohoCorpGuard.cs: internal static class with static void AssertNotZohoCorp(string? email) — throws ZapiCliException('ZohoCorp accounts are not permitted.', ACCOUNT_DOMAIN_BLOCKED, 1) if email.Split('@')[1].Split('.')[0] equals 'zohocorp' (OrdinalIgnoreCase). If email is null or does not contain '@', passes (guard only blocks confirmed ZohoCorp, null is handled by EMAIL_REQUIRED at account add).",
+    "Create src/ZapiCli.Core/Auth/DcResolver.cs: internal static class with static string GetAccountsBaseUrl(string dc) returning the Zoho Accounts base URL for the dc short name. Map: us→https://accounts.zoho.com, eu→https://accounts.zoho.eu, in→https://accounts.zoho.in, au→https://accounts.zoho.com.au, cn→https://accounts.zoho.com.cn, jp→https://accounts.zoho.jp, sa→https://accounts.zoho.sa, uk→https://accounts.zoho.uk, ca→https://accounts.zohocloud.ca. Throw ZapiCliException(INVALID_ARGS, 1) for unknown dc values.",
+    "Create src/ZapiCli.Core/Auth/OAuthCredentials.cs: internal sealed record OAuthCredentials with required string AccessToken, required string ClientId, required string ClientSecret. Used exclusively for keychain JSON serialization/deserialization. Serialized with camelCase (NOT snake_case) since this is an internal format, not a user-visible output.",
+    "Create src/ZapiCli.Core/Auth/IAuthProvider.cs: Task<string> GetTokenAsync(string accountName, CancellationToken ct = default); Task StoreTokenAsync(string accountName, string accessToken, string clientId, string clientSecret, CancellationToken ct = default); Task ClearTokenAsync(string accountName, CancellationToken ct = default); Task<string> RefreshTokenAsync(string accountName, IEnumerable<string> scopes, string dc, CancellationToken ct = default).",
+    "Create src/ZapiCli.Core/Auth/OAuthProvider.cs implementing IAuthProvider. Constructor injects IKeychainProvider, IHttpClientFactory, ILogger<OAuthProvider>. Keychain key constant: private const string KeyPrefix = 'zapi-cli'; private static string MakeKey(string accountName) => $'{KeyPrefix}:{accountName}:oauth'.",
+    "OAuthProvider.GetTokenAsync: calls IKeychainProvider.GetAsync(MakeKey(accountName)). If null, throws ZapiCliException(KEYCHAIN_ERROR, 2). Deserializes JSON blob to OAuthCredentials and returns AccessToken.",
+    "OAuthProvider.StoreTokenAsync: serializes { accessToken, clientId, clientSecret } to JSON and calls IKeychainProvider.SetAsync(MakeKey(accountName), json).",
+    "OAuthProvider.ClearTokenAsync: calls IKeychainProvider.DeleteAsync(MakeKey(accountName)). Swallows exceptions (best-effort cleanup during account remove).",
+    "OAuthProvider.RefreshTokenAsync: reads OAuthCredentials from keychain. POST form-encoded to DcResolver.GetAccountsBaseUrl(dc) + '/oauth/v2/token' with body: grant_type=client_credentials&client_id=<ClientId>&client_secret=<ClientSecret>&scope=<comma-joined scopes>. Parse JSON response for 'access_token'. If absent or HTTP error, throw ZapiCliException(AUTH_FAILURE, 2). Update keychain with new access_token (preserve client_id + client_secret). Return new access_token.",
+    "Register IAccountStore (AccountStore), IAuthProvider (OAuthProvider) as singletons in DI in Program.cs.",
+    "Unit tests: AccountStore round-trip (write/read/verify fields); ZohoCorpGuard blocks zohocorp.com, zohocorp.eu, zohocorp.com.au; ZohoCorpGuard passes example.com; ZohoCorpGuard passes null email (no throw); OAuthProvider.StoreTokenAsync stores JSON blob; OAuthProvider.GetTokenAsync returns AccessToken from blob; DcResolver maps all 9 valid dc values; DcResolver throws on unknown dc."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "AccountEntry record has no token, client_id, or client_secret properties",
+    "AccountEntry.Zuid serializes as 'zuidstring' in JSON (matched by [JsonPropertyName(\"zuidstring\")])",
+    "AccountStore.SaveAsync writes accounts.json with 0600 permissions on macOS/Linux",
+    "AccountStore round-trip: save AccountEntry, load it back, all fields match",
+    "ZohoCorpGuard.AssertNotZohoCorp('user@zohocorp.com') throws ZapiCliException(ACCOUNT_DOMAIN_BLOCKED)",
+    "ZohoCorpGuard.AssertNotZohoCorp('user@zohocorp.eu') throws ZapiCliException(ACCOUNT_DOMAIN_BLOCKED)",
+    "ZohoCorpGuard.AssertNotZohoCorp('user@zohocorp.com.au') throws ZapiCliException(ACCOUNT_DOMAIN_BLOCKED)",
+    "ZohoCorpGuard.AssertNotZohoCorp('user@example.com') does NOT throw",
+    "ZohoCorpGuard.AssertNotZohoCorp(null) does NOT throw",
+    "OAuthProvider.GetTokenAsync with a valid stored blob returns the AccessToken string",
+    "OAuthProvider.GetTokenAsync with no keychain entry throws ZapiCliException(KEYCHAIN_ERROR, exit 2)",
+    "DcResolver maps 'us' → 'https://accounts.zoho.com' and all other 8 dc values correctly",
+    "DcResolver throws ZapiCliException(INVALID_ARGS) for 'invalid'",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "This story is security-critical. Read ADR-0003 for ZohoCorp block design — ZohoCorpGuard must be an internal static class in ZapiCli.Core.Security; it is NOT in ZapiCli. It must be called at BOTH account add (Story 4) AND api call/scope commands (Stories 5, 7). Read ADR-0002 for OAuthProvider design details including the keychain blob format and refresh flow. The keychain value is a JSON string (not a binary blob) — use camelCase property names internally: { 'accessToken': '...', 'clientId': '...', 'clientSecret': '...' }. ZapiCli.Core uses snake_case for user-visible output but camelCase for internal keychain serialization. Config directory: use Environment.GetFolderPath applied to ApplicationData on macOS/Linux + 'zapi-cli', LocalApplicationData on Windows + 'zapi-cli'.",
+  "openItems": [
+    {
+      "item": "Config directory resolution",
+      "defaultAssumption": "Use Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) on macOS/Linux. Use Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) on Windows. Append 'zapi-cli' to get the config base dir. Create the directory if it does not exist."
+    },
+    {
+      "item": "Windows ACL for accounts.json",
+      "defaultAssumption": "See OQ-007. Use System.Security.AccessControl.FileSecurity. If ACL operation fails, log warning but do not fail the Save operation."
+    },
+    {
+      "item": "OAuthCredentials camelCase keys",
+      "defaultAssumption": "See OQ-002. Serialize OAuthCredentials with camelCase JsonSerializerOptions (distinct from the snake_case options used for user-visible output)."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/docs/adr/adr-0002-oauth-self-client-authentication.md",
+    "tech_spec/docs/adr/adr-0003-zohocorp-domain-block.md",
+    "tech_spec/docs/adr/adr-0005-os-keychain-abstraction.md",
+    "tech_spec/tech_spec.md §5 Data Models",
+    "tech_spec/tech_spec.md §6 Authentication",
+    "tech_spec/tech_spec.md §7 ZohoCorp Account Restriction",
+    "tech_spec/tech_spec.md §8 Storage"
+  ],
+  "relevantOpenQuestions": ["OQ-002", "OQ-003", "OQ-007"]
+}

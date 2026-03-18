@@ -1,0 +1,54 @@
+{
+  "storyId": 2,
+  "title": "Output Contract + Error Infrastructure + Global Settings",
+  "description": "Implement the central IOutputWriter interface, JsonOutputWriter (production), InMemoryOutputWriter (tests), ZapiCliException with typed error codes, GlobalSettings for global flags, and wire up Program.cs with the CommandApp. This establishes the no-wrapper JSON output contract that every command in the project must use.",
+  "status": "Not Started",
+  "dependsOn": [1],
+  "prerequisiteState": "Story 1 complete. Three-project solution compiles. IKeychainProvider and all implementations exist. Program.cs is a stub.",
+  "goal": "Every command can call IOutputWriter.WriteJson / WriteRaw / WriteError and get deterministic JSON on stdout/stderr respectively. The CommandApp is wired, global flags are parsed, and unhandled exceptions are converted to the error envelope on stderr.",
+  "scope": [
+    "Create src/ZapiCli.Core/IOutputWriter.cs with interface: void WriteJson(object data), void WriteRaw(string rawJson), void WriteError(string message, string code, int exitCode = 1)",
+    "Create src/ZapiCli.Core/JsonOutputWriter.cs implementing IOutputWriter: WriteJson serializes with System.Text.Json + JsonNamingPolicy.SnakeCaseLower and writes to Console.Out; WriteRaw writes the raw string to Console.Out as-is (no serialization); WriteError serializes the error envelope { error, code, exitCode } with camelCase and writes to Console.Error. Both use no trailing newline beyond what Console.WriteLine adds.",
+    "Create src/ZapiCli.Core/InMemoryOutputWriter.cs implementing IOutputWriter: thread-safe, stores all WriteJson/WriteRaw calls in List<string> SuccessOutput and WriteError calls in List<ErrorRecord> Errors. Expose LastSuccessJson, AllSuccessJson, LastError, AllErrors for test assertions.",
+    "Create src/ZapiCli.Core/ZapiCliException.cs: public sealed class ZapiCliException(string message, string code, int exitCode = 1) : Exception(message). Properties: Code (string), ExitCode (int).",
+    "Create src/ZapiCli.Core/ErrorCodes.cs: public static class ErrorCodes with static readonly string constants for all error codes: ACCOUNT_NOT_FOUND, ACCOUNT_ALREADY_EXISTS, NO_DEFAULT_ACCOUNT, AUTH_FAILURE, NEEDS_REAUTH, API_ERROR, INVALID_ARGS, IO_ERROR, KEYCHAIN_ERROR, ACCOUNT_DOMAIN_BLOCKED, EMAIL_REQUIRED, HOST_NOT_ALLOWED, INTERNAL_ERROR.",
+    "Create src/ZapiCli/Commands/GlobalSettings.cs: public class GlobalSettings : CommandSettings with [CommandOption(\"--account\")] string? Account, [CommandOption(\"--json\")] bool Json = true (default), [CommandOption(\"--no-input\")] bool NoInput = false. All sub-command settings classes must inherit GlobalSettings.",
+    "Update src/ZapiCli/Program.cs: create CommandApp, configure DI via DependencyInjectionRegistrar, register JsonOutputWriter as IOutputWriter singleton, register IHttpClientFactory (services.AddHttpClient()), intercept args == [\"--version\"] before CommandApp to print AssemblyInformationalVersion and return 0, wrap CommandApp.RunAsync in try/catch for ZapiCliException (write error envelope, return exitCode) and catch Exception (write INTERNAL_ERROR envelope, return 1), handle OperationCanceledException (exit 1 silently).",
+    "Add Spectre.Console.Cli NuGet package to ZapiCli.csproj, Microsoft.Extensions.DependencyInjection to ZapiCli.Core.csproj, Microsoft.Extensions.Logging + Microsoft.Extensions.Logging.Console to ZapiCli.Core.csproj.",
+    "Configure logging in Program.cs: LogToStandardErrorThreshold = LogLevel.Trace so Warning+ logs go to stderr only (never to stdout where JSON output lives).",
+    "Write unit tests in ZapiCli.Tests/OutputWriterTests.cs: WriteJson serializes with snake_case; WriteRaw passes raw string through unchanged; WriteError produces correct { error, code, exitCode } envelope; ErrorCodes constants are all non-null non-empty strings."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "IOutputWriter is in ZapiCli.Core namespace with exactly WriteJson, WriteRaw, WriteError signatures",
+    "JsonOutputWriter.WriteJson({\"CamelCase\": 1}) → stdout contains 'camel_case' (snake_case applied)",
+    "JsonOutputWriter.WriteRaw('{\"raw\":1}') → stdout contains '{\"raw\":1}' with no re-serialization",
+    "JsonOutputWriter.WriteError('msg', 'CODE', 1) → stderr contains {\"error\":\"msg\",\"code\":\"CODE\",\"exitCode\":1}",
+    "InMemoryOutputWriter.WriteJson records to SuccessOutput; InMemoryOutputWriter.WriteError records to Errors",
+    "ZapiCliException carries Code and ExitCode accessible as properties",
+    "ErrorCodes.ACCOUNT_NOT_FOUND, AUTH_FAILURE, HOST_NOT_ALLOWED etc. are non-null string constants",
+    "GlobalSettings has --account, --json, and --no-input options with correct defaults",
+    "Program.cs catches ZapiCliException and writes error envelope to stderr with the exception's ExitCode",
+    "Program.cs catches unhandled Exception and writes INTERNAL_ERROR envelope to stderr with exit 1",
+    "Program.cs intercepts --version before CommandApp and outputs AssemblyInformationalVersion",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "The no-wrapper output contract is critical. WriteJson must NOT wrap in { status, data } — it serializes the data object directly. WriteRaw is for passing Zoho API response bodies through byte-for-byte. WriteError always goes to stderr. Read ADR-0008 for the full output contract rationale. IMPORTANT: logging (ILogger) must go to stderr via LogToStandardErrorThreshold — never to stdout. Commands must NEVER call Console.Write() or Console.WriteLine() directly — always go through IOutputWriter. InMemoryOutputWriter must be placed in ZapiCli.Core (not the test project) so all future test stories can inject it without adding project references.",
+  "openItems": [
+    {
+      "item": "JSON serializer options",
+      "defaultAssumption": "Create a shared internal static readonly JsonSerializerOptions in JsonOutputWriter with PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, WriteIndented = false, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull. Reuse the same options for all WriteJson calls."
+    },
+    {
+      "item": "WriteError camelCase vs snake_case",
+      "defaultAssumption": "The error envelope uses camelCase keys: { \"error\": \"...\", \"code\": \"...\", \"exitCode\": N }. Note 'exitCode' is camelCase, not 'exit_code'. Use [JsonPropertyName(\"exitCode\")] attribute on the ExitCode property of the error envelope record to override the SnakeCaseLower policy."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/docs/adr/adr-0008-output-contract.md",
+    "tech_spec/tech_spec.md §11 Output Contract",
+    "tech_spec/tech_spec.md §12 Error Handling",
+    "tech_spec/tech_spec.md §13 Dependencies"
+  ],
+  "relevantOpenQuestions": []
+}

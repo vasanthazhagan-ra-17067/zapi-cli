@@ -1,0 +1,80 @@
+{
+  "stories": [
+    {
+      "storyId": 1,
+      "title": "Three-Project Solution Scaffold + IKeychainProvider",
+      "status": "Not Started",
+      "dependsOn": [],
+      "version": "v1",
+      "phase": "Phase 1 — Foundation"
+    },
+    {
+      "storyId": 2,
+      "title": "Output Contract + Error Infrastructure + Global Settings",
+      "status": "Not Started",
+      "dependsOn": [1],
+      "version": "v1",
+      "phase": "Phase 1 — Foundation"
+    },
+    {
+      "storyId": 3,
+      "title": "AccountStore + OAuthProvider + ZohoCorp Block + DcResolver",
+      "status": "Not Started",
+      "dependsOn": [1, 2],
+      "version": "v1",
+      "phase": "Phase 2 — Account & API"
+    },
+    {
+      "storyId": 4,
+      "title": "Account Command Group (add, list, remove, show, set-default, re-auth)",
+      "status": "Not Started",
+      "dependsOn": [3],
+      "version": "v1",
+      "phase": "Phase 2 — Account & API"
+    },
+    {
+      "storyId": 5,
+      "title": "ApiClient + api call Command",
+      "status": "Not Started",
+      "dependsOn": [3, 4],
+      "version": "v1",
+      "phase": "Phase 2 — Account & API"
+    },
+    {
+      "storyId": 6,
+      "title": "Utility Commands (util time-ms, util uuid)",
+      "status": "Not Started",
+      "dependsOn": [2],
+      "version": "v1",
+      "phase": "Phase 3 — Utility"
+    },
+    {
+      "storyId": 7,
+      "title": "Scope Management Command Group",
+      "status": "Not Started",
+      "dependsOn": [4, 5],
+      "version": "v2",
+      "phase": "Phase 4 — v2 Features"
+    },
+    {
+      "storyId": 8,
+      "title": "Trace System + trace session Commands",
+      "status": "Not Started",
+      "dependsOn": [5],
+      "version": "v2",
+      "phase": "Phase 4 — v2 Features"
+    },
+    {
+      "storyId": 9,
+      "title": "API Registry (api registry list/add/show/remove)",
+      "status": "Not Started",
+      "dependsOn": [5],
+      "version": "v2",
+      "phase": "Phase 4 — v2 Features"
+    }
+  ],
+  "criticalPath": [1, 2, 3, 4, 5],
+  "v1Stories": [1, 2, 3, 4, 5, 6],
+  "v2Stories": [7, 8, 9],
+  "notes": "Stories 7-9 may only be started after all v1 stories are Completed. Story 7 depends on 4 and 5 (account commands and api call must exist for scope NeedsReauth to be testable end-to-end). Story 8 (trace) depends on 5 because ApiClient must exist to integrate trace auto-append. Story 6 (util) is independent of 3-5 and can be done in parallel with stories 3-5 if desired — depends only on 2 (output contract)."
+}

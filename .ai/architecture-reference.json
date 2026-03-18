@@ -1,0 +1,262 @@
+{
+  "commandTree": {
+    "root": "zapi-cli [--account <name>] [--json] [--no-input] [--help] [--version]",
+    "groups": {
+      "account": {
+        "subcommands": [
+          { "name": "add",         "flags": ["--name (req)", "--token (req)", "--client-id (req)", "--client-secret (req)", "--dc (default: us; values: us|eu|in|au|cn|jp|sa|uk|ca)"] },
+          { "name": "list",        "flags": [] },
+          { "name": "remove",      "flags": ["--name (req)"] },
+          { "name": "show",        "flags": ["--name (req)"] },
+          { "name": "set-default", "flags": ["--name (req)"] },
+          { "name": "re-auth",     "flags": ["--name (req)"], "note": "explicit token refresh; also triggered automatically on 401 or NeedsReauth" }
+        ]
+      },
+      "scope": {
+        "version": "v2",
+        "subcommands": [
+          { "name": "add",    "flags": ["--scope (req, comma-separated)", "--account (optional)"] },
+          { "name": "remove", "flags": ["--scope (req, comma-separated)", "--account (optional)"] },
+          { "name": "list",   "flags": ["--account (optional)"] }
+        ]
+      },
+      "api": {
+        "subcommands": [
+          {
+            "name": "call",
+            "flags": [
+              "--url <full-url> (req) — full endpoint URL, no derivation from account dc",
+              "--method GET|POST|PUT|PATCH|DELETE (req)",
+              "--body <json-string> (mutually exclusive with --body-file)",
+              "--body-file <path> (mutually exclusive with --body)",
+              "--header key:value (repeatable)",
+              "--query key=value (repeatable)",
+              "--account <name> (optional override)"
+            ],
+            "examples": [
+              "zapi-cli api call --url \"https://cliq.zoho.com/api/v2/channels\" --method GET",
+              "zapi-cli api call --url \"https://desk.zoho.com/api/v1/tickets\" --method GET",
+              "zapi-cli api call --url \"https://crm.zoho.com/crm/v5/Leads\" --method POST --body '{\"data\":[{\"Last_Name\":\"Doe\"}]}'"
+            ]
+          },
+          { "name": "registry list",   "flags": [],                                                                                              "version": "v2" },
+          { "name": "registry add",    "flags": ["--id (req)", "--url (req)", "--method (req)", "--purpose (req)"],                              "version": "v2" },
+          { "name": "registry show",   "flags": ["--id (req)"],                                                                                  "version": "v2" },
+          { "name": "registry remove", "flags": ["--id (req)"],                                                                                  "version": "v2" }
+        ]
+      },
+      "trace": {
+        "version": "v2",
+        "subcommands": [
+          { "name": "session start",  "flags": ["--name (req)"] },
+          { "name": "session list",   "flags": [] },
+          { "name": "session export", "flags": ["--name (req)", "--truncate-body <bytes> (optional)", "--type api|pex (optional)", "--product <name> (optional, requires API Registry)"] },
+          { "name": "session close",  "flags": ["--name (req)"] },
+          { "name": "session remove", "flags": ["--name (req)"] }
+        ]
+      },
+      "ws": {
+        "version": "v3-future",
+        "subcommands": [
+          { "name": "connect", "flags": ["--url (req)", "--name (req)", "--account (optional)"] },
+          { "name": "send",    "flags": ["--name (req)", "--message (req)"] },
+          { "name": "listen",  "flags": ["--name (req)"] },
+          { "name": "close",   "flags": ["--name (req)"] }
+        ]
+      },
+      "pex": {
+        "version": "v3-future",
+        "subcommands": [
+          { "name": "connect", "flags": ["--account (optional)"] },
+          { "name": "send",    "flags": ["--message (req)", "--account (optional)"] },
+          { "name": "drain",   "flags": ["--account (optional)"] },
+          { "name": "clear",   "flags": ["--account (optional)"] },
+          { "name": "listen",  "flags": ["--account (optional)"] },
+          { "name": "close",   "flags": ["--account (optional)"] }
+        ]
+      },
+      "util": {
+        "subcommands": [
+          { "name": "time-ms", "description": "Current UTC time as Unix millisecond timestamp — output: {\"ts\": <value>}" },
+          { "name": "uuid",    "description": "Generate a random UUID v4 — output: {\"uuid\": \"<value>\"}" }
+        ]
+      }
+    }
+  },
+  "interfaces": {
+    "IKeychainProvider": {
+      "namespace": "ZapiCli.Keychain",
+      "methods": [
+        "Task<string?> GetAsync(string key, CancellationToken ct = default)",
+        "Task SetAsync(string key, string value, CancellationToken ct = default)",
+        "Task DeleteAsync(string key, CancellationToken ct = default)"
+      ],
+      "keyFormat": "zapi-cli:<accountName>:oauth",
+      "keyExample": "zapi-cli:work:oauth",
+      "valueFormat": "JSON string: { \"access_token\": \"...\", \"client_id\": \"...\", \"client_secret\": \"...\" }",
+      "implementations": [
+        { "class": "MacOsKeychainProvider",         "backend": "Security.framework via P/Invoke (SecKeychainAddGenericPassword / SecKeychainFindGenericPassword / SecKeychainItemDelete)" },
+        { "class": "WindowsKeychainProvider",       "backend": "advapi32.dll CredWrite/CredRead/CredDelete via P/Invoke" },
+        { "class": "LinuxKeychainProvider",         "backend": "libsecret Secret Service via P/Invoke; TryCreate() factory catches DllNotFoundException" },
+        { "class": "EncryptedFileKeychainProvider", "backend": "AES-256-GCM, key from machine entropy; path: <configDir>/keystore/<sanitized-key>.bin" }
+      ]
+    },
+    "IAuthProvider": {
+      "namespace": "ZapiCli.Core.Auth",
+      "methods": [
+        "Task<string> GetTokenAsync(string accountName, CancellationToken ct = default)",
+        "Task StoreTokenAsync(string accountName, string accessToken, string clientId, string clientSecret, CancellationToken ct = default)",
+        "Task ClearTokenAsync(string accountName, CancellationToken ct = default)",
+        "Task<string> RefreshTokenAsync(string accountName, IEnumerable<string> scopes, CancellationToken ct = default)"
+      ],
+      "v1Implementation": "OAuthProvider",
+      "note": "StoreTokenAsync stores the JSON blob {access_token, client_id, client_secret} to keychain. RefreshTokenAsync reads client_id + client_secret from keychain, calls Zoho token endpoint, stores new access token, returns it. ApiClient calls IAuthProvider.GetTokenAsync and IAuthProvider.RefreshTokenAsync — never IKeychainProvider directly."
+    },
+    "IAccountStore": {
+      "namespace": "ZapiCli.Core.Accounts",
+      "methods": [
+        "Task<AccountsRoot> LoadAsync(CancellationToken ct = default)",
+        "Task SaveAsync(AccountsRoot root, CancellationToken ct = default)",
+        "Task<AccountEntry?> FindAsync(string name, CancellationToken ct = default)",
+        "Task<AccountEntry> GetDefaultAsync(CancellationToken ct = default)"
+      ]
+    },
+    "IOutputWriter": {
+      "namespace": "ZapiCli.Core",
+      "purpose": "All output goes through this — commands NEVER write to Console directly. No success wrapper envelope.",
+      "methods": [
+        "void WriteJson(object data)",
+        "void WriteRaw(string rawJson)",
+        "void WriteError(string message, string code, int exitCode)"
+      ],
+      "note": "WriteJson serializes data with SnakeCaseLower and writes to stdout. WriteRaw writes the raw string to stdout as-is (used by api call for Zoho response passthrough). WriteError writes the error envelope to stderr."
+    }
+  },
+  "dataModels": {
+    "AccountEntry": {
+      "namespace": "ZapiCli.Core.Accounts",
+      "type": "sealed record",
+      "jsonFile": "accounts.json",
+      "properties": [
+        { "name": "Name",        "type": "required string",  "jsonKey": "name" },
+        { "name": "Dc",          "type": "required string",  "jsonKey": "dc",           "example": "us",  "values": "us|eu|in|au|cn|jp|sa|uk|ca" },
+        { "name": "Email",       "type": "string?",          "jsonKey": "email",        "note": "populated from Zoho user-info API at account add; never stored in keychain; used for ZohoCorp domain block" },
+        { "name": "Zuid",        "type": "string?",          "jsonKey": "zuidstring",   "note": "Zoho User ID (ZPUID/ZUIDSTRING), fetched from user-info at account add" },
+        { "name": "Scopes",      "type": "List<string>",     "jsonKey": "scopes",       "default": "[]" },
+        { "name": "IsDefault",   "type": "bool",             "jsonKey": "is_default" },
+        { "name": "NeedsReauth", "type": "bool",             "jsonKey": "needs_reauth" }
+      ],
+      "securityNote": "No token, client_id, or client_secret fields. Credentials live exclusively in the OS keychain under zapi-cli:<name>:oauth."
+    },
+    "AccountsRoot": {
+      "namespace": "ZapiCli.Core.Accounts",
+      "type": "sealed record",
+      "properties": [
+        { "name": "Accounts", "type": "List<AccountEntry>", "jsonKey": "accounts", "default": "[]" }
+      ]
+    },
+    "ApiRequest": {
+      "namespace": "ZapiCli.Core.Api",
+      "type": "sealed record",
+      "properties": [
+        { "name": "Url",         "type": "required string",                    "note": "full endpoint URL supplied by --url" },
+        { "name": "Method",      "type": "required string" },
+        { "name": "Body",        "type": "string?" },
+        { "name": "Headers",     "type": "Dictionary<string, string>",         "default": "new()" },
+        { "name": "QueryParams", "type": "Dictionary<string, string>",         "default": "new()" },
+        { "name": "AccountName", "type": "required string" }
+      ]
+    },
+    "ApiResponse": {
+      "namespace": "ZapiCli.Core.Api",
+      "type": "sealed record",
+      "properties": [
+        { "name": "StatusCode", "type": "int" },
+        { "name": "Body",       "type": "required string",  "note": "raw JSON string from Zoho server" },
+        { "name": "IsSuccess",  "type": "bool (computed)",  "expression": "StatusCode is >= 200 and < 300" }
+      ]
+    },
+    "ApiTraceEntry": {
+      "namespace": "ZapiCli.Core.Trace",
+      "type": "sealed record",
+      "properties": [
+        "int Seq",
+        "string Type => \"api\"",
+        "required string Session",
+        "required DateTimeOffset Timestamp",
+        "int DurationMs",
+        "required string Account",
+        "required string Method",
+        "required string BaseUrl  (scheme+host+port, no path — for cross-product traceability)",
+        "required string Url (full assembled URL)",
+        "Dictionary<string, string> RequestHeaders  (Authorization EXCLUDED)",
+        "string? RequestBody",
+        "int ResponseStatus",
+        "Dictionary<string, string> ResponseHeaders",
+        "string? ResponseBody",
+        "string? Error  (non-null on transport failure only)"
+      ]
+    },
+    "PexTraceEntry": {
+      "namespace": "ZapiCli.Core.Trace",
+      "type": "sealed record",
+      "properties": [
+        "int Seq",
+        "string Type => \"pex\"",
+        "required string Session",
+        "required DateTimeOffset Timestamp",
+        "required string Account",
+        "int? RelatedApiSeq",
+        "required string HandlerClass",
+        "required string CallbackMethod",
+        "required string Payload"
+      ]
+    },
+    "ApiRegistryEntry": {
+      "namespace": "ZapiCli.Core.Api",
+      "type": "sealed record",
+      "jsonFile": "registry.json",
+      "properties": [
+        { "name": "Id",      "type": "required string",  "jsonKey": "id" },
+        { "name": "Url",     "type": "required string",  "jsonKey": "url",     "note": "full endpoint URL" },
+        { "name": "Method",  "type": "required string",  "jsonKey": "method" },
+        { "name": "Purpose", "type": "required string",  "jsonKey": "purpose" }
+      ]
+    },
+    "OAuthCredentials": {
+      "namespace": "ZapiCli.Core.Auth",
+      "type": "internal sealed record (deserialized from keychain value)",
+      "properties": [
+        "required string AccessToken",
+        "required string ClientId",
+        "required string ClientSecret"
+      ],
+      "note": "Stored as JSON blob in keychain. Never written to disk or any log."
+    }
+  },
+  "zohoCorpGuard": {
+    "rule": "email.Split('@')[1].Split('.')[0].Equals(\"zohocorp\", StringComparison.OrdinalIgnoreCase)",
+    "covers": "zohocorp.com, zohocorp.eu, zohocorp.in, zohocorp.com.au, and all future datacenter TLDs",
+    "errorCode": "ACCOUNT_DOMAIN_BLOCKED",
+    "blockedEntryPoints": [
+      "account add (before keychain write)",
+      "api call (before any HTTP request — check stored account email)",
+      "scope add/remove/list (before any mutation)"
+    ]
+  },
+  "errorCodes": {
+    "ACCOUNT_NOT_FOUND":      { "exit": 1, "meaning": "Named account does not exist" },
+    "ACCOUNT_ALREADY_EXISTS": { "exit": 1, "meaning": "account add with duplicate name" },
+    "NO_DEFAULT_ACCOUNT":     { "exit": 1, "meaning": "No active account and --account not provided" },
+    "AUTH_FAILURE":           { "exit": 2, "meaning": "Auto-refresh or keychain read failed" },
+    "NEEDS_REAUTH":           { "exit": 2, "meaning": "Auto-refresh attempted but failed; account locked" },
+    "API_ERROR":              { "exit": 1, "meaning": "HTTP 4xx/5xx from Zoho API; response body still on stdout" },
+    "INVALID_ARGS":           { "exit": 1, "meaning": "Missing or conflicting flags" },
+    "IO_ERROR":               { "exit": 1, "meaning": "File system failure" },
+    "KEYCHAIN_ERROR":         { "exit": 2, "meaning": "OS keychain operation failed" },
+    "ACCOUNT_DOMAIN_BLOCKED": { "exit": 1, "meaning": "Account email is a ZohoCorp domain" },
+    "EMAIL_REQUIRED":         { "exit": 1, "meaning": "User-info API returned no email; account add aborted" },
+    "HOST_NOT_ALLOWED":       { "exit": 1, "meaning": "Outgoing URL host not in compile-time allowlist" },
+    "INTERNAL_ERROR":         { "exit": 1, "meaning": "Unhandled exception at top level" }
+  }
+}

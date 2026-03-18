@@ -1,0 +1,64 @@
+{
+  "storyId": 1,
+  "title": "Three-Project Solution Scaffold + IKeychainProvider",
+  "description": "Create the complete solution structure with three projects, correct project references, build properties, and a fully implemented IKeychainProvider abstraction with all four concrete platform implementations. This is the security foundation — all credential storage is built on top of this.",
+  "status": "Not Started",
+  "dependsOn": [],
+  "prerequisiteState": "Empty repository. Only tech_spec/ and .ai/ folders exist. No src/ directory yet.",
+  "goal": "Produce a compilable three-project .NET 10 solution where IKeychainProvider is fully defined and all four implementations (macOS, Windows, Linux, encrypted-file fallback) are correctly wired with runtime platform detection. The keychain key format for this project is 'zapi-cli:<accountName>:oauth'.",
+  "scope": [
+    "Create src/zapi-cli.sln referencing all four projects using 'dotnet new sln --format sln' (legacy .sln, not .slnx)",
+    "Create src/ZapiCli/ZapiCli.csproj (net10.0, TreatWarningsAsErrors=true, Nullable=enable, ImplicitUsings=enable, AssemblyName=zapi-cli, OutputType=Exe)",
+    "Create src/ZapiCli.Core/ZapiCli.Core.csproj (net10.0, TreatWarningsAsErrors=true, Nullable=enable, ImplicitUsings=enable; NO Spectre.Console reference)",
+    "Create src/ZapiCli.Keychain/ZapiCli.Keychain.csproj (net10.0, TreatWarningsAsErrors=true, Nullable=enable, ImplicitUsings=enable; NO dependency on Core or ZapiCli)",
+    "Create tests/ZapiCli.Tests/ZapiCli.Tests.csproj (net10.0, xUnit, Microsoft.NET.Test.Sdk, xunit.runner.visualstudio; references ZapiCli.Core and ZapiCli.Keychain)",
+    "Set project references: ZapiCli → ZapiCli.Core + ZapiCli.Keychain; ZapiCli.Core → ZapiCli.Keychain",
+    "Create src/ZapiCli.Keychain/IKeychainProvider.cs: interface with GetAsync(string key, CancellationToken ct = default) → Task<string?>, SetAsync(string key, string value, CancellationToken ct = default) → Task, DeleteAsync(string key, CancellationToken ct = default) → Task",
+    "Create src/ZapiCli.Keychain/MacOsKeychainProvider.cs: P/Invoke to Security.framework (SecKeychainAddGenericPassword, SecKeychainFindGenericPassword, SecKeychainItemDelete). Service name: 'zapi-cli'. [SupportedOSPlatform(\"macos\")] attribute on class.",
+    "Create src/ZapiCli.Keychain/WindowsKeychainProvider.cs: P/Invoke to advapi32.dll CredWrite/CredRead/CredDelete. Credential type: CRED_TYPE_GENERIC (1). [SupportedOSPlatform(\"windows\")] attribute on class.",
+    "Create src/ZapiCli.Keychain/LinuxKeychainProvider.cs: P/Invoke to libsecret-1.so.0 via TryCreate() factory — catches DllNotFoundException + probe failure to signal fallback needed. Attributes: { 'application': 'zapi-cli', 'key': '<keystring>' }.",
+    "Create src/ZapiCli.Keychain/EncryptedFileKeychainProvider.cs: AES-256-GCM using machine entropy derived key. Key derivation: SHA256(MachineName + MachineGuid + 'zapi-cli'). MachineGuid: ioreg on macOS, registry HKLMv SOFTWARE\\Microsoft\\Cryptography\\MachineGuid on Windows, /etc/machine-id on Linux. File layout: [12-byte IV][ciphertext][16-byte GCM tag]. File path: <configDir>/keystore/<sanitized-key>.bin (replace ':' with '_').",
+    "Create src/ZapiCli.Keychain/KeychainProviderFactory.cs: static Create(string configDir) method — uses OperatingSystem.IsMacOS(), OperatingSystem.IsWindows(), OperatingSystem.IsLinux() (NOT RuntimeInformation.IsOSPlatform — Roslyn CA1416 analyzer only recognises OperatingSystem.IsXxx()). Linux: try LinuxKeychainProvider.TryCreate(); fall back to EncryptedFileKeychainProvider on failure.",
+    "Create src/ZapiCli/Program.cs stub: empty CommandApp with Spectre.Console reference. No commands yet. Ensure it compiles.",
+    "Create src/ZapiCli/DependencyInjectionRegistrar.cs: bridge between Microsoft.Extensions.DependencyInjection and Spectre.Console.Cli's ITypeRegistrar interface.",
+    "Create tests/ZapiCli.Tests/Fakes/InMemoryKeychainProvider.cs: thread-safe dictionary-based IKeychainProvider for all future test stories.",
+    "Create tests/ZapiCli.Tests/PlaceholderTests.cs: single passing xUnit test — ensures dotnet test compiles and runs.",
+    "Run 'dotnet build src/zapi-cli.sln' and confirm 0 errors, 0 warnings."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build src/zapi-cli.sln succeeds with 0 errors and 0 warnings",
+    "IKeychainProvider interface is in ZapiCli.Keychain namespace with exactly GetAsync, SetAsync, DeleteAsync signatures",
+    "All four IKeychainProvider implementations exist as separate classes in src/ZapiCli.Keychain/",
+    "KeychainProviderFactory.Create() uses OperatingSystem.IsMacOS()/IsWindows()/IsLinux() NOT RuntimeInformation.IsOSPlatform()",
+    "All platform-specific methods carry [SupportedOSPlatform] attributes to satisfy CA1416 with TreatWarningsAsErrors=true",
+    "EncryptedFileKeychainProvider uses AES-256-GCM (not CBC or ECB). IV stored as first 12 bytes.",
+    "No third-party NuGet keychain package referenced in any .csproj",
+    "ZapiCli.Core.csproj has zero reference to Spectre.Console",
+    "ZapiCli.Keychain.csproj has zero reference to ZapiCli.Core or ZapiCli",
+    "TreatWarningsAsErrors=true and Nullable=enable present in all four .csproj files",
+    "AssemblyName=zapi-cli in ZapiCli.csproj",
+    "InMemoryKeychainProvider exists in tests/ and implements IKeychainProvider fully",
+    "dotnet test passes (placeholder test green)"
+  ],
+  "contextForAgent": "This is the foundation story. Nothing else can be built until this passes. Read ADR-0007 for the three-project layout and dependency graph. Read ADR-0005 for the full keychain design including P/Invoke signatures for each platform. Read ADR-0001 for .csproj build requirements. The keychain key format is 'zapi-cli:<accountName>:oauth' (e.g. 'zapi-cli:work:oauth'). The CRITICAL pitfall: use OperatingSystem.IsMacOS() not RuntimeInformation.IsOSPlatform() — the Roslyn CA1416 analyzer only recognises OperatingSystem.IsXxx() as valid platform guards. Use 'dotnet new sln --format sln' to create the .sln file (not .slnx which is the new default in .NET 10). Config dir resolution: Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) on macOS/Linux + append 'zapi-cli'; Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) on Windows + append 'zapi-cli'. For machine entropy in EncryptedFileKeychainProvider: 'zapi-cli' is the salt (not 'cliq-cli').",
+  "openItems": [
+    {
+      "item": "Machine entropy key derivation for EncryptedFileKeychainProvider",
+      "defaultAssumption": "See OQ-005. Use SHA256(MachineName + MachineGuid + 'zapi-cli') as AES-256 key. IV stored as first 12 bytes of .bin file, then ciphertext, then 16-byte GCM tag."
+    },
+    {
+      "item": "Linux libsecret fallback activation",
+      "defaultAssumption": "See OQ-006. Catch DllNotFoundException when loading libsecret-1.so.0. Perform a sentinel probe on init. If any failure, return false from TryCreate() to activate EncryptedFileKeychainProvider fallback."
+    },
+    {
+      "item": "macOS keychain ACL on unsigned builds",
+      "defaultAssumption": "Use kSecAttrAccessibleWhenUnlocked. If keychain returns errSecAuthFailed on a developer build, log and activate fallback."
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/docs/adr/adr-0001-technology-stack.md",
+    "tech_spec/docs/adr/adr-0005-os-keychain-abstraction.md",
+    "tech_spec/docs/adr/adr-0007-three-layer-project-structure.md"
+  ],
+  "relevantOpenQuestions": ["OQ-005", "OQ-006"]
+}

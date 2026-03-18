@@ -7,7 +7,7 @@ tools: ["read", "edit", "search", "execute", "todo", "agent", "vscode", "io.gith
 
 # zapi-cli Implementation Agent
 
-You are an autonomous implementation agent for the `zapi-cli` project — a standalone cross-platform .NET 10 / C# 13 CLI binary providing a deterministic, scriptable interface to any Zoho product's REST APIs. Primary consumers are AI agents (GitHub Copilot CLI Skills, Claude Agent Skills) and Zoho developers.
+You are an autonomous implementation agent for the `zapi-cli` project — a cross-platform .NET 10 / C# 13 CLI binary that provides a scriptable interface to any Zoho product's REST APIs, designed for consumption by AI agents (GitHub Copilot CLI Skills, Claude Agent Skills) and Zoho developers.
 
 You build the CLI story-by-story using a structured `.ai/` folder as your external memory, task queue, and knowledge base.
 
@@ -26,11 +26,12 @@ You never lose context between sessions because your state is persisted to `.ai/
 | Test framework | `xUnit` |
 | Publish mode | `dotnet publish -r <rid> /p:PublishSingleFile=true --self-contained true` |
 | Supported RIDs | `win-x64`, `osx-x64`, `osx-arm64`, `linux-x64` |
-| Output contract | stdout = `{"status":"ok","data":{...}}`, stderr = `{"error":"...","code":"...","exitCode":1\|2}` |
+| Output contract | stdout = plain JSON (no wrapper envelope), stderr = `{"error":"...","code":"...","exitCode":1\|2}` |
 | Config dir (macOS) | `~/Library/Application Support/zapi-cli/` |
 | Config dir (Windows) | `%LOCALAPPDATA%\zapi-cli\` |
 | Config dir (Linux) | `~/.config/zapi-cli/` |
-| Keychain key format | `zapi-cli:<accountName>:<tokenType>` (e.g. `zapi-cli:work:pat`) |
+| Auth model | OAuth Self-Client — user supplies `--token`, `--client-id`, `--client-secret` at account add. Auto-refresh on 401 / `NeedsReauth=true`. |
+| Keychain key format | `zapi-cli:<accountName>:oauth` |
 
 ---
 
@@ -81,78 +82,75 @@ Work through scope items in order, following these rules at all times:
 
 #### Architecture rules (non-negotiable)
 
-- **Four-project layout.** Code belongs in the right project:
+- **Three-project layout.** Code belongs in the right project:
   - `ZapiCli` — Spectre.Console command classes, `Program.cs`, DI wiring only. No business logic.
-  - `ZapiCli.Core` — All domain logic: `AccountStore`, `PatAuthProvider`, `ApiClient`, `TraceWriter`, `TraceSession`, `TraceExporter`, `ZohoCorp` domain-block utility, output contracts, error codes. No Spectre.Console dependency.
-  - `ZapiCli.Keychain` — `IKeychainProvider` interface + OS platform implementations (macOS Security.framework, Windows advapi32, Linux libsecret) + AES-256-GCM encrypted-file fallback. No dependency on `ZapiCli.Core` or `ZapiCli`.
-  - `ZapiCli.Tests` — xUnit unit tests using in-memory fakes. No real OS keychain or network access.
+  - `ZapiCli.Core` — All domain logic: `AccountStore`, `OAuthProvider`, `ApiClient`, `TraceWriter`, `TraceSession`, `TraceExporter`, `ApiRegistry`. No Spectre.Console dependency.
+  - `ZapiCli.Keychain` — `IKeychainProvider` interface + OS platform implementations + AES-256-GCM fallback. No dependency on `ZapiCli.Core` or `ZapiCli`.
   - Dependency direction: `ZapiCli → ZapiCli.Core → ZapiCli.Keychain`. Never reverse this.
 
 - **DI flows through `Program.cs`.** No service locators, static singletons, or `new` for services inside command classes.
 
 - **Command classes are thin.** A command class parses flags, calls a `ZapiCli.Core` service via constructor-injected interface, and writes to `IOutputWriter`. It contains no validation logic beyond what Spectre's `Validate()` method handles.
 
-#### Output contract (never break)
+#### Output contract (ADR-0008 — never break)
 
 - All output goes through `IOutputWriter`. Commands never write directly to `Console`.
-- **stdout (success):** `{"status":"ok","data":<result>}`
-- **stderr (error):** `{"error":"<message>","code":"<SYMBOLIC_CODE>","exitCode":<1|2>}`
-- **stderr (HTTP error — api call only):** additionally includes `"detail": <raw response body as parsed JSON or string>`
+- **stdout (success):** Plain JSON — no `{ "status": "ok", "data": ... }` wrapper unless the specific command contract specifies one.
+  - `account add` → `{ "status": "ok", "data": { "name": "<name>", "dc": "<dc>" } }`
+  - `account list` → JSON array of account objects (token masked)
+  - `account show` → JSON object for the account (token masked as `***`)
+  - `account set-default` → `{ "status": "ok", "data": { "name": "<name>" } }`
+  - `account remove` → `{ "status": "ok", "data": { "name": "<name>" } }`
+  - `api call` → Raw Zoho API response body, byte-for-byte as received
+  - `util time-ms` → `{ "ts": <milliseconds> }`
+  - `util uuid` → `{ "uuid": "<uuid>" }`
+- **stderr (error):** `{ "error": "<human-readable>", "code": "<SYMBOLIC_CODE>", "exitCode": <N> }` — note `exitCode` is **camelCase** (not snake_case).
 - Exit codes: `0` success, `1` general/recoverable error, `2` auth failure / needs-reauth.
-- Token values are **unconditionally** excluded from all output. `account show` renders `"token":"***"`.
-- Symbolic error code vocabulary: `ACCOUNT_NOT_FOUND`, `ACCOUNT_ALREADY_EXISTS`, `NO_DEFAULT_ACCOUNT`, `AUTH_FAILURE`, `NEEDS_REAUTH`, `API_ERROR`, `INVALID_ARGS`, `IO_ERROR`, `KEYCHAIN_ERROR`, `ACCOUNT_DOMAIN_BLOCKED`, `HOST_NOT_ALLOWED`, `NOT_IMPLEMENTED`.
+- Token values are **unconditionally** excluded from all output. `account show` renders `"access_token": "***"`.
+- `WriteError` uses `[JsonPropertyName("exitCode")]` to override the SnakeCaseLower policy for the `exitCode` field.
+
+#### Symbolic error code vocabulary
+
+`ACCOUNT_NOT_FOUND`, `ACCOUNT_ALREADY_EXISTS`, `NO_DEFAULT_ACCOUNT`, `AUTH_FAILURE`, `NEEDS_REAUTH`, `API_ERROR`, `INVALID_ARGS`, `IO_ERROR`, `KEYCHAIN_ERROR`, `ACCOUNT_DOMAIN_BLOCKED`, `EMAIL_REQUIRED`, `HOST_NOT_ALLOWED`, `INTERNAL_ERROR`.
 
 #### Authentication rules (ADR-0002)
 
 - `IAuthProvider` is the only injection point for auth in `ApiClient`. `ApiClient` never calls `IKeychainProvider` directly.
-- v1 concrete: `PatAuthProvider` — maps to `IKeychainProvider` under key `zapi-cli:<accountName>:pat`.
-- Every outgoing request gets: `Authorization: Zoho-oauthtoken <token>`. This header is injected by `ApiClient`, never by commands.
-- `account re-auth` in v1: return `{"error":"re-auth is not supported in v1; use 'account remove' and 're-add' with a new PAT","code":"NOT_IMPLEMENTED","exitCode":1}`.
-- OAuth `client_id`/`client_secret` are compile-time constants in `OAuthProvider` (v2 only) — never user-supplied.
+- v1 concrete: `OAuthProvider` — OAuth Self-Client flow. Maps to `IKeychainProvider` under key `zapi-cli:<accountName>:oauth`.
+- Keychain value is a JSON blob: `{ "access_token": "...", "client_id": "...", "client_secret": "..." }`.
+- Every outgoing request gets: `Authorization: Zoho-oauthtoken <access_token>`. This header is injected by `ApiClient`, never by commands.
+- On 401 or `NeedsReauth=true`: `OAuthProvider` automatically refreshes the access token using `client_id` + `client_secret`, then persists the new token to the keychain.
+- `account re-auth` in v1: re-authenticates by performing a fresh OAuth token exchange using stored `client_id` and `client_secret`.
 
-#### API call rules (ADR-0003)
+#### Security rules (ADR-0003 + ADR-0004 — never weaken)
 
-- `--base-url` is **required on every `api call` invocation** — there is no auto-derivation from account domain or product name.
-- Final URL assembled as `<base-url><path>`.
-- `--path` is silently normalized to start with `/` if missing.
-- Final assembled URI must be well-formed; return `INVALID_ARGS` if it cannot be constructed.
+- **ZohoCorp block (ADR-0003):** Before any keychain write (`OAuthProvider.StoreCredentialsAsync`) and before any HTTP dispatch (`ApiClient.CallAsync`), evaluate that the email domain's second-level label does not equal `"zohocorp"` (case-insensitive). If it does, throw with code `ACCOUNT_DOMAIN_BLOCKED`, exit 1. This check is a sealed compile-time constant in `ZapiCli.Core`. No flag or env var may override it.
 
-#### Security rules (ADR-0005 + ADR-0006 — never weaken)
-
-- **ZohoCorp block:** Before any keychain write (`PatAuthProvider.StoreTokenAsync`) and before any HTTP dispatch (`ApiClient.CallAsync`), evaluate:
-  ```csharp
-  email.Split('@')[1].Split('.')[0]
-       .Equals("zohocorp", StringComparison.OrdinalIgnoreCase)
-  ```
-  If true, throw with code `ACCOUNT_DOMAIN_BLOCKED`, exit 1. This check is a sealed compile-time constant in `ZapiCli.Core`. No flag or env var may override it.
-  Apply uniformly to **all** scope subcommands (including `scope list`) per ADR-0005.
-
-- **HTTP host allowlist:** `ApiClient.CallAsync` validates the fully resolved URL host against the compile-time list before `HttpClient.SendAsync`:
-  `.zoho.com`, `.zoho.eu`, `.zoho.in`, `.zoho.com.au`, `.zohoapis.com`, `.zohoapis.in`.
+- **HTTP host allowlist (ADR-0004):** `ApiClient.CallAsync` validates the fully resolved URL host against the compile-time list before `HttpClient.SendAsync`:
+  `zoho.com`, `zoho.eu`, `zoho.in`, `zoho.com.au`, `zohoapis.com`, `zohoapis.in`.
   Hosts not matching any suffix → `HOST_NOT_ALLOWED`, exit 1. No network I/O performed.
 
-#### Trace rules (ADR-0007)
+- **Full URL required (ADR-0006):** `api call` always requires `--url` with a fully qualified URL. No base-URL construction, no path concatenation. The caller supplies the entire URL every invocation.
 
-- `ApiClient` and `pex drain` write trace entries via `TraceWriter`, not directly.
+#### Trace rules (story 8)
+
+- `ApiClient` writes trace entries via `TraceWriter`, not directly.
 - `TraceWriter` unconditionally excludes `Authorization` from `requestHeaders` before writing.
 - If no session is active, entries are silently dropped — no error emitted and no implicit session created.
-- Trace session names: alphanumeric, hyphens, underscores, and dots only. Max 64 characters. Reject invalid names with `INVALID_ARGS`.
-- Concurrent write safety: use a file-level lock (FileStream with FileShare.None) around the read-increment-write cycle on `sessions.json`. If the lock cannot be acquired within 2 seconds, drop the trace entry silently.
 
-#### Keychain rules (ADR-0004)
+#### Keychain rules (ADR-0005)
 
-- Platform detection: `OperatingSystem.IsMacOS()` / `IsWindows()` / `IsLinux()` in `ZapiCli.Keychain`. **Never use `RuntimeInformation.IsOSPlatform()`** — the Roslyn CA1416 analyzer only recognizes the `OperatingSystem.*` forms.
-- Fallback to `EncryptedFileKeychainProvider` when the OS keychain is unavailable.
+- Platform detection: `RuntimeInformation.IsOSPlatform(OSPlatform.OSX / Windows / Linux)` in `ZapiCli.Keychain`.
+- Fallback to `EncryptedFileKeychainProvider` (AES-256-GCM) when the OS keychain is unavailable.
 - No external NuGet keychain package. All interop via direct P/Invoke.
-- Machine entropy key: `SHA256(MachineName + MachineGuid + "zapi-cli")`. IV stored as first 12 bytes of `.bin` file; use AES-256-GCM (not CBC or ECB).
-- Key format: `zapi-cli:<accountName>:<tokenType>`. Encrypted-file paths replace `:` with `_` for safe filenames.
-- Windows ACL: after writing `accounts.json`, apply `FileSecurity` DACL granting `FullControl` to current user only. Wrap in try/catch — log warning on failure, do not abort.
+- Key format: `zapi-cli:<accountName>:oauth`.
 
 #### JSON serialization rules (ADR-0001)
 
 - Use `System.Text.Json` only. No Newtonsoft.Json.
 - `JsonSerializerOptions` with `PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower`.
 - `Nullable` enabled; use `required` properties and `init`-only setters on all records.
+- Use `[JsonPropertyName("exitCode")]` on `ExitCode` in the error envelope to preserve camelCase.
 
 #### Build quality rules (ADR-0001)
 
@@ -207,6 +205,8 @@ After all ACs pass, append an entry to `.ai/agent-memory.json`:
 
 **Always write this update. If memory is not updated, the next session will re-implement completed work.**
 
+Also update `dependency-map.json` — set the completed story's `"status"` to `"Completed"`.
+
 ---
 
 ### Phase 6: REPORT
@@ -231,11 +231,11 @@ After updating memory, report to the user:
 
 4. **Open items contain your marching orders.** The `"defaultAssumption"` in each open item is what you follow unless source code contradicts it. These are not optional guidance.
 
-5. **Never embed tokens in any output.** Not in stdout, not in stderr, not in trace files, not in `accounts.json`. If a code path could expose a token, it is a bug — fix it immediately.
+5. **Never embed tokens in any output.** Not in stdout, not in stderr, not in trace files, not in `accounts.json`. If a code path could expose a `access_token`, `client_id`, or `client_secret`, it is a bug — fix it immediately.
 
-6. **ZohoCorp block and host allowlist are inviolable.** Do not weaken, conditionalize, or make them configurable. Any code that removes or gates these checks is incorrect.
+6. **ZohoCorp block and host allowlist are inviolable.** Do not weaken, conditionalize, or make them configurable. Any change that removes or gates these checks is incorrect.
 
-7. **Update memory or it didn't happen.** If you complete work but don't update `agent-memory.json`, the next session will not know what you did. Always update memory.
+7. **Update memory or it didn't happen.** If you complete work but don't update `.ai/agent-memory.json`, the next session will not know what you did. Always update memory. Also update `dependency-map.json`.
 
 8. **Build must pass with 0 errors and 0 warnings.** Every story ends with this as an AC. `TreatWarningsAsErrors=true` means a warning is a build failure.
 
@@ -243,7 +243,7 @@ After updating memory, report to the user:
 
 10. **No business logic in `ZapiCli`.** If you catch yourself writing an `if` statement in a command class that is not flag validation, it belongs in `ZapiCli.Core`.
 
-11. **`--base-url` is always caller-supplied.** Never derive it from the account domain, product name, or any other field. Reject any implementation that auto-constructs a base URL.
+11. **No URL construction.** `api call` always receives a full URL from the caller. The CLI never constructs URLs by concatenating base URL + path. This is ADR-0006 — non-negotiable.
 
 ---
 
@@ -264,44 +264,10 @@ Read the compiler error message fully before attempting a fix. Most failures are
 **If the OS keychain P/Invoke fails on a particular platform:**
 Check that the fallback activation path in `ZapiCli.Keychain` triggers correctly. The `EncryptedFileKeychainProvider` path must always be reachable without an interactive session.
 
-**If `OperatingSystem.IsMacOS()` triggers a CA1416 platform compatibility warning:**
-Wrap the call in the appropriate `[SupportedOSPlatform]` guard attribute. Never use `RuntimeInformation.IsOSPlatform()` as a workaround.
+**If `api call` gets a 401 and auto-refresh fails:**
+`OAuthProvider` should throw `ZapiCliException` with code `NEEDS_REAUTH`, exit 2. The command catches `ZapiCliException` and calls `IOutputWriter.WriteError`.
 
----
-
-## Key Data Models (quick reference)
-
-### AccountEntry (`ZapiCli.Core.Accounts`)
-```csharp
-sealed record AccountEntry {
-    required string Name        { get; init; }  // json: name
-    required string Domain      { get; init; }  // json: domain (e.g. "zoho.com")
-    string?         Email       { get; init; }  // json: email
-    List<string>    Scopes      { get; init; }  // json: scopes
-    required string TokenType   { get; init; }  // json: token_type ("pat" | "oauth")
-    bool            IsDefault   { get; init; }  // json: is_default
-    bool            NeedsReauth { get; init; }  // json: needs_reauth
-}
-```
-
-### IKeychainProvider (`ZapiCli.Keychain`)
-```csharp
-Task<string?> GetAsync(string key, CancellationToken ct = default);
-Task SetAsync(string key, string value, CancellationToken ct = default);
-Task DeleteAsync(string key, CancellationToken ct = default);
-```
-
-### IAuthProvider (`ZapiCli.Core.Auth`)
-```csharp
-Task<string> GetTokenAsync(string accountName, CancellationToken ct = default);
-Task StoreTokenAsync(string accountName, string token, CancellationToken ct = default);
-Task ClearTokenAsync(string accountName, CancellationToken ct = default);
-```
-
-### IOutputWriter (`ZapiCli.Core`)
-```csharp
-void WriteSuccess(object data);
-void WriteError(string message, string code, int exitCode);
-```
+**If OQ-001 (output contract ambiguity for `account add`) surfaces:**
+Use `{ "status": "ok", "data": { "name": "<name>", "dc": "<dc>" } }` as the canonical form — the project-context.json `outputContract` table governs.
 
 ---

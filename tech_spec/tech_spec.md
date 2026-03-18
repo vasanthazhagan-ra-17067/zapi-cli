@@ -1,4 +1,4 @@
-# znet — Technical Specification
+# zapi-cli — Technical Specification
 
 > **Status:** Draft
 > **Derived from:** `tech_spec/brainstorming.md`
@@ -27,7 +27,7 @@
 
 ## 1. Project Overview
 
-**znet** is a standalone, multi-platform CLI binary for interacting with **any Zoho product's REST APIs**. It manages multiple Zoho accounts, handles authentication via a pluggable `IAuthProvider` interface, and exposes a general-purpose HTTP API invoker where the caller supplies the full base URL at invocation time.
+**zapi-cli** is a standalone, multi-platform CLI binary for interacting with **any Zoho product's REST APIs**. It manages multiple Zoho accounts, handles authentication via a pluggable `IAuthProvider` interface, and exposes a general-purpose HTTP API invoker where the caller supplies the full base URL at invocation time.
 
 **Primary consumer:** AI Agents via GitHub Copilot CLI Skills.
 
@@ -55,7 +55,7 @@
 ## 3. Project Structure
 
 ```
-znet/
+zapi-cli/
 ├── src/
 │   ├── ZapiCli/                              ← Entry point + Spectre command wiring
 │   │   ├── ZapiCli.csproj
@@ -119,7 +119,7 @@ ZapiCli.Core  →  ZapiCli.Keychain
 ### Root
 
 ```
-znet [global-flags] <group> <subcommand> [flags]
+zapi-cli [global-flags] <group> <subcommand> [flags]
 ```
 
 ### Global Flags
@@ -183,9 +183,9 @@ Adding or removing a scope sets `needs_reauth = true` on that account.
 **Examples:**
 
 ```sh
-znet api call --url "https://cliq.zoho.com/api/v2/channels" --method GET
-znet api call --url "https://desk.zoho.com/api/v1/tickets" --method GET
-znet api call --url "https://crm.zoho.com/crm/v5/Leads" --method POST --body '{"data":[{"Last_Name":"Doe"}]}'
+zapi-cli api call --url "https://cliq.zoho.com/api/v2/channels" --method GET
+zapi-cli api call --url "https://desk.zoho.com/api/v1/tickets" --method GET
+zapi-cli api call --url "https://crm.zoho.com/crm/v5/Leads" --method POST --body '{"data":[{"Last_Name":"Doe"}]}'
 ```
 
 #### `api registry` *(P2)*
@@ -199,7 +199,7 @@ Each registry entry has a single `url` field (full endpoint URL), consistent wit
 | `show` | `--id` (req) | Show a single entry by id |
 | `remove` | `--id` (req) | Delete an entry by id |
 
-Storage: `<configDir>/znet/registry.json`
+Storage: `<configDir>/zapi-cli/registry.json`
 
 ```json
 {
@@ -235,7 +235,7 @@ Storage: `<configDir>/znet/registry.json`
 
 ### Group: `pex` *(Future)*
 
-> Pex is Zoho Cliq's proprietary real-time protocol. Events are buffered to `<configDir>/znet/pex-buffer/<account>.jsonl`. `drain` atomically reads and truncates this file.
+> Pex is Zoho Cliq's proprietary real-time protocol. Events are buffered to `<configDir>/zapi-cli/pex-buffer/<account>.jsonl`. `drain` atomically reads and truncates this file.
 
 | Subcommand | Flags | Description |
 |-----------|-------|-------------|
@@ -391,7 +391,7 @@ public interface IAuthProvider
 
 - Implements `IAuthProvider`.
 - User supplies `--token`, `--client-id`, `--client-secret` at `account add` time.
-- `StoreTokenAsync` → writes access token + client credentials to OS keychain under key `znet:<accountName>:oauth`.
+- `StoreTokenAsync` → writes access token + client credentials to OS keychain under key `zapi-cli:<accountName>:oauth`.
 - `GetTokenAsync` → reads access token from OS keychain by the same key.
 - `ClearTokenAsync` → deletes all stored credentials from OS keychain.
 - Token injected into requests as: `Authorization: Zoho-oauthtoken <token>`.
@@ -402,7 +402,7 @@ public interface IAuthProvider
 #### OAuth Self-Client flow
 
 ```
-znet account add --name "work" --token "xxx" --client-id "yyy" --client-secret "zzz" [--dc us]
+zapi-cli account add --name "work" --token "xxx" --client-id "yyy" --client-secret "zzz" [--dc us]
   1. Validate --token, --client-id, --client-secret are all present (error INVALID_ARGS if any missing)
   2. Validate name is unique in accounts.json
   3. Resolve Accounts URL from --dc (default: us → https://accounts.zoho.com)
@@ -411,7 +411,7 @@ znet account add --name "work" --token "xxx" --client-id "yyy" --client-secret "
      → abort with AUTH_FAILURE on network/HTTP error
   5. Apply ZohoCorp domain check on the returned email; abort with ACCOUNT_DOMAIN_BLOCKED if blocked
   6. Call OAuthProvider.StoreTokenAsync: writes token + client-id + client-secret to OS keychain
-     under key: znet:work:oauth
+     under key: zapi-cli:work:oauth
   7. Append AccountEntry (dc, email, zuidstring, scopes=[]) to accounts.json
   8. If no other account exists, set is_default = true
   9. Write accounts.json (permissions: 0600 on Unix)
@@ -423,7 +423,7 @@ znet account add --name "work" --token "xxx" --client-id "yyy" --client-secret "
 > **Auto-refresh principle:** Re-authentication is triggered **automatically** whenever a token is expired or scope changes are pending. The user never needs to run `account re-auth` manually in normal operation. The command remains available for explicit/forced refresh.
 
 ```
-znet scope add --scope "ZohoDesk.Tickets.READ" [--account "work"]
+zapi-cli scope add --scope "ZohoDesk.Tickets.READ" [--account "work"]
   1. Resolve target account (--account or default)
   2. Add scope to AccountEntry.Scopes if not already present
   3. Set AccountEntry.NeedsReauth = true
@@ -444,7 +444,7 @@ Next api call on account "work"  (NeedsReauth == true  OR  401 received from Zoh
   If auto-refresh itself fails (invalid client credentials, revoked app, etc.):
   → write error to stderr + exit 2 with AUTH_FAILURE
 
-znet account re-auth --name "work"  (explicit / forced)
+zapi-cli account re-auth --name "work"  (explicit / forced)
   1. Read stored client-id + client-secret from OS keychain for account "work"
   2. Call Zoho OAuth token endpoint using stored credentials + current AccountEntry.Scopes
   3. Store updated access token in OS keychain
@@ -508,9 +508,9 @@ Covers `zohocorp.com`, `zohocorp.eu`, `zohocorp.in`, `zohocorp.com.au`, and all 
 
 | Platform | Config Directory |
 |----------|-----------------|
-| macOS | `~/Library/Application Support/znet/` |
-| Windows | `%LOCALAPPDATA%\znet\` |
-| Linux | `~/.config/znet/` |
+| macOS | `~/Library/Application Support/zapi-cli/` |
+| Windows | `%LOCALAPPDATA%\zapi-cli\` |
+| Linux | `~/.config/zapi-cli/` |
 
 Path resolution uses `Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)` on macOS/Linux and `Environment.SpecialFolder.LocalApplicationData` on Windows.
 
@@ -555,9 +555,9 @@ public interface IKeychainProvider
     Task DeleteAsync(string key, CancellationToken ct = default);
 }
 
-// Key format: "znet:<accountName>:oauth"
-// e.g.        "znet:work:oauth"
-//             "znet:personal:oauth"
+// Key format: "zapi-cli:<accountName>:oauth"
+// e.g.        "zapi-cli:work:oauth"
+//             "zapi-cli:personal:oauth"
 ```
 
 **Platform implementations:**
@@ -641,7 +641,7 @@ public sealed record ApiResponse
 ### Storage Layout
 
 ```
-<configDir>/znet/traces/
+<configDir>/zapi-cli/traces/
   sessions.json                 ← index: name, startTime, entryCount, status (active | closed)
   <session-name>/
     trace.jsonl                 ← one JSON object per line (append-only)
@@ -673,15 +673,15 @@ public sealed record ApiResponse
 
 ```
 Session start:
-  znet trace session start --name "<FeatureName>-<YYYY-MM-DD>"
+  zapi-cli trace session start --name "<FeatureName>-<YYYY-MM-DD>"
 
 ... agent fires api calls — entries auto-appended ...
 
 Session complete:
-  znet trace session export --name "<FeatureName>-<YYYY-MM-DD>"
+  zapi-cli trace session export --name "<FeatureName>-<YYYY-MM-DD>"
     → agent captures stdout → saves to api-trace.json
 
-  znet trace session close --name "<FeatureName>-<YYYY-MM-DD>"
+  zapi-cli trace session close --name "<FeatureName>-<YYYY-MM-DD>"
 ```
 
 ### Export Options

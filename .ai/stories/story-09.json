@@ -1,0 +1,53 @@
+{
+  "storyId": 9,
+  "title": "API Registry (api registry list/add/show/remove)",
+  "description": "Implement the four api registry subcommands and the ApiRegistry domain class. The registry is a persistent local store of named API endpoint entries that agents can discover without re-documenting endpoints repeatedly across sessions. Each entry carries a full URL field consistent with api call --url.",
+  "status": "Not Started",
+  "dependsOn": [5],
+  "prerequisiteState": "Stories 1-5 complete. ApiClient and api call working. IOutputWriter wired. No registry infrastructure exists yet.",
+  "goal": "After 'zapi-cli api registry add --id cliq-channels --url https://cliq.zoho.com/api/v2/channels --method GET --purpose \"List all Cliq channels\"', the entry is persisted to registry.json and 'zapi-cli api registry list' returns it.",
+  "scope": [
+    "Create src/ZapiCli.Core/Api/ApiRegistryEntry.cs: sealed record with Id (required string), Url (required string — full endpoint URL), Method (required string), Purpose (required string). JSON keys: id, url, method, purpose via SnakeCaseLower.",
+    "Create src/ZapiCli.Core/Api/ApiRegistryRoot.cs: sealed record with Apis (List<ApiRegistryEntry> = []).",
+    "Create src/ZapiCli.Core/Api/IApiRegistry.cs: Task<ApiRegistryRoot> LoadAsync(ct); Task SaveAsync(ApiRegistryRoot root, ct); Task<ApiRegistryEntry?> FindByIdAsync(string id, ct); Task UpsertAsync(ApiRegistryEntry entry, ct) — add if new id, overwrite if id exists; Task RemoveAsync(string id, ct) — throw ZapiCliException(SESSION_NOT_FOUND scoped as REGISTRY_ENTRY_NOT_FOUND exit 1 — add REGISTRY_ENTRY_NOT_FOUND to ErrorCodes) if id not found.",
+    "Create src/ZapiCli.Core/Api/ApiRegistry.cs implementing IApiRegistry: reads/writes registry.json at <configDir>/registry.json using System.Text.Json with SnakeCaseLower. Apply same 0600/ACL permissions as accounts.json on write.",
+    "Create src/ZapiCli/Commands/ApiRegistryCommands.cs with four command classes.",
+    "ApiRegistryListSettings inherits GlobalSettings (no extra flags). ApiRegistryListCommand.ExecuteAsync: LoadAsync, WriteJson(root.Apis) — plain JSON array.",
+    "ApiRegistryAddSettings inherits GlobalSettings: [CommandOption(\"--id\")] required string Id, [CommandOption(\"--url\")] required string Url, [CommandOption(\"--method\")] required string Method, [CommandOption(\"--purpose\")] required string Purpose. Validate(): reject if any required field is null/empty (INVALID_ARGS); reject if Method is not one of GET|POST|PUT|PATCH|DELETE (INVALID_ARGS); reject if Url host is not in ApiClient's host allowlist — reuse the same ValidateHost logic (HOST_NOT_ALLOWED). ApiRegistryAddCommand.ExecuteAsync: UpsertAsync; WriteJson({ status=\"ok\", data = { id } }).",
+    "ApiRegistryShowSettings inherits GlobalSettings: [CommandOption(\"--id\")] required string Id. ApiRegistryShowCommand.ExecuteAsync: FindByIdAsync; if null → ZapiCliException(REGISTRY_ENTRY_NOT_FOUND, 1); WriteJson(entry).",
+    "ApiRegistryRemoveSettings inherits GlobalSettings: [CommandOption(\"--id\")] required string Id. ApiRegistryRemoveCommand.ExecuteAsync: RemoveAsync; WriteJson({ status=\"ok\", data = { id } }).",
+    "Register IApiRegistry (ApiRegistry) as singleton in Program.cs DI. Register all four commands in Program.cs under 'api registry' branch.",
+    "Unit tests: registry add stores entry in registry.json; registry add overwrites existing entry with same id (upsert); registry add with non-Zoho URL → HOST_NOT_ALLOWED; registry list returns all entries; registry show returns single entry; registry show with nonexistent id → REGISTRY_ENTRY_NOT_FOUND; registry remove deletes entry; registry remove with nonexistent id → REGISTRY_ENTRY_NOT_FOUND."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build succeeds with 0 errors and 0 warnings",
+    "api registry add --id cliq-channels --url https://cliq.zoho.com/api/v2/channels --method GET --purpose '...' returns { \"status\": \"ok\", \"data\": { \"id\": \"cliq-channels\" } }",
+    "api registry add with same id again overwrites the existing entry (upsert — no error)",
+    "api registry add with --url https://evil.com/api → HOST_NOT_ALLOWED on stderr, exit 1",
+    "api registry add with missing --id → INVALID_ARGS on stderr, exit 1",
+    "api registry list returns a JSON array of all registered entries",
+    "api registry show --id cliq-channels returns the single entry as a JSON object",
+    "api registry show --id nonexistent → REGISTRY_ENTRY_NOT_FOUND on stderr, exit 1",
+    "api registry remove --id cliq-channels removes the entry; subsequent list does not contain it",
+    "api registry remove --id nonexistent → REGISTRY_ENTRY_NOT_FOUND on stderr, exit 1",
+    "registry.json written with 0600 permissions on macOS/Linux",
+    "All unit tests pass"
+  ],
+  "contextForAgent": "The api registry commands do NOT require an active account — they are purely local storage operations. The one security check that DOES apply is the host allowlist: 'api registry add' must validate the --url against the same allowlist used by ApiClient.ValidateHost. This prevents registering entries that could never be successfully called anyway. Extract ValidateHost into a shared static method (or internal class in ZapiCli.Core.Api) so it can be reused by both ApiClient and ApiRegistryAddCommand. The registry.json file is stored at <configDir>/registry.json (same level as accounts.json, NOT in a subdirectory). Add REGISTRY_ENTRY_NOT_FOUND to ErrorCodes with exit 1. The 'upsert' semantic: if an entry with the same id already exists, overwrite it completely (no partial update). Registry entries have no secret fields, so no masking is needed in any output.",
+  "openItems": [
+    {
+      "item": "ValidateHost reuse between ApiClient and ApiRegistry",
+      "defaultAssumption": "Extract ValidateHost into a static class ZapiCli.Core.Api.HostValidator with a single public static method ValidateHost(Uri uri). Both ApiClient and ApiRegistryAddCommand call this. This avoids code duplication and ensures both enforce the same allowlist."
+    },
+    {
+      "item": "REGISTRY_ENTRY_NOT_FOUND error code",
+      "defaultAssumption": "Add REGISTRY_ENTRY_NOT_FOUND to ErrorCodes with exit 1. Message: \"API registry entry '<id>' not found.\""
+    }
+  ],
+  "sourceReferences": [
+    "tech_spec/docs/adr/adr-0004-host-allowlist.md",
+    "tech_spec/tech_spec.md §4 CLI Structure (api registry commands)",
+    "tech_spec/tech_spec.md §8 Storage (registry.json location)"
+  ],
+  "relevantOpenQuestions": []
+}
