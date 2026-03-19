@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ZapiCli.Keychain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+177216f5df7c01c70e9d592ab774fdbc0fb10921")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8c662fcb997e196a8b342e757a719d6ff0dcf082")]
 [assembly: System.Reflection.AssemblyProductAttribute("ZapiCli.Keychain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ZapiCli.Keychain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

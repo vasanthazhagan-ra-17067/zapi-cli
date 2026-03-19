@@ -63,7 +63,8 @@ public sealed class AccountCommandTests : IDisposable
             _store,
             _auth,
             httpFactory ?? UserInfoFactory("user@example.com"),
-            NullLogger<AccountService>.Instance);
+            NullLogger<AccountService>.Instance,
+            new FakeOAuthBrowserFlow());
 
     // ── account add ───────────────────────────────────────────────────────────
 

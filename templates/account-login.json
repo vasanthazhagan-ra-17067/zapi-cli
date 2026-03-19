@@ -1,0 +1,7 @@
+{
+  "name": "",
+  "client-id": "",
+  "client-secret": "",
+  "scope": ["ZohoAPI.Resource.READ"],
+  "dc": "us"
+}

@@ -9,7 +9,8 @@
           { "name": "remove",      "flags": ["--name (req)"] },
           { "name": "show",        "flags": ["--name (req)"] },
           { "name": "set-default", "flags": ["--name (req)"] },
-          { "name": "re-auth",     "flags": ["--name (req)"], "note": "explicit token refresh; also triggered automatically on 401 or NeedsReauth" }
+          { "name": "re-auth",     "flags": ["--name (req)"], "note": "explicit token refresh; also triggered automatically on 401 or NeedsReauth" },
+          { "name": "login",       "flags": ["--name (req if --file absent)", "--client-id (req if --file absent)", "--client-secret (req if --file absent)", "--scope (req if --file absent, comma-separated)", "--dc (default: us)", "--file (optional path to JSON config; CLI flags override file values)"], "note": "browser OAuth redirect flow — opens system browser, starts local ephemeral-port callback server, exchanges code for tokens. Stories 10-12. Plan: .ai/plans/account-login-browser-flow.md" }
         ]
       },
       "scope": {
@@ -100,6 +101,17 @@
         { "class": "LinuxKeychainProvider",         "backend": "libsecret Secret Service via P/Invoke; TryCreate() factory catches DllNotFoundException" },
         { "class": "EncryptedFileKeychainProvider", "backend": "AES-256-GCM, key from machine entropy; path: <configDir>/keystore/<sanitized-key>.bin" }
       ]
+    },
+    "IOAuthBrowserFlow": {
+      "namespace": "ZapiCli.Core.Auth",
+      "story": 10,
+      "methods": [
+        "string GenerateState()  — URL-safe base64 of 32 cryptographically random bytes (CSRF token)",
+        "string BuildAuthorizationUrl(string baseUrl, string clientId, string redirectUri, string[] scopes, string state)",
+        "void OpenBrowser(string url)  — platform dispatch: open/xdg-open/UseShellExecute; always prints URL to stderr as fallback"
+      ],
+      "implementation": "OAuthBrowserFlow",
+      "note": "Constructor-injected into AccountService. Registered as singleton in DI (Story 12)."
     },
     "IAuthProvider": {
       "namespace": "ZapiCli.Core.Auth",
@@ -257,6 +269,8 @@
     "ACCOUNT_DOMAIN_BLOCKED": { "exit": 1, "meaning": "Account email is a ZohoCorp domain" },
     "EMAIL_REQUIRED":         { "exit": 1, "meaning": "User-info API returned no email; account add aborted" },
     "HOST_NOT_ALLOWED":       { "exit": 1, "meaning": "Outgoing URL host not in compile-time allowlist" },
-    "INTERNAL_ERROR":         { "exit": 1, "meaning": "Unhandled exception at top level" }
+    "INTERNAL_ERROR":         { "exit": 1, "meaning": "Unhandled exception at top level" },
+    "STATE_MISMATCH":          { "exit": 1, "meaning": "OAuth callback state parameter does not match sent state (CSRF guard) or Zoho returned ?error= in callback" },
+    "LOGIN_TIMEOUT":           { "exit": 1, "meaning": "120-second browser auth window expired before receiving OAuth callback" }
   }
 }

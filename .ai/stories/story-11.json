@@ -1,0 +1,54 @@
+{
+  "storyId": 11,
+  "title": "AccountService Browser Login + LoginConfig Model + Template",
+  "description": "Refactor AccountService to extract the shared token-exchange logic into a private helper, then add LoginAsync which orchestrates the full browser OAuth redirect flow using LocalCallbackServer and IOAuthBrowserFlow from Story 10. Also create the LoginConfig POCO (CLI-layer input model for the --file flag) and the static templates/account-login.json starter template. No commands or DI wiring are touched in this story — only domain logic and the two new files.",
+  "status": "Not Started",
+  "dependsOn": [4, 10],
+  "prerequisiteState": "Stories 1–6 and Story 10 complete. AccountService, IAccountService, IAuthProvider, IAccountStore, DcResolver, ZohoCorpGuard all exist. IOAuthBrowserFlow and LocalCallbackServer exist from Story 10. ErrorCodes.STATE_MISMATCH and ErrorCodes.LOGIN_TIMEOUT exist. Project compiles cleanly.",
+  "goal": "After this story: calling AccountService.LoginAsync starts a LocalCallbackServer, opens the browser to the Zoho OAuth authorization URL, waits for the redirect callback, verifies the CSRF state, and then completes token exchange + account persistence exactly as AddAccountAsync does. LoginConfig can be deserialized from a JSON file matching the templates/account-login.json schema.",
+  "scope": [
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — inject IOAuthBrowserFlow via constructor (alongside existing IAuthProvider, IAccountStore, IHttpClientFactory, ILogger<AccountService>). Add the IOAuthBrowserFlow parameter to the existing constructor.",
+    "In AccountService: extract private async Task<(string Name, string Dc)> ExchangeAndFinalizeAsync(string name, string code, string redirectUri, string clientId, string clientSecret, string dc, CancellationToken ct) containing EXACTLY the shared body of AddAccountAsync: POST to /oauth/v2/token to exchange code, GET /oauth/user/info for email+ZUID, ZohoCorpGuard.AssertNotZohoCorp check, OAuthProvider.StoreTokenAsync, AccountStore save. AddAccountAsync must then delegate to ExchangeAndFinalizeAsync (no behavioral change — all existing tests must still pass).",
+    "In AccountService: add public async Task<(string Name, string Dc)> LoginAsync(string name, string clientId, string clientSecret, string[] scopes, string dc, CancellationToken ct = default). Steps: (1) Load accounts, check for duplicate name → ZapiCliException(ACCOUNT_ALREADY_EXISTS, 1) if exists. (2) Resolve dc base URL via DcResolver. (3) Instantiate LocalCallbackServer inside 'await using var server = new LocalCallbackServer()'. (4) Generate state string via _browserFlow.GenerateState(). (5) Build redirectUri = $'http://localhost:{server.Port}/callback' (no trailing slash). (6) Build authorization URL via _browserFlow.BuildAuthorizationUrl(baseUrl, clientId, redirectUri, scopes, state). (7) Call _browserFlow.OpenBrowser(authUrl). (8) Await server.WaitForCallbackAsync(TimeSpan.FromSeconds(120), ct) → (code, returnedState). (9) If returnedState != state: throw ZapiCliException('OAuth state mismatch — possible CSRF attack.', ErrorCodes.STATE_MISMATCH, 1). (10) Call await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, ct). (11) Return (name, dc).",
+    "Modify src/ZapiCli.Core/Accounts/IAccountService.cs: add LoginAsync signature — Task<(string Name, string Dc)> LoginAsync(string name, string clientId, string clientSecret, string[] scopes, string dc, CancellationToken ct = default).",
+    "Create src/ZapiCli/Commands/LoginConfig.cs — CLI-layer POCO, placed in ZapiCli (not ZapiCli.Core) because it is only consumed by AccountLoginCommand and never reaches AccountService. Properties with [JsonPropertyName] attributes: string? Name ('name'), string? ClientId ('client-id'), string? ClientSecret ('client-secret'), string[]? Scope ('scope'), string Dc ('dc') with default 'us'. Method: List<string> Validate() — returns list of human-readable error strings for each missing required field (Name, ClientId, ClientSecret, Scope). Returns empty list if all required fields are present and non-empty.",
+    "Create templates/account-login.json — static starter template at the repository root level templates/ directory. Content: { \"name\": \"\", \"client-id\": \"\", \"client-secret\": \"\", \"scope\": [\"ZohoAPI.Resource.READ\"], \"dc\": \"us\" }. No build action — pure documentation artifact.",
+    "Unit tests in tests/ZapiCli.Tests/Auth/LoginAsyncTests.cs: LoginAsync calls IOAuthBrowserFlow.GenerateState() and OpenBrowser(); LoginAsync passes the generated state to BuildAuthorizationUrl(); LoginAsync throws STATE_MISMATCH when WaitForCallbackAsync returns a different state; LoginAsync calls ExchangeAndFinalizeAsync (verify via FakeHttpMessageHandler seeing the correct token exchange POST and user-info GET); LoginAsync throws ACCOUNT_ALREADY_EXISTS when account name already exists in the store.",
+    "Unit tests in tests/ZapiCli.Tests/Auth/LoginConfigTests.cs: Validate() returns empty list when all required fields present; Validate() returns error for each missing required field (Name, ClientId, ClientSecret, Scope); Dc defaults to 'us' when not provided in JSON; JSON deserialization reads kebab-case field names correctly."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build src/zapi-cli.sln succeeds with 0 errors and 0 warnings",
+    "All existing tests (stories 1–6) still pass — AddAccountAsync behavior is unchanged",
+    "AccountService constructor accepts IOAuthBrowserFlow as a new parameter",
+    "IAccountService.LoginAsync signature is present with CancellationToken ct = default",
+    "LoginAsync throws ACCOUNT_ALREADY_EXISTS when a duplicate account name is provided",
+    "LoginAsync throws STATE_MISMATCH when the returned OAuth state does not match the sent state",
+    "LoginAsync correctly calls ExchangeAndFinalizeAsync (token exchange + user-info + ZohoCorp guard + keychain store + accounts.json persist) after a valid callback",
+    "LoginConfig.Validate() returns an empty list for a fully-populated config",
+    "LoginConfig.Validate() returns one error string per missing required field",
+    "templates/account-login.json file exists with all required keys present as empty strings or defaults",
+    "All new unit tests pass"
+  ],
+  "contextForAgent": "Read src/ZapiCli.Core/Accounts/AccountService.cs in full before editing — understand the exact AddAccountAsync body before extracting ExchangeAndFinalizeAsync. The extraction must be a pure refactor: all the HTTP calls, ZohoCorp guard, keychain store, and accounts.json persist steps move into ExchangeAndFinalizeAsync, and AddAccountAsync becomes a thin delegate. Do NOT change the redirect_uri used by AddAccountAsync (it comes from its own parameter). Read src/ZapiCli.Core/Accounts/IAccountService.cs before adding the LoginAsync signature. LoginConfig lives in src/ZapiCli/Commands/ — NOT in ZapiCli.Core — because it is a CLI-layer concern. The IOAuthBrowserFlow dependency in AccountService is constructor-injected; Story 12 will register it in DI. For the test helpers: create a FakeOAuthBrowserFlow in tests/ZapiCli.Tests/Fakes/ that records calls and returns a preset state value from GenerateState(), a well-formed URL from BuildAuthorizationUrl(), and does nothing in OpenBrowser(). Pair it with a fake LocalCallbackServer-like mechanism — since LocalCallbackServer is concrete, LoginAsync creates it via 'new LocalCallbackServer()'; for testing, consider making LocalCallbackServer creation injectable via a factory Func<LocalCallbackServer> parameter with a default of '() => new LocalCallbackServer()', or mock at the WaitForCallbackAsync level using a subclass.",
+  "openItems": [
+    {
+      "item": "LocalCallbackServer testability",
+      "defaultAssumption": "Add an overload to AccountService.LoginAsync that accepts a Func<LocalCallbackServer> serverFactory parameter (default: () => new LocalCallbackServer()) for dependency injection in tests. Production code uses the default factory; tests supply a fake server that returns preset code+state without starting an HttpListener."
+    },
+    {
+      "item": "OAuthCredentials refresh_token field",
+      "defaultAssumption": "The browser flow produces both an access_token AND a refresh_token from the token exchange. OAuthCredentials must store the refresh_token too. Check OAuthCredentials.cs and OAuthProvider.StoreTokenAsync — if refresh_token is already stored (from Story 3), ExchangeAndFinalizeAsync will naturally include it. If not, add it in this story."
+    }
+  ],
+  "sourceReferences": [
+    ".ai/plans/account-login-browser-flow.md",
+    "tech_spec/docs/Authentication.md",
+    "src/ZapiCli.Core/Accounts/AccountService.cs",
+    "src/ZapiCli.Core/Accounts/IAccountService.cs",
+    "src/ZapiCli.Core/Auth/IOAuthBrowserFlow.cs",
+    "src/ZapiCli.Core/Auth/LocalCallbackServer.cs",
+    "src/ZapiCli.Core/Auth/DcResolver.cs",
+    "src/ZapiCli.Core/ErrorCodes.cs"
+  ],
+  "relevantOpenQuestions": ["OQ-011"]
+}

@@ -252,5 +252,109 @@
         "util uuid"
       ]
     }
+  },
+  {
+    "storyId": 10,
+    "title": "Browser OAuth Infrastructure: LocalCallbackServer + IOAuthBrowserFlow/OAuthBrowserFlow + ErrorCodes",
+    "status": "Completed",
+    "completedDate": "2026-03-19",
+    "planReference": ".ai/plans/account-login-browser-flow.md",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "modified — added STATE_MISMATCH, LOGIN_TIMEOUT" },
+      { "path": "src/ZapiCli.Core/Auth/LocalCallbackServer.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Auth/IOAuthBrowserFlow.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Auth/OAuthBrowserFlow.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Auth/LocalCallbackServerTests.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Auth/OAuthBrowserFlowTests.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "HttpListener prefix changed from /callback/ to / (root) — HttpListener prefix /callback/ does NOT match requests to /callback?query=string (no trailing slash path). Using / as prefix matches all requests on the ephemeral port, which is safe since we own it exclusively.",
+      "Tests use UseProxy=false in HttpClientHandler — a corporate Squid proxy at 127.0.0.1:3128 intercepts localhost HTTP requests and returns 503. Production browser OAuth redirects skip the proxy (browsers bypass proxy for localhost natively). Only tests need UseProxy=false.",
+      "OperatingSystem.IsMacOS/IsLinux/IsWindows() used for platform detection in OAuthBrowserFlow (not RuntimeInformation.IsOSPlatform) to satisfy CA1416 with TreatWarningsAsErrors=true.",
+      "TOCTOU retry logic in LocalCallbackServer constructor: catches HttpListenerException on first Start(), retries once with new ephemeral port.",
+      "OAuthBrowserFlow.OpenBrowser always prints URL to Console.Error before Process.Start — visible even in piped output, serves as manual-paste fallback."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "HttpListener prefix http://localhost:{port}/callback/ does not match OAuth redirect URL /callback?code=...&state=... (path /callback without slash)",
+        "resolution": "Changed prefix to http://localhost:{port}/ (root prefix) — matches all requests on the ephemeral port. Since we own this port exclusively, no ambiguity."
+      },
+      {
+        "issue": "Tests timed out with LOGIN_TIMEOUT — corporate Squid proxy at 127.0.0.1:3128 intercepted localhost HTTP requests and returned 503 before HttpListener received them",
+        "resolution": "Updated LocalCallbackServer test HttpClient to use new HttpClientHandler { UseProxy = false }. Production code unaffected (real browser bypasses proxy for localhost)."
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "94 passing, 1 pre-existing failure (AccountStore_ZuidSerializesAsZuidstring — unrelated to Story 10)",
+      "commandsWorking": ["account add", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid"]
+    }
+  },
+  {
+    "storyId": 11,
+    "title": "AccountService Browser Login + LoginConfig Model + Template",
+    "status": "Completed",
+    "completedDate": "2026-03-19",
+    "planReference": ".ai/plans/account-login-browser-flow.md",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — extracted ExchangeAndFinalizeAsync, added LoginAsync, injected IOAuthBrowserFlow" },
+      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — added LoginAsync signature" },
+      { "path": "src/ZapiCli/Commands/LoginConfig.cs", "action": "created" },
+      { "path": "templates/account-login.json", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Auth/LoginAsyncTests.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Auth/LoginConfigTests.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeOAuthBrowserFlow.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeLocalCallbackServer.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs", "action": "modified — added [JsonPropertyName(\"zuidstring\")] to Zuid property (pre-existing bug fix)" }
+    ],
+    "keyDecisionsMade": [
+      "AccountService.LoginAsync has two overloads: public (5 params) delegates to internal (6 params with Func<LocalCallbackServer> serverFactory). Default factory is () => new LocalCallbackServer(). Tests inject FakeLocalCallbackServer via factory.",
+      "ExchangeAndFinalizeAsync is private — extracted from AddAccountAsync body. AddAccountAsync now delegates to it. All existing tests still pass.",
+      "LoginConfig lives in ZapiCli/Commands/ (CLI layer) not ZapiCli.Core — only consumed by AccountLoginCommand.",
+      "LoginConfig.Validate() returns List<string> of error messages, empty on success.",
+      "FakeLocalCallbackServer subclasses LocalCallbackServer using protected constructor(int port) — bypasses HttpListener entirely.",
+      "AccountEntry.Zuid [JsonPropertyName(\"zuidstring\")] attribute was missing despite Story 3 memory stating it was added — fixed in this session. All 109 tests now pass."
+    ],
+    "openQuestionsResolved": [
+      { "id": "OQ-011", "resolution": "refresh_token was already stored in OAuthCredentials — ExchangeAndFinalizeAsync captures it from the token exchange response and passes to StoreTokenAsync." }
+    ],
+    "issuesEncountered": [
+      { "issue": "AccountStore_ZuidSerializesAsZuidstring test failing — [JsonPropertyName(\"zuidstring\")] attribute was missing on AccountEntry.Zuid despite Story 3 memory claiming it was added.", "resolution": "Added [JsonPropertyName(\"zuidstring\")] attribute and 'using System.Text.Json.Serialization' import to AccountEntry.cs. All 109 tests now pass." }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "109 passing, 0 failing",
+      "commandsWorking": ["account add", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid"]
+    }
+  },
+  {
+    "storyId": 12,
+    "title": "AccountLoginCommand + DI Registration + CLI Wiring + Unit Tests",
+    "status": "Completed",
+    "completedDate": "2026-03-19",
+    "planReference": ".ai/plans/account-login-browser-flow.md",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli/Commands/AccountCommands.cs", "action": "modified — added AccountLoginSettings + AccountLoginCommand" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified — registered IOAuthBrowserFlow singleton, added account login command after add" },
+      { "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "AccountLoginSettings.JsonFile C# property uses '--file' CLI flag (not '--json-file') — avoids collision with GlobalSettings '--json' bool flag.",
+      "DC override logic: if settings.Dc != 'us' (non-default), CLI wins; else fall back to config?.Dc. This handles the case where user explicitly passes --dc that differs from file.",
+      "AccountLoginSettings.Validate() does full merged validation including File.Exists check, JSON parse, LoginConfig.Validate() with merged values — all before ExecuteAsync runs.",
+      "IOAuthBrowserFlow registered as AddSingleton<IOAuthBrowserFlow, OAuthBrowserFlow>() in Program.cs alongside the existing service registrations.",
+      "FakeAccountService defined inline in AccountLoginCommandTests.cs (not in Fakes/) since it is only used for AccountLoginCommand tests.",
+      "InMemoryOutputWriter.SuccessOutput (not JsonOutputs) is the correct property for asserting WriteJson output."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      { "issue": "Test used InMemoryOutputWriter.JsonOutputs which does not exist — correct property is SuccessOutput.", "resolution": "Fixed test to use output.SuccessOutput[0] for assertion." }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "120 passing, 0 failing",
+      "commandsWorking": ["account add", "account login", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid"]
+    }
   }
 ]

@@ -1,0 +1,47 @@
+{
+  "storyId": 12,
+  "title": "AccountLoginCommand + DI Registration + CLI Wiring + Unit Tests",
+  "description": "Add the AccountLoginSettings and AccountLoginCommand classes to AccountCommands.cs, register IOAuthBrowserFlow in DI, wire 'account login' into the Spectre.Console.Cli command tree in Program.cs, and write the full unit test suite for the login command. This is the final story that makes 'zapi-cli account login' a working end-to-end command.",
+  "status": "Not Started",
+  "dependsOn": [11],
+  "prerequisiteState": "Stories 1–6, 10, and 11 complete. IAccountService.LoginAsync implemented. LoginConfig POCO exists. IOAuthBrowserFlow registered-ready. templates/account-login.json exists. All prior tests pass.",
+  "goal": "After this story: 'zapi-cli account login --name dev --client-id X --client-secret Y --scope ZohoAPI.Resource.READ,ZohoAPI.Resource.WRITE' opens the system browser, waits for the OAuth callback, and outputs { \"status\": \"ok\", \"data\": { \"name\": \"dev\", \"dc\": \"us\" } }. The --file flag allows all inputs to be supplied from a JSON file, with CLI flags overriding individual fields.",
+  "scope": [
+    "Modify src/ZapiCli/Commands/AccountCommands.cs: add AccountLoginSettings sealed class inheriting GlobalSettings with the following [CommandOption] properties: string? JsonFile ('--file'), string? Name ('--name'), string? ClientId ('--client-id'), string? ClientSecret ('--client-secret'), string? Scope ('--scope'), string Dc ('--dc') with default 'us'. Override Validate(): if '--file' is provided, verify File.Exists(JsonFile) → error if not; deserialize JSON → LoginConfig using System.Text.Json; call LoginConfig.Validate() and collect errors; if '--file' is absent, require --name, --client-id, --client-secret, --scope (INVALID_ARGS for any missing). Condition: CLI flags always override JSON file values — JsonFile provides base values, individual flags override.",
+    "Add AccountLoginCommand sealed class inheriting AsyncCommand<AccountLoginSettings>: constructor injects IAccountService and IOutputWriter. ExecuteAsync: (1) If settings.JsonFile != null: read and deserialize LoginConfig; (2) Resolve final values with CLI flag override logic — final name = settings.Name ?? config?.Name; final clientId = settings.ClientId ?? config?.ClientId; final clientSecret = settings.ClientSecret ?? config?.ClientSecret; final dc = settings.Dc (already has default 'us') or fall back to config?.Dc ?? 'us'; final scopes: if settings.Scope != null, split on ',' and trim → string[]; else use config?.Scope ?? []. (3) Call await _service.LoginAsync(name, clientId, clientSecret, scopes, dc, ct). (4) _output.WriteJson(new { status = \"ok\", data = new { name, dc } }). (5) Return 0.",
+    "Modify src/ZapiCli/DependencyInjectionRegistrar.cs — add registration of IOAuthBrowserFlow → OAuthBrowserFlow as singleton in Program.cs (add 'services.AddSingleton<IOAuthBrowserFlow, OAuthBrowserFlow>();' alongside the existing auth/account service registrations).",
+    "Modify src/ZapiCli/Program.cs: inside the 'account' branch in app.Configure, add 'account.AddCommand<AccountCommands.AccountLoginCommand>(\"login\").WithDescription(\"Authenticate a new account via browser OAuth redirect.\");'. Placement: immediately after the 'add' command registration so the natural ordering is add → login → list → show → set-default → remove → re-auth.",
+    "Unit tests in tests/ZapiCli.Tests/AccountLoginCommandTests.cs: test 1 — all flags provided, no --file: LoginAsync called with correct name/clientId/scopes/dc; output is { status: ok, data: { name, dc } }. Test 2 — --file provided with all fields, no individual flags: LoginAsync called with values from file. Test 3 — --file provided plus --name override: LoginAsync receives the CLI --name, other values from file. Test 4 — --file with missing required field (no name): Validate() returns error listing the missing field. Test 5 — --file pointing to non-existent path: Validate() returns file-not-found error. Test 6 — no --file and --scope missing: Validate() returns INVALID_ARGS. Test 7 — --scope with comma-separated string: scopes array is correctly split and trimmed. Test 8 — duplicate account name (service throws ACCOUNT_ALREADY_EXISTS): exit 1, error envelope on stderr."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build src/zapi-cli.sln succeeds with 0 errors and 0 warnings",
+    "All existing tests (stories 1–6, 10, 11) still pass",
+    "'zapi-cli account login --name dev --client-id X --client-secret Y --scope ZohoAPI.Resource.READ' → reaches IAccountService.LoginAsync (integration verified via unit test with fake service)",
+    "'zapi-cli account login --file my-login.json' with a valid file → LoginAsync called with values from file",
+    "'zapi-cli account login --file my-login.json --name staging' → LoginAsync receives 'staging' for name, other values from file",
+    "'zapi-cli account login --file missing.json' → Validate() fails with file-not-found message, exit 1",
+    "'zapi-cli account login --file bad.json' (missing required fields) → Validate() fails listing the missing fields, exit 1",
+    "'zapi-cli account login' with no --file and no --scope → Validate() fails with INVALID_ARGS, exit 1",
+    "Scope '--scope ZohoAPI.Resource.READ,ZohoAPI.Resource.WRITE' → LoginAsync receives string[] { \"ZohoAPI.Resource.READ\", \"ZohoAPI.Resource.WRITE\" }",
+    "IOAuthBrowserFlow registered as singleton in DI — AccountService can be resolved without error",
+    "'account login' appears in 'zapi-cli account --help' output after the 'add' command",
+    "All new unit tests pass"
+  ],
+  "contextForAgent": "Read src/ZapiCli/Commands/AccountCommands.cs in full before adding the new classes — match exactly the existing static class pattern (AccountCommands is a static class containing nested Settings and Command classes). AccountLoginSettings must include a [CommandOption(\"--file\")] property — the property name in C# should be JsonFile or ConfigFile to avoid clashing with any framework keyword; use JsonFile. The --json flag is already taken by GlobalSettings (bool, for JSON output mode) — using '--file' for the config file path avoids this collision entirely. Read src/ZapiCli/Program.cs in full to find the exact account branch block before inserting the new command. Read src/ZapiCli/DependencyInjectionRegistrar.cs — the IOAuthBrowserFlow registration goes in Program.cs directly (services.AddSingleton<IOAuthBrowserFlow, OAuthBrowserFlow>()) not in DependencyInjectionRegistrar itself. For unit tests: use InMemoryOutputWriter to capture _output.WriteJson calls; use a FakeAccountService that records LoginAsync invocations and returns a preset (name, dc) tuple. Scope splitting: settings.Scope?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [].",
+  "openItems": [
+    {
+      "item": "C# property name for --file flag",
+      "defaultAssumption": "Name the C# property 'JsonFile' with [CommandOption(\"--file <FILE>\")] — avoids 'File' (System.IO namespace clash) and '--json' (GlobalSettings bool collision). The Spectre flag string is '--file' which is user-visible."
+    }
+  ],
+  "sourceReferences": [
+    ".ai/plans/account-login-browser-flow.md",
+    "tech_spec/docs/Authentication.md",
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli/Commands/LoginConfig.cs",
+    "src/ZapiCli/Program.cs",
+    "src/ZapiCli/DependencyInjectionRegistrar.cs",
+    "src/ZapiCli.Core/Accounts/IAccountService.cs"
+  ],
+  "relevantOpenQuestions": []
+}

@@ -19,6 +19,12 @@ public static class ErrorCodes
     public static readonly string EMAIL_REQUIRED = "EMAIL_REQUIRED";
     public static readonly string HOST_NOT_ALLOWED = "HOST_NOT_ALLOWED";
 
+    /// <summary>Thrown when the OAuth state parameter returned in the callback does not match the sent state (CSRF guard).</summary>
+    public static readonly string STATE_MISMATCH = "STATE_MISMATCH";
+
+    /// <summary>Thrown when the 120-second browser authentication window expires before a callback is received.</summary>
+    public static readonly string LOGIN_TIMEOUT = "LOGIN_TIMEOUT";
+
     /// <summary>Used by the global exception handler for unhandled non-ZapiCliException errors.</summary>
     public static readonly string INTERNAL_ERROR = "INTERNAL_ERROR";
 }

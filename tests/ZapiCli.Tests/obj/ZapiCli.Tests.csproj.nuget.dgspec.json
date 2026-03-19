@@ -769,6 +769,12 @@
               "target": "Package",
               "version": "[10.0.0, )"
             },
+            "Microsoft.NET.ILLink.Tasks": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.5, )",
+              "autoReferenced": true
+            },
             "Spectre.Console.Cli": {
               "target": "Package",
               "version": "[0.49.1, )"
@@ -1065,6 +1071,11 @@
             "System.Xml.XPath": "(,4.3.32767]",
             "System.Xml.XPath.XDocument": "(,5.0.32767]"
           }
+        }
+      },
+      "runtimes": {
+        "osx-arm64": {
+          "#import": []
         }
       }
     },

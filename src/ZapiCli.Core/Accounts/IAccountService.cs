@@ -47,4 +47,26 @@ public interface IAccountService
     /// Throws <see cref="ZapiCliException"/> with <c>ACCOUNT_NOT_FOUND</c> if absent.
     /// </summary>
     Task ReAuthAsync(string name, CancellationToken ct = default);
+
+    /// <summary>
+    /// Starts a local callback server, opens the Zoho OAuth authorization URL in the system browser,
+    /// waits for the redirect callback (up to 120 seconds), verifies the CSRF state, then exchanges
+    /// the grant code for tokens and persists the account (same as AddAccountAsync).
+    /// Throws <see cref="ZapiCliException"/> with <c>ACCOUNT_ALREADY_EXISTS</c> if a duplicate name is provided.
+    /// Throws <see cref="ZapiCliException"/> with <c>STATE_MISMATCH</c> if CSRF state does not match.
+    /// Throws <see cref="ZapiCliException"/> with <c>LOGIN_TIMEOUT</c> if browser auth times out.
+    /// </summary>
+    /// <param name="callbackPort">
+    /// The local port the callback HTTP server will bind to (default 8085).
+    /// Register <c>http://localhost:{callbackPort}/callback</c> as a redirect URI in the
+    /// Zoho Developer Console — this must match exactly every time.
+    /// </param>
+    Task<(string Name, string Dc)> LoginAsync(
+        string name,
+        string clientId,
+        string clientSecret,
+        string[] scopes,
+        string dc,
+        int callbackPort = 8085,
+        CancellationToken ct = default);
 }

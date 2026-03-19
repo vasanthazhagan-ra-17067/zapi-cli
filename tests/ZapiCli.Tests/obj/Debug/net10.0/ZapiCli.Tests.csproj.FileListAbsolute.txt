@@ -124,4 +124,3 @@
 /Users/vasanth-17067/Development/zapi-cli/tests/ZapiCli.Tests/bin/Debug/net10.0/fr/Spectre.Console.Cli.resources.dll
 /Users/vasanth-17067/Development/zapi-cli/tests/ZapiCli.Tests/bin/Debug/net10.0/sv/Spectre.Console.Cli.resources.dll
 /Users/vasanth-17067/Development/zapi-cli/tests/ZapiCli.Tests/bin/Debug/net10.0/zapi-cli.dll
-/Users/vasanth-17067/Development/zapi-cli/tests/ZapiCli.Tests/bin/Debug/net10.0/zapi-cli.pdb

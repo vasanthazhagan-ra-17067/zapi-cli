@@ -254,4 +254,134 @@ internal static class AccountCommands
             return 0;
         }
     }
+
+    // ─── account login ────────────────────────────────────────────────────────
+
+    public sealed class AccountLoginSettings : GlobalSettings
+    {
+        [CommandOption("--file <FILE>")]
+        public string? JsonFile { get; init; }
+
+        [CommandOption("--name <NAME>")]
+        public string? Name { get; init; }
+
+        [CommandOption("--client-id <CLIENT_ID>")]
+        public string? ClientId { get; init; }
+
+        [CommandOption("--client-secret <CLIENT_SECRET>")]
+        public string? ClientSecret { get; init; }
+
+        /// <summary>Comma-separated list of OAuth scopes to request.</summary>
+        [CommandOption("--scope <SCOPE>")]
+        public string? Scope { get; init; }
+
+        /// <summary>Zoho datacenter short name. Defaults to <c>us</c>.</summary>
+        [CommandOption("--dc <DC>")]
+        public string Dc { get; init; } = "us";
+
+        /// <summary>
+        /// Local port for the OAuth callback server. Defaults to 8085.
+        /// Register <c>http://localhost:{PORT}/callback</c> in the Zoho Developer Console as
+        /// the redirect URI for your Self-Client app.
+        /// </summary>
+        [CommandOption("--port <PORT>")]
+        public int Port { get; init; } = 8085;
+
+        public override ValidationResult Validate()
+        {
+            if (JsonFile is not null)
+            {
+                if (!System.IO.File.Exists(JsonFile))
+                    return ValidationResult.Error($"--file '{JsonFile}' was not found.");
+
+                LoginConfig config;
+                try
+                {
+                    var json = System.IO.File.ReadAllText(JsonFile);
+                    config = System.Text.Json.JsonSerializer.Deserialize<LoginConfig>(json)
+                        ?? new LoginConfig();
+                }
+                catch (Exception ex)
+                {
+                    return ValidationResult.Error($"Failed to parse --file '{JsonFile}': {ex.Message}");
+                }
+
+                // Merge CLI overrides — CLI flags take precedence over file values.
+                var effectiveName = Name ?? config.Name;
+                var effectiveClientId = ClientId ?? config.ClientId;
+                var effectiveClientSecret = ClientSecret ?? config.ClientSecret;
+                var effectiveScope = Scope is not null
+                    ? Scope.Split(',', System.StringSplitOptions.TrimEntries | System.StringSplitOptions.RemoveEmptyEntries)
+                    : config.Scope;
+
+                var merged = new LoginConfig
+                {
+                    Name = effectiveName,
+                    ClientId = effectiveClientId,
+                    ClientSecret = effectiveClientSecret,
+                    Scope = effectiveScope,
+                    Dc = Dc != "us" ? Dc : config.Dc,
+                };
+
+                var errors = merged.Validate();
+                return errors.Count == 0
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error(string.Join(" ", errors));
+            }
+            else
+            {
+                // Flags-only mode — all required flags must be present.
+                if (string.IsNullOrWhiteSpace(Name))
+                    return ValidationResult.Error("--name is required (or use --file).");
+                if (string.IsNullOrWhiteSpace(ClientId))
+                    return ValidationResult.Error("--client-id is required (or use --file).");
+                if (string.IsNullOrWhiteSpace(ClientSecret))
+                    return ValidationResult.Error("--client-secret is required (or use --file).");
+                if (string.IsNullOrWhiteSpace(Scope))
+                    return ValidationResult.Error("--scope is required (or use --file).");
+                return ValidationResult.Success();
+            }
+        }
+    }
+
+    public sealed class AccountLoginCommand : AsyncCommand<AccountLoginSettings>
+    {
+        private readonly IAccountService _service;
+        private readonly IOutputWriter _output;
+
+        public AccountLoginCommand(IAccountService service, IOutputWriter output)
+        {
+            _service = service;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(
+            CommandContext context,
+            AccountLoginSettings settings)
+        {
+            LoginConfig? fileConfig = null;
+            if (settings.JsonFile is not null)
+            {
+                var json = await System.IO.File.ReadAllTextAsync(settings.JsonFile);
+                fileConfig = System.Text.Json.JsonSerializer.Deserialize<LoginConfig>(json);
+            }
+
+            // Resolve final values: CLI flags override file values.
+            var name = settings.Name ?? fileConfig?.Name ?? string.Empty;
+            var clientId = settings.ClientId ?? fileConfig?.ClientId ?? string.Empty;
+            var clientSecret = settings.ClientSecret ?? fileConfig?.ClientSecret ?? string.Empty;
+            var dc = (settings.Dc != "us" || fileConfig?.Dc is null)
+                ? settings.Dc
+                : fileConfig.Dc;
+            var scopes = settings.Scope is not null
+                ? settings.Scope.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                : fileConfig?.Scope ?? [];
+
+            var (resultName, resultDc) = await _service.LoginAsync(
+                name, clientId, clientSecret, scopes, dc, settings.Port);
+
+            _output.WriteJson(new { status = "ok", data = new { name = resultName, dc = resultDc } });
+            return 0;
+        }
+    }
 }

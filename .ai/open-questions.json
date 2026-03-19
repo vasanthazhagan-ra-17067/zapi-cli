@@ -79,6 +79,14 @@
       "defaultAssumption": "Use a named Mutex (Mutex('Global\\\\zapi-cli-trace-<sessionName>')) around the read-increment-write cycle on sessions.json when appending a trace entry. The lock must be per-session-name scoped. If the lock cannot be acquired within 2 seconds, drop the trace entry silently (do not fail the api call).",
       "status": "Open",
       "usedByStories": [8]
+    },
+    {
+      "id": "OQ-011",
+      "question": "Does Zoho enforce exact redirect_uri matching including the port number for loopback URIs, or does it follow RFC 8252 (which allows any port on localhost)?",
+      "context": "The browser OAuth login flow (Stories 10-12) uses a random ephemeral port for the local callback server. The redirect_uri registered in the Zoho Developer Console Self-Client app must match what is sent in the authorization request. RFC 8252 allows any loopback port, but Zoho may require exact match. If exact match is required, users must pre-register the specific port URI and the ephemeral-port approach will not work without a --port flag.",
+      "defaultAssumption": "Proceed with the ephemeral-port approach. If Zoho requires exact redirect_uri including port, expose an optional --port flag on account login so users can pre-register a fixed port URI (e.g. http://localhost:9004/callback) and pass --port 9004. Test against a real Zoho org during Story 12 acceptance testing.",
+      "status": "Open",
+      "usedByStories": [10, 11, 12]
     }
   ]
 }

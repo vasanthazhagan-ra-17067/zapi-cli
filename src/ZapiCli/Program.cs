@@ -45,6 +45,9 @@ internal static class Program
         // Auth provider: OAuth Self-Client — reads/writes keychain credential bundles.
         services.AddSingleton<IAuthProvider, OAuthProvider>();
 
+        // Browser OAuth flow: generates CSRF state, builds authorization URLs, opens system browser.
+        services.AddSingleton<IOAuthBrowserFlow, OAuthBrowserFlow>();
+
         // Account service: business logic for all 'account' subcommands.
         services.AddSingleton<IAccountService, AccountService>();
 
@@ -101,6 +104,8 @@ internal static class Program
             {
                 account.AddCommand<AccountCommands.AccountAddCommand>("add")
                     .WithDescription("Add a new Zoho account (OAuth Self-Client).");
+                account.AddCommand<AccountCommands.AccountLoginCommand>("login")
+                    .WithDescription("Authenticate a new account via browser OAuth redirect.");
                 account.AddCommand<AccountCommands.AccountListCommand>("list")
                     .WithDescription("List all configured accounts.");
                 account.AddCommand<AccountCommands.AccountShowCommand>("show")

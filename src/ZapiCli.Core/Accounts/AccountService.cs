@@ -6,7 +6,7 @@ using ZapiCli.Core.Security;
 namespace ZapiCli.Core.Accounts;
 
 /// <summary>
-/// Implements all six account subcommand operations (ADR-0002, ADR-0003).
+/// Implements all account subcommand operations (ADR-0002, ADR-0003).
 /// All security checks run here before any credential or state mutation.
 /// </summary>
 public sealed class AccountService : IAccountService
@@ -15,17 +15,20 @@ public sealed class AccountService : IAccountService
     private readonly IAuthProvider _authProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AccountService> _logger;
+    private readonly IOAuthBrowserFlow _browserFlow;
 
     public AccountService(
         IAccountStore accountStore,
         IAuthProvider authProvider,
         IHttpClientFactory httpClientFactory,
-        ILogger<AccountService> logger)
+        ILogger<AccountService> logger,
+        IOAuthBrowserFlow browserFlow)
     {
         _accountStore = accountStore;
         _authProvider = authProvider;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _browserFlow = browserFlow;
     }
 
     // ─── AddAccountAsync ──────────────────────────────────────────────────────
@@ -39,7 +42,7 @@ public sealed class AccountService : IAccountService
         string dc,
         CancellationToken ct = default)
     {
-        // Step 1: Uniqueness check — abort early before any network call.
+        // Uniqueness check — abort early before any network call.
         var existing = await _accountStore.FindAsync(name, ct).ConfigureAwait(false);
         if (existing is not null)
             throw new ZapiCliException(
@@ -47,10 +50,96 @@ public sealed class AccountService : IAccountService
                 ErrorCodes.ACCOUNT_ALREADY_EXISTS,
                 exitCode: 1);
 
-        // Step 2: Resolve DC base URL — validates dc value.
+        return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, ct)
+            .ConfigureAwait(false);
+    }
+
+    // ─── LoginAsync ───────────────────────────────────────────────────────────
+
+    public Task<(string Name, string Dc)> LoginAsync(
+        string name,
+        string clientId,
+        string clientSecret,
+        string[] scopes,
+        string dc,
+        int callbackPort = 8085,
+        CancellationToken ct = default) =>
+        LoginAsync(name, clientId, clientSecret, scopes, dc, callbackPort, () => new LocalCallbackServer(callbackPort), ct);
+
+    /// <summary>
+    /// Internal overload that accepts a <paramref name="serverFactory"/> — used by tests to inject
+    /// a fake callback server that returns preset code+state without binding an HttpListener.
+    /// </summary>
+    internal async Task<(string Name, string Dc)> LoginAsync(
+        string name,
+        string clientId,
+        string clientSecret,
+        string[] scopes,
+        string dc,
+        int callbackPort,
+        Func<LocalCallbackServer> serverFactory,
+        CancellationToken ct = default)
+    {
+        // Step 1: Uniqueness check.
+        var existing = await _accountStore.FindAsync(name, ct).ConfigureAwait(false);
+        if (existing is not null)
+            throw new ZapiCliException(
+                $"Account '{name}' already exists. Use 'account remove' first to replace it.",
+                ErrorCodes.ACCOUNT_ALREADY_EXISTS,
+                exitCode: 1);
+
+        // Step 2: Resolve DC base URL (needed to build the authorization URL).
         var baseUrl = DcResolver.GetAccountsBaseUrl(dc);
 
-        // Step 3: Exchange the grant code for access_token + refresh_token.
+        // Step 3–7: Browser OAuth flow.
+        await using var server = serverFactory();
+
+        var state = _browserFlow.GenerateState();
+        var redirectUri = $"http://localhost:{server.Port}/callback";
+        var authUrl = _browserFlow.BuildAuthorizationUrl(baseUrl, clientId, redirectUri, scopes, state);
+
+        Console.Error.WriteLine($"Redirect URI (must be registered in Zoho Developer Console): {redirectUri}");
+        _browserFlow.OpenBrowser(authUrl);
+
+        Console.Error.WriteLine("Waiting for browser authentication... (timeout: 120s)");
+
+        var (code, returnedState) = await server
+            .WaitForCallbackAsync(TimeSpan.FromSeconds(120), ct)
+            .ConfigureAwait(false);
+
+        // Step 8: CSRF state verification.
+        if (returnedState != state)
+            throw new ZapiCliException(
+                "OAuth state mismatch — possible CSRF attack.",
+                ErrorCodes.STATE_MISMATCH,
+                exitCode: 1);
+
+        // Step 9: Exchange code + finalize (same as AddAccountAsync).
+        return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, ct)
+            .ConfigureAwait(false);
+    }
+
+    // ─── ExchangeAndFinalizeAsync ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Shared token-exchange + account-persistence helper used by both
+    /// <see cref="AddAccountAsync"/> and <see cref="LoginAsync"/>.
+    /// Performs: POST /oauth/v2/token → GET /oauth/user/info → ZohoCorp guard →
+    /// keychain store → accounts.json persist.
+    /// </summary>
+    private async Task<(string Name, string Dc)> ExchangeAndFinalizeAsync(
+        string name,
+        string code,
+        string redirectUri,
+        string clientId,
+        string clientSecret,
+        string dc,
+        CancellationToken ct)
+    {
+        // Step 1: Resolve DC base URL — validates dc value.
+        var baseUrl = DcResolver.GetAccountsBaseUrl(dc);
+
+        // Step 2: Exchange the grant code for access_token + refresh_token.
         using var httpClient = _httpClientFactory.CreateClient();
         httpClient.Timeout = TimeSpan.FromSeconds(30);
 
@@ -121,7 +210,7 @@ public sealed class AccountService : IAccountService
             refreshToken = rtEl.GetString()!;
         }
 
-        // Step 4: Fetch user-info to validate token and retrieve email + ZPUID.
+        // Step 3: Fetch user-info to validate token and retrieve email + ZPUID.
         using var userInfoRequest = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/oauth/user/info");
         userInfoRequest.Headers.TryAddWithoutValidation("Authorization", $"Zoho-oauthtoken {accessToken}");
 
@@ -148,7 +237,7 @@ public sealed class AccountService : IAccountService
 
             var body = await userInfoResponse.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
-            // Step 5: Parse Email and ZPUID from the user-info response.
+            // Step 4: Parse Email and ZPUID from the user-info response.
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
 
@@ -169,14 +258,14 @@ public sealed class AccountService : IAccountService
                     : zuidEl.GetString()
                 : null;
 
-            // Step 6: ZohoCorp block — MUST run after email is known, BEFORE any write.
+            // Step 5: ZohoCorp block — MUST run after email is known, BEFORE any write.
             ZohoCorpGuard.AssertNotZohoCorp(email);
 
-            // Step 7: Store credentials in the OS keychain.
+            // Step 6: Store credentials in the OS keychain.
             await _authProvider.StoreTokenAsync(name, accessToken, refreshToken, clientId, clientSecret, ct)
                 .ConfigureAwait(false);
 
-            // Step 8: Persist account entry in accounts.json.
+            // Step 7: Persist account entry in accounts.json.
             var accountsRoot = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
             var isDefault = accountsRoot.Accounts.Count == 0;
 

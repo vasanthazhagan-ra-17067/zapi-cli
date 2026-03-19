@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ZapiCli.Core.Accounts;
 
 /// <summary>
@@ -13,6 +15,7 @@ public sealed record AccountEntry
 
     public string? Email { get; init; }
 
+    [JsonPropertyName("zuidstring")]
     public string? Zuid { get; init; }
 
     public List<string> Scopes { get; init; } = [];

@@ -76,8 +76,15 @@
     "deferred": [
       "Native AOT",
       "Interactive TUI / shell mode",
-      "CI/CD pipeline automation",
-      "Browser-based OAuth flows"
+      "CI/CD pipeline automation"
+    ],
+    "browserOAuth": [
+      "account login command — browser OAuth redirect flow (Stories 10-12)",
+      "LocalCallbackServer — ephemeral-port HTTP listener for OAuth callback",
+      "IOAuthBrowserFlow / OAuthBrowserFlow — authorization URL builder + system browser launcher",
+      "LoginConfig — CLI-layer JSON config model for --file flag",
+      "templates/account-login.json — starter template for --file input",
+      "Plan: .ai/plans/account-login-browser-flow.md"
     ]
   },
   "outputContract": {
@@ -90,6 +97,7 @@
       "accountShow": "JSON object for the account (token masked as ***)",
       "accountSetDefault": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\" } }",
       "accountRemove": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\" } }",
+      "accountLogin": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\", \"dc\": \"<dc>\" } }",
       "accountReAuth": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\" } }",
       "scopeCommands": "Plain JSON object/array",
       "traceCommands": "Plain JSON result",
@@ -131,6 +139,12 @@
       "ADR-0006": "tech_spec/docs/adr/adr-0006-full-url-required.md",
       "ADR-0007": "tech_spec/docs/adr/adr-0007-three-layer-project-structure.md",
       "ADR-0008": "tech_spec/docs/adr/adr-0008-output-contract.md"
+    },
+    "plans": {
+      "browser-oauth": ".ai/plans/account-login-browser-flow.md"
+    },
+    "authDocs": {
+      "zohoSelfClientOAuth": "tech_spec/docs/Authentication.md"
     }
   },
   "configDirectories": {

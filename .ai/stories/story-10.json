@@ -1,0 +1,53 @@
+{
+  "storyId": 10,
+  "title": "Browser OAuth Infrastructure: LocalCallbackServer + IOAuthBrowserFlow/OAuthBrowserFlow + ErrorCodes",
+  "description": "Create the two new infrastructure types that the browser OAuth login flow depends on: a local HTTP callback server that receives the OAuth redirect, and the browser-flow helper that generates the CSRF state token, builds the Zoho authorization URL, and opens the system browser. Also add the two new error codes (STATE_MISMATCH, LOGIN_TIMEOUT) to ErrorCodes.cs. No existing commands or services are modified in this story.",
+  "status": "Not Started",
+  "dependsOn": [2],
+  "prerequisiteState": "Stories 1–2 complete. ZapiCliException and ErrorCodes exist. IAuthProvider, DcResolver exist in ZapiCli.Core/Auth/. The project compiles cleanly.",
+  "goal": "After this story: (1) LocalCallbackServer can be instantiated, will bind an ephemeral port, and WaitForCallbackAsync correctly receives a redirect from a browser with ?code=...&state=..., responds with a success HTML page to the browser, and disposes the HttpListener. (2) OAuthBrowserFlow can build a correctly-formatted Zoho OAuth authorization URL and open the system browser. (3) STATE_MISMATCH and LOGIN_TIMEOUT are in ErrorCodes.cs.",
+  "scope": [
+    "Modify src/ZapiCli.Core/ErrorCodes.cs: add two new static readonly string constants — STATE_MISMATCH = \"STATE_MISMATCH\" (exit 1, thrown when the state parameter returned in the OAuth callback does not match the sent state — CSRF guard) and LOGIN_TIMEOUT = \"LOGIN_TIMEOUT\" (exit 1, thrown when the 120-second browser auth window expires before a callback is received).",
+    "Create src/ZapiCli.Core/Auth/LocalCallbackServer.cs implementing IDisposable. Constructor: allocate an ephemeral port by binding a TcpListener to IPAddress.Loopback on port 0, read LocalEndpoint.Port, then Stop() the TcpListener — this port is now the assigned port. Start an HttpListener on prefix 'http://localhost:{port}/callback/'. Expose a public int Port property.",
+    "LocalCallbackServer.WaitForCallbackAsync(TimeSpan timeout, CancellationToken ct): use CancellationTokenSource.CreateLinkedTokenSource(ct, CancellationToken) with a timeout of 'timeout'. Call HttpListener.GetContextAsync() via a Task.Run + WaitAsync(linkedCts.Token). On receiving a context: parse the query string from context.Request.Url. If ?error=... is present, respond to the browser with a plain HTML error page that shows the error, flush/close the response, then throw ZapiCliException(error, ErrorCodes.STATE_MISMATCH, 1) — use the Zoho error string as the message. If the query contains ?code= and ?state=, respond to the browser with a success HTML page ('Authentication successful! You can close this tab.'), flush/close the response, then return (code, state) as a ValueTuple<string, string>. If the cancellation/timeout fires, throw ZapiCliException('Browser authentication timed out. Run the command again.', ErrorCodes.LOGIN_TIMEOUT, 1).",
+    "LocalCallbackServer.Dispose(): call HttpListener.Stop() and HttpListener.Close() wrapped in try/catch — suppress ObjectDisposedException. Mark as IDisposable so callers can use 'await using' (implement IAsyncDisposable as well, delegating to Dispose()).",
+    "Create src/ZapiCli.Core/Auth/IOAuthBrowserFlow.cs: public interface IOAuthBrowserFlow with three method signatures: string GenerateState(); string BuildAuthorizationUrl(string baseUrl, string clientId, string redirectUri, string[] scopes, string state); void OpenBrowser(string url).",
+    "Create src/ZapiCli.Core/Auth/OAuthBrowserFlow.cs implementing IOAuthBrowserFlow. GenerateState(): use RandomNumberGenerator.GetBytes(32), then Base64Url-encode using Convert.ToBase64String + replace '+' with '-', '/' with '_', strip trailing '='. BuildAuthorizationUrl(): construct query string with response_type=code, client_id (Uri-encoded), redirect_uri (Uri-encoded), scope (scopes joined with ',' then Uri-encoded), state (Uri-encoded), access_type=offline. Returns the final URL string. OpenBrowser(url): write the URL to Console.Error (so it is always visible even in piped scenarios); then attempt Process.Start — on macOS: Process.Start('open', url); on Linux: Process.Start('xdg-open', url); on Windows: Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true }). Wrap Process.Start in try/catch and silently swallow — the printed URL is the fallback.",
+    "Unit tests in tests/ZapiCli.Tests/Auth/LocalCallbackServerTests.cs: Port property is non-zero after construction; WaitForCallbackAsync returns (code, state) when a simulated HTTP GET to http://localhost:{port}/callback?code=testcode&state=teststate is made (use HttpClient in test); WaitForCallbackAsync throws ZapiCliException(LOGIN_TIMEOUT) when timeout fires before any request.",
+    "Unit tests in tests/ZapiCli.Tests/Auth/OAuthBrowserFlowTests.cs: GenerateState() returns a non-empty string, at least 32 chars (base64url of 32 bytes = 43 chars), and two successive calls return different values; BuildAuthorizationUrl produces a URL containing response_type=code, access_type=offline, the client_id, the redirect_uri (encoded), and all scopes joined with comma."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build src/zapi-cli.sln succeeds with 0 errors and 0 warnings",
+    "ErrorCodes.STATE_MISMATCH and ErrorCodes.LOGIN_TIMEOUT are non-null non-empty string constants",
+    "LocalCallbackServer constructor binds an ephemeral port; Port property returns a non-zero integer",
+    "LocalCallbackServer.WaitForCallbackAsync returns (code, state) tuple when a GET to /callback?code=X&state=Y is received",
+    "LocalCallbackServer responds to the browser with an HTML page before returning — browser does not hang",
+    "LocalCallbackServer.WaitForCallbackAsync throws ZapiCliException with code LOGIN_TIMEOUT when the timeout expires",
+    "LocalCallbackServer.WaitForCallbackAsync surfaces ?error=access_denied immediately as ZapiCliException (code STATE_MISMATCH) without waiting for timeout",
+    "LocalCallbackServer implements IDisposable and IAsyncDisposable; HttpListener is stopped on Dispose",
+    "IOAuthBrowserFlow interface declares exactly GenerateState, BuildAuthorizationUrl, OpenBrowser",
+    "OAuthBrowserFlow.GenerateState() returns URL-safe base64 strings of consistent length; two calls produce different values",
+    "OAuthBrowserFlow.BuildAuthorizationUrl produces a URL with response_type=code, access_type=offline, correct client_id, redirect_uri, scope, state query parameters",
+    "All new unit tests pass",
+    "No changes to any existing command, service, or interface outside ErrorCodes.cs"
+  ],
+  "contextForAgent": "Read src/ZapiCli.Core/ErrorCodes.cs before editing it — preserve existing constant names exactly. Read src/ZapiCli.Core/ZapiCliException.cs to understand the constructor signature before throwing new instances. The HttpListener prefix MUST have a trailing slash ('http://localhost:{port}/callback/') — HttpListener will throw AddressAlreadyInUse without it. The redirect_uri value passed to Zoho (and used in token exchange) must NOT have a trailing slash ('http://localhost:{port}/callback') — these are two different strings for two different purposes. For port allocation: bind TcpListener to port 0 on IPAddress.Loopback, read (TcpListener.LocalEndpoint as IPEndPoint).Port, then call Stop() — this releases the port so HttpListener can bind it. There is a small TOCTOU race; if it fails, retry once with a new TcpListener. OAuthBrowserFlow.OpenBrowser must always print the URL to Console.Error BEFORE attempting Process.Start, so the user can manually paste even if the browser launch fails silently. Use OperatingSystem.IsMacOS(), OperatingSystem.IsLinux(), OperatingSystem.IsWindows() for platform detection (NOT RuntimeInformation.IsOSPlatform) to satisfy CA1416 with TreatWarningsAsErrors=true.",
+  "openItems": [
+    {
+      "item": "TOCTOU race on ephemeral port",
+      "defaultAssumption": "Bind TcpListener to port 0, read port, Stop(). Then bind HttpListener to that port. If HttpListener.Start() throws, retry once with a fresh TcpListener allocation."
+    },
+    {
+      "item": "Zoho error strings in callback",
+      "defaultAssumption": "Use the ?error= query parameter value directly as the ZapiCliException message (e.g. 'access_denied'). Error code: STATE_MISMATCH (closest semantic fit for early-abort OAuth errors)."
+    }
+  ],
+  "sourceReferences": [
+    ".ai/plans/account-login-browser-flow.md",
+    "tech_spec/docs/Authentication.md",
+    "src/ZapiCli.Core/ErrorCodes.cs",
+    "src/ZapiCli.Core/ZapiCliException.cs",
+    "src/ZapiCli.Core/Auth/DcResolver.cs"
+  ],
+  "relevantOpenQuestions": []
+}

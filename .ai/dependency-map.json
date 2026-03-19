@@ -71,10 +71,38 @@
       "dependsOn": [5],
       "version": "v2",
       "phase": "Phase 4 — v2 Features"
+    },
+    {
+      "storyId": 10,
+      "title": "Browser OAuth Infrastructure: LocalCallbackServer + IOAuthBrowserFlow/OAuthBrowserFlow + ErrorCodes",
+      "status": "Completed",
+      "dependsOn": [2],
+      "version": "v2",
+      "phase": "Phase 5 — Browser OAuth",
+      "planReference": ".ai/plans/account-login-browser-flow.md"
+    },
+    {
+      "storyId": 11,
+      "title": "AccountService Browser Login + LoginConfig Model + Template",
+      "status": "Completed",
+      "dependsOn": [4, 10],
+      "version": "v2",
+      "phase": "Phase 5 — Browser OAuth",
+      "planReference": ".ai/plans/account-login-browser-flow.md"
+    },
+    {
+      "storyId": 12,
+      "title": "AccountLoginCommand + DI Registration + CLI Wiring + Unit Tests",
+      "status": "Completed",
+      "dependsOn": [11],
+      "version": "v2",
+      "phase": "Phase 5 — Browser OAuth",
+      "planReference": ".ai/plans/account-login-browser-flow.md"
     }
   ],
   "criticalPath": [1, 2, 3, 4, 5],
   "v1Stories": [1, 2, 3, 4, 5, 6],
-  "v2Stories": [7, 8, 9],
-  "notes": "Stories 7-9 may only be started after all v1 stories are Completed. Story 7 depends on 4 and 5 (account commands and api call must exist for scope NeedsReauth to be testable end-to-end). Story 8 (trace) depends on 5 because ApiClient must exist to integrate trace auto-append. Story 6 (util) is independent of 3-5 and can be done in parallel with stories 3-5 if desired — depends only on 2 (output contract)."
+  "v2Stories": [7, 8, 9, 10, 11, 12],
+  "browserOAuthStories": [10, 11, 12],
+  "notes": "Stories 7-9 may only be started after all v1 stories are Completed. Story 7 depends on 4 and 5 (account commands and api call must exist for scope NeedsReauth to be testable end-to-end). Story 8 (trace) depends on 5 because ApiClient must exist to integrate trace auto-append. Story 6 (util) is independent of 3-5 and can be done in parallel with stories 3-5 if desired — depends only on 2 (output contract). Stories 10-12 implement the browser OAuth redirect login flow (account login command) — see .ai/plans/account-login-browser-flow.md. Story 10 can be started as soon as Story 2 is complete (only needs ZapiCliException + ErrorCodes). Story 11 requires Story 4 (AccountService) AND Story 10. Story 12 requires Story 11 only."
 }
