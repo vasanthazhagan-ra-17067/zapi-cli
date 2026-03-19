@@ -69,4 +69,25 @@ public interface IAccountService
         string dc,
         int callbackPort = 8085,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Adds one or more scopes to the account's scope list (deduplicating) and sets
+    /// <c>NeedsReauth = true</c> so the next <c>api call</c> triggers a token refresh.
+    /// Enforces the ZohoCorp block.
+    /// Throws <see cref="ZapiCliException"/> with <c>ACCOUNT_NOT_FOUND</c> if absent.
+    /// </summary>
+    /// <param name="accountName">Target account; if null, the default account is used.</param>
+    /// <param name="scopesToAdd">Individual scope strings to add (already split and trimmed).</param>
+    /// <returns>The account name and its updated scope list.</returns>
+    Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
+        string accountName,
+        IEnumerable<string> scopesToAdd,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the scope list for the named account.
+    /// Enforces the ZohoCorp block.
+    /// Throws <see cref="ZapiCliException"/> with <c>ACCOUNT_NOT_FOUND</c> if absent.
+    /// </summary>
+    Task<List<string>> GetScopesAsync(string accountName, CancellationToken ct = default);
 }

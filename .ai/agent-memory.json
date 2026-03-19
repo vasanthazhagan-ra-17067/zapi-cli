@@ -356,5 +356,44 @@
       "tests": "120 passing, 0 failing",
       "commandsWorking": ["account add", "account login", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid"]
     }
+  },
+  {
+    "storyId": 7,
+    "title": "Scope Management Command Group (scope add, scope list)",
+    "status": "Completed",
+    "completedDate": "2026-03-19",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli/Commands/ScopeCommands.cs", "action": "created" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified — added scope branch (add, list)" },
+      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — added AddScopesAsync, GetScopesAsync" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — implemented AddScopesAsync, GetScopesAsync" },
+      { "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs", "action": "modified — added AddScopesAsync and GetScopesAsync stubs to FakeAccountService" },
+      { "path": ".ai/stories/story-07.json", "action": "modified — scope remove deferred to future phase" }
+    ],
+    "keyDecisionsMade": [
+      "scope remove deferred to a future phase by user decision on 2026-03-19. story-07.json updated with deferredItems noting the design rationale (NeedsReauth=true on remove, ZohoCorpGuard required).",
+      "ZohoCorpGuard is internal to ZapiCli.Core.Security and cannot be called from ZapiCli (the UI layer). Scope logic was placed in IAccountService/AccountService methods (AddScopesAsync, GetScopesAsync) so ZohoCorpGuard can be applied inside Core.",
+      "ScopeAddCommand and ScopeListCommand each inject IAccountStore (only for GetDefaultAsync resolution) and IAccountService (for the actual business logic). All Core logic (ZohoCorpGuard, dedup, NeedsReauth, SaveAsync) lives in AccountService.",
+      "scope list output is a plain JSON array of strings — no {status, data} wrapper — per contextForAgent spec.",
+      "scope add output uses {status:'ok', data:{account, scopes}} wrapper matching other mutating command contracts.",
+      "Comma-separated --scope is split + trimmed in the command class before passing IEnumerable<string> to AddScopesAsync."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "ScopeCommands.cs was created with `create_file`, then a multi-replace also rewrote the file header. The tool produced a duplicate class definition (two `internal static class ScopeCommands` blocks in one file).",
+        "resolution": "Used `head -111` to truncate the file to the correct first block only. Same issue occurred in ScopeCommandTests.cs — truncated to 308 lines."
+      },
+      {
+        "issue": "FakeAccountService in AccountLoginCommandTests.cs did not implement the new IAccountService methods (AddScopesAsync, GetScopesAsync), causing CS0535 build errors.",
+        "resolution": "Added `throw new NotImplementedException()` stubs for both methods to FakeAccountService."
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "135 passing, 0 failing",
+      "commandsWorking": ["account add", "account login", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid", "scope add", "scope list"]
+    }
   }
 ]

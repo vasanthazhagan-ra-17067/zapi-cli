@@ -442,4 +442,58 @@ public sealed class AccountService : IAccountService
                 new AccountsRoot { Accounts = updatedAccounts }, ct)
             .ConfigureAwait(false);
     }
+
+    // ─── AddScopesAsync ───────────────────────────────────────────────────────
+
+    public async Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
+        string accountName,
+        IEnumerable<string> scopesToAdd,
+        CancellationToken ct = default)
+    {
+        var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
+        var account = root.Accounts.FirstOrDefault(a => a.Name == accountName);
+        if (account is null)
+            throw new ZapiCliException(
+                $"Account '{accountName}' not found.",
+                ErrorCodes.ACCOUNT_NOT_FOUND,
+                exitCode: 1);
+
+        ZohoCorpGuard.AssertNotZohoCorp(account.Email);
+
+        var updatedScopes = account.Scopes.ToList();
+        foreach (var s in scopesToAdd)
+        {
+            if (!updatedScopes.Contains(s, StringComparer.Ordinal))
+                updatedScopes.Add(s);
+        }
+
+        var updatedAccount = account with { Scopes = updatedScopes, NeedsReauth = true };
+        var updatedAccounts = root.Accounts
+            .Select(a => a.Name == accountName ? updatedAccount : a)
+            .ToList();
+
+        await _accountStore.SaveAsync(
+            new AccountsRoot { Accounts = updatedAccounts }, ct).ConfigureAwait(false);
+
+        return (updatedAccount.Name, updatedScopes);
+    }
+
+    // ─── GetScopesAsync ───────────────────────────────────────────────────────
+
+    public async Task<List<string>> GetScopesAsync(
+        string accountName,
+        CancellationToken ct = default)
+    {
+        var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
+        var account = root.Accounts.FirstOrDefault(a => a.Name == accountName);
+        if (account is null)
+            throw new ZapiCliException(
+                $"Account '{accountName}' not found.",
+                ErrorCodes.ACCOUNT_NOT_FOUND,
+                exitCode: 1);
+
+        ZohoCorpGuard.AssertNotZohoCorp(account.Email);
+
+        return account.Scopes.ToList();
+    }
 }

@@ -344,4 +344,11 @@ internal sealed class FakeAccountService : IAccountService
 
     public Task ReAuthAsync(string name, CancellationToken ct = default) =>
         throw new NotImplementedException();
+
+    public Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
+        string accountName, IEnumerable<string> scopesToAdd, CancellationToken ct = default) =>
+        throw new NotImplementedException();
+
+    public Task<List<string>> GetScopesAsync(string accountName, CancellationToken ct = default) =>
+        throw new NotImplementedException();
 }

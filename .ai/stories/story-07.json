@@ -1,40 +1,41 @@
 {
   "storyId": 7,
-  "title": "Scope Management Command Group (scope add, remove, list)",
-  "description": "Implement the three scope subcommands. Adding or removing a scope modifies the account's Scopes list in accounts.json and sets NeedsReauth=true, triggering an automatic token refresh on the next api call. All scope commands enforce the ZohoCorp block.",
+  "title": "Scope Management Command Group (scope add, list)",
+  "description": "Implement scope add and scope list subcommands. Adding a scope modifies the account's Scopes list in accounts.json and sets NeedsReauth=true, triggering an automatic token refresh on the next api call. Both scope commands enforce the ZohoCorp block. NOTE: scope remove is deferred to a future phase.",
   "status": "Not Started",
   "dependsOn": [4, 5],
   "prerequisiteState": "Stories 1-5 complete. All account commands, ApiClient, and auto-refresh on NeedsReauth=true are working and tested.",
   "goal": "After 'zapi-cli scope add --scope ZohoDesk.Tickets.READ', the scope is added to the target account's scopes[] in accounts.json and needs_reauth is set to true. The next api call for that account triggers an automatic token refresh.",
   "scope": [
-    "Create src/ZapiCli/Commands/ScopeCommands.cs with three command classes.",
+    "Create src/ZapiCli/Commands/ScopeCommands.cs with two command classes (scope add, scope list). scope remove is deferred.",
     "ScopeAddSettings inherits GlobalSettings: [CommandOption(\"--scope\")] required string Scope (req, may be comma-separated), [CommandOption(\"--account\")] string? AccountOverride. Validate() rejects if Scope is null/empty (INVALID_ARGS).",
-    "ScopeAddCommand.ExecuteAsync: (1) Resolve account name (AccountOverride ?? IAccountStore.GetDefaultAsync().Name); (2) AccountStore.FindAsync (ACCOUNT_NOT_FOUND if null); (3) ZohoCorpGuard.AssertNotZohoCorp(account.Email); (4) Parse comma-separated scope string into individual scope strings (trim whitespace); (5) Build updated Scopes list = existing + new ones (skip duplicates); (6) Set NeedsReauth = true; (7) Replace AccountEntry in AccountsRoot; (8) AccountStore.SaveAsync; (9) WriteJson({ status=\"ok\", data = { account = account.Name, scopes = updatedScopes } }).",
-    "ScopeRemoveSettings inherits GlobalSettings: [CommandOption(\"--scope\")] required string Scope (req, comma-separated), [CommandOption(\"--account\")] string? AccountOverride.",
-    "ScopeRemoveCommand.ExecuteAsync: (1) Resolve account; (2) FindAsync (ACCOUNT_NOT_FOUND if null); (3) ZohoCorpGuard.AssertNotZohoCorp; (4) Parse comma-separated scope string; (5) Build updated Scopes = existing minus removed scopes; (6) Set NeedsReauth = true (removing a scope also needs a token refresh to narrow permissions); (7) Replace AccountEntry; (8) SaveAsync; (9) WriteJson({ status=\"ok\", data = { account, scopes = updatedScopes } }).",
+    "ScopeAddCommand.ExecuteAsync: (1) Resolve account name (AccountOverride ?? IAccountStore.GetDefaultAsync().Name); (2) Delegate to IAccountService.AddScopesAsync (handles ACCOUNT_NOT_FOUND, ZohoCorp block, dedup, NeedsReauth=true, save); (3) WriteJson({ status=\"ok\", data = { account, scopes = updatedScopes } }).",
     "ScopeListSettings inherits GlobalSettings: [CommandOption(\"--account\")] string? AccountOverride.",
-    "ScopeListCommand.ExecuteAsync: (1) Resolve account; (2) FindAsync (ACCOUNT_NOT_FOUND if null); (3) ZohoCorpGuard.AssertNotZohoCorp; (4) WriteJson(account.Scopes) — plain JSON array of scope strings.",
-    "Register all three commands under the 'scope' branch in Program.cs CommandApp.",
-    "Unit tests: scope add adds comma-separated scopes individually; scope add deduplicates existing scopes; scope add sets NeedsReauth=true; scope remove removes correct scopes; scope remove sets NeedsReauth=true; scope list returns scopes array; scope add with ZohoCorp account → ACCOUNT_DOMAIN_BLOCKED; scope add with missing --scope → INVALID_ARGS."
+    "ScopeListCommand.ExecuteAsync: (1) Resolve account; (2) Delegate to IAccountService.GetScopesAsync (handles ACCOUNT_NOT_FOUND, ZohoCorp block); (3) WriteJson(scopes) — plain JSON array of scope strings.",
+    "Register scope add and scope list under the 'scope' branch in Program.cs CommandApp.",
+    "IAccountService: add AddScopesAsync and GetScopesAsync methods.",
+    "AccountService: implement AddScopesAsync and GetScopesAsync with ZohoCorpGuard in Core.",
+    "Unit tests: scope add adds comma-separated scopes individually; scope add deduplicates existing scopes; scope add sets NeedsReauth=true; scope list returns scopes array; scope add with ZohoCorp account → ACCOUNT_DOMAIN_BLOCKED; scope add with missing --scope → INVALID_ARGS; scope list with nonexistent account → ACCOUNT_NOT_FOUND.",
+    "DEFERRED: scope remove — to be implemented in a future phase."
   ],
   "acceptanceCriteria": [
     "dotnet build succeeds with 0 errors and 0 warnings",
     "scope add --scope ZohoDesk.Tickets.READ adds the scope to accounts.json and sets needs_reauth=true",
     "scope add --scope 'ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ' adds both scopes individually",
     "scope add does not add duplicate scopes if the scope already exists",
-    "scope remove removes the specified scope(s) from accounts.json and sets needs_reauth=true",
     "scope list --account work returns a JSON array of scope strings",
     "scope add with a ZohoCorp-domain account → ACCOUNT_DOMAIN_BLOCKED, accounts.json unchanged",
-    "scope add/remove/list with nonexistent account → ACCOUNT_NOT_FOUND",
+    "scope add/list with nonexistent account → ACCOUNT_NOT_FOUND",
     "scope add without --scope → INVALID_ARGS",
     "After scope add sets NeedsReauth=true, the next api call (Story 5) triggers auto-refresh (integration: end-to-end verified)",
     "All unit tests pass"
   ],
-  "contextForAgent": "Read ADR-0002 §Scope Change + Re-auth Flow for the full scope management design. The key invariant: any scope add OR remove sets NeedsReauth=true — even removing a scope requires a new token (narrowed permissions). The scope list/output is a plain JSON array (not wrapped in { status, data }). ZohoCorpGuard must fire in ALL three scope commands — even scope list (read-only). The comma-separated scope string in --scope should be split by comma and each part trimmed of whitespace before processing. Multiple --scope calls with the same values should be idempotent (no duplicate scopes added).",
-  "openItems": [
+  "contextForAgent": "Read ADR-0002 §Scope Change + Re-auth Flow for the full scope management design. The scope list/output is a plain JSON array (not wrapped in { status, data }). ZohoCorpGuard must fire in BOTH scope commands — even scope list (read-only). The comma-separated scope string in --scope should be split by comma and each part trimmed of whitespace before processing. Multiple --scope calls with the same values should be idempotent (no duplicate scopes added). scope remove is explicitly out of scope for this story.",
+  "openItems": [],
+  "deferredItems": [
     {
-      "item": "NeedsReauth on scope remove",
-      "defaultAssumption": "Yes — removing a scope also sets NeedsReauth=true. Rationale: narrowing OAuth token permissions requires issuing a new token with the reduced scope set. The existing token still has the old (broader) permissions until a refresh issues a new narrower one."
+      "item": "scope remove command",
+      "rationale": "Deferred to a future phase by user decision on 2026-03-19. When implemented: removing a scope should also set NeedsReauth=true (narrowing permissions requires a new token). Use IAccountService.RemoveScopesAsync following the same ZohoCorpGuard + save pattern."
     }
   ],
   "sourceReferences": [
@@ -42,7 +43,8 @@
     "tech_spec/docs/adr/adr-0003-zohocorp-domain-block.md",
     "tech_spec/tech_spec.md §4 CLI Structure (scope commands)",
     "tech_spec/tech_spec.md §6 Authentication (scope change + re-auth flow)",
-    "tech_spec/tech_spec.md §11 Output Contract"
+    "tech_spec/tech_spec.md §11 Output Contract",
+    "tech_spec/docs/zoho-oauth-incremental-authorization.md"
   ],
   "relevantOpenQuestions": []
 }

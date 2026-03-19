@@ -51,7 +51,7 @@
     {
       "storyId": 7,
       "title": "Scope Management Command Group",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [4, 5],
       "version": "v2",
       "phase": "Phase 4 — v2 Features"

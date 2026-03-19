@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ZapiCli.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8c662fcb997e196a8b342e757a719d6ff0dcf082")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2a3f1c3a0a00c0751c2e1f41f1a199ec21f1b5f3")]
 [assembly: System.Reflection.AssemblyProductAttribute("ZapiCli.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ZapiCli.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
