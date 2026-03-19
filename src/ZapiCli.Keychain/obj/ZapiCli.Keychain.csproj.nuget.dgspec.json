@@ -339,7 +339,7 @@
         }
       },
       "runtimes": {
-        "osx-arm64": {
+        "linux-arm64": {
           "#import": []
         }
       }

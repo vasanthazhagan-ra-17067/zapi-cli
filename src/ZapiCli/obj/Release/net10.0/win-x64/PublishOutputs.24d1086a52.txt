@@ -1,0 +1,1 @@
+/Users/vasanth-17067/Development/zapi-cli/build/win-x64/zapi-cli.exe
