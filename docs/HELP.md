@@ -23,6 +23,17 @@ Ships as a single self-contained binary — no runtime, no dependencies, no inst
    - [api call](#api-call)
    - [util time-ms](#util-time-ms)
    - [util uuid](#util-uuid)
+   - [util time-now](#util-time-now)
+   - [scope add](#scope-add)
+   - [scope list](#scope-list)
+   - [trace session start](#trace-session-start)
+   - [trace session list](#trace-session-list)
+   - [trace session export](#trace-session-export)
+   - [trace session close](#trace-session-close)
+   - [trace session reopen](#trace-session-reopen)
+   - [trace session remove](#trace-session-remove)
+   - [trace config set](#trace-config-set)
+   - [trace config show](#trace-config-show)
 6. [Global Flags](#global-flags)
 7. [Scripting & AI Agent Usage](#scripting--ai-agent-usage)
 8. [Error Handling Reference](#error-handling-reference)
@@ -741,6 +752,96 @@ The `data` field contains the raw Zoho API response body parsed as JSON:
 
 ---
 
+### scope add
+
+Add one or more OAuth scopes to an existing account. Sets `needs_reauth` to `true`, triggering an automatic token refresh on the next `api call` for that account.
+
+```
+USAGE:
+    zapi-cli scope add [OPTIONS]
+
+OPTIONS:
+    --scope <SCOPE>          OAuth scope(s) to add, comma-separated (required)
+    -a, --account <ACCOUNT>  Account alias (uses default account if omitted)
+```
+
+Scopes are deduplicated — adding a scope that already exists is a no-op for that scope.
+
+#### Example
+
+```bash
+zapi-cli scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
+```
+
+#### Example output
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "account": "myaccount",
+    "scopes": [
+      "ZohoCliq.Channels.READ",
+      "ZohoDesk.Tickets.READ",
+      "ZohoDesk.Reports.READ"
+    ]
+  }
+}
+```
+
+> **Note:** After `scope add` sets `needs_reauth: true`, the next `api call` for this account automatically triggers a silent token refresh using the stored `client_id` and `client_secret`.
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `INVALID_ARGS` | `--scope` was not provided or is empty. | Pass `--scope <SCOPE>`. |
+| `ACCOUNT_NOT_FOUND` | The target account does not exist. | Run `account list` to verify. |
+| `ACCOUNT_DOMAIN_BLOCKED` | The account email is `@zohocorp.*`. | Use a customer Zoho account. |
+| `NO_DEFAULT_ACCOUNT` | `--account` omitted and no default account is set. | Run `account set-default` or pass `--account` explicitly. |
+
+---
+
+### scope list
+
+List all OAuth scopes configured for an account.
+
+```
+USAGE:
+    zapi-cli scope list [OPTIONS]
+
+OPTIONS:
+    -a, --account <ACCOUNT>  Account alias (uses default account if omitted)
+```
+
+#### Example
+
+```bash
+zapi-cli scope list --account myaccount
+```
+
+#### Example output
+
+```json
+[
+  "ZohoCliq.Channels.READ",
+  "ZohoDesk.Tickets.READ",
+  "ZohoDesk.Reports.READ"
+]
+```
+
+> **Note:** Output is a plain JSON array of strings — no `{"status":"ok","data":...}` wrapper.
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `ACCOUNT_NOT_FOUND` | The target account does not exist. | Run `account list` to verify. |
+| `ACCOUNT_DOMAIN_BLOCKED` | The account email is `@zohocorp.*`. | Use a customer Zoho account. |
+| `NO_DEFAULT_ACCOUNT` | `--account` omitted and no default account is set. | Run `account set-default` or pass `--account` explicitly. |
+
+---
+
 ### util time-ms
 
 Output the current UTC time as a Unix millisecond timestamp.
@@ -762,10 +863,7 @@ zapi-cli util time-ms
 
 ```json
 {
-  "status": "ok",
-  "data": {
-    "ts": 1710789600000
-  }
+  "ts": 1710789600000
 }
 ```
 
@@ -773,7 +871,7 @@ zapi-cli util time-ms
 
 ```bash
 # Capture the timestamp into a shell variable
-TS=$(zapi-cli util time-ms | jq -r '.data.ts')
+TS=$(zapi-cli util time-ms | jq -r '.ts')
 echo "Current time: $TS ms"
 ```
 
@@ -800,23 +898,397 @@ zapi-cli util uuid
 
 ```json
 {
-  "status": "ok",
-  "data": {
-    "uuid": "550e8400-e29b-41d4-a716-446655440000"
-  }
+  "uuid": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
 #### Usage in a pipeline
 
 ```bash
-IDEMPOTENCY_KEY=$(zapi-cli util uuid | jq -r '.data.uuid')
+IDEMPOTENCY_KEY=$(zapi-cli util uuid | jq -r '.uuid')
 zapi-cli api call \
   --url "https://www.zohoapis.com/crm/v6/Leads" \
   -X POST \
   --header "Idempotency-Key:$IDEMPOTENCY_KEY" \
   --body '{"data": [{"Last_Name": "Smith", "First_Name": "John"}]}'
 ```
+
+---
+
+### util time-now
+
+Output the current India Standard Time (IST, GMT+5:30) as a formatted timestamp.
+
+```
+USAGE:
+    zapi-cli util time-now [OPTIONS]
+```
+
+The time is formatted as `DD/MM/YY HH:mm:ss.fff` (24-hour clock with milliseconds). Uses a fixed +05:30 offset — no OS timezone database dependency.
+
+#### Example
+
+```bash
+zapi-cli util time-now
+```
+
+#### Example output
+
+```json
+{
+  "now": "20/03/26 21:15:30.427"
+}
+```
+
+#### Usage in a pipeline
+
+```bash
+NOW_IST=$(zapi-cli util time-now | jq -r '.now')
+echo "Current IST time: $NOW_IST"
+```
+
+---
+
+### trace session start
+
+Start a named trace session. All subsequent `api call` invocations will write trace entries live to the resolved export file until the session is closed.
+
+```
+USAGE:
+    zapi-cli trace session start [OPTIONS]
+
+OPTIONS:
+    --name <NAME>          Session name (required; allowed chars: [a-zA-Z0-9_.-], max 64)
+    --export-path <PATH>   File or directory path for trace output (optional)
+```
+
+**Export path resolution order:**
+1. If `--export-path` ends in `.json` → used as the exact file path.
+2. If `--export-path` is a directory → file is created as `<name>-<short-uuid>.json` in that directory.
+3. If `--export-path` is omitted → falls back to the default configured via `trace config set`.
+4. If no export path is available → `EXPORT_PATH_NOT_SET` error, exit 1.
+
+Session names are **non-unique** — multiple sessions may share the same name. The `unique_id` UUID is the primary key for all session operations.
+
+#### Example
+
+```bash
+zapi-cli trace session start --name my-session --export-path /tmp/traces/
+```
+
+#### Example output
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "unique_id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "my-session",
+    "export_path": "/tmp/traces/my-session-550e8400.json",
+    "start_time": "2026-03-20T15:30:00.000+00:00",
+    "status": "active"
+  }
+}
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `INVALID_ARGS` | `--name` is missing or contains invalid characters. | Name must match `[a-zA-Z0-9_.-]` and be at most 64 characters. |
+| `EXPORT_PATH_NOT_SET` | No `--export-path` given and no default is configured. | Run `trace config set --default-export-path <PATH>` or pass `--export-path` explicitly. |
+
+---
+
+### trace session list
+
+List all known trace sessions with their current status and entry counts.
+
+```
+USAGE:
+    zapi-cli trace session list [OPTIONS]
+```
+
+#### Example
+
+```bash
+zapi-cli trace session list
+```
+
+#### Example output
+
+```json
+[
+  {
+    "unique_id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "my-session",
+    "start_time": "2026-03-20T15:30:00.000+00:00",
+    "entry_count": 12,
+    "status": "active",
+    "export_path": "/tmp/traces/my-session-550e8400.json"
+  }
+]
+```
+
+**Session status values:**
+
+| Status | Meaning |
+|---|---|
+| `active` | Session is live; `api call` writes trace entries. |
+| `closing` | Session is draining in-flight writes; new entries are silently dropped. |
+| `closed` | Session is sealed; no further entries are written. |
+
+---
+
+### trace session export
+
+Read and return the entries from a trace file, with optional type filtering and body truncation.
+
+```
+USAGE:
+    zapi-cli trace session export [OPTIONS]
+
+OPTIONS:
+    --id <ID>                Session UUID (mutually exclusive with --name)
+    --name <NAME>            Session name (mutually exclusive with --id)
+    --type <TYPE>            Filter entries by type: api or pex
+    --truncate-body <CHARS>  Truncate request_body and response_body to N characters in output
+```
+
+Either `--id` or `--name` is required. If `--name` matches multiple sessions, `SESSION_AMBIGUOUS` is returned — use `--id` to disambiguate.
+
+> **Note:** `--truncate-body` affects **output only**. The trace file on disk is never modified.
+
+> **Security:** The `authorization`, `cookie`, `x-auth-token`, and `x-api-key` request headers, and the `set-cookie` and `www-authenticate` response headers, are **never written to the trace file**.
+
+#### Example
+
+```bash
+zapi-cli trace session export --id 550e8400-e29b-41d4-a716-446655440000 --type api --truncate-body 200
+```
+
+#### Example output
+
+```json
+[
+  {
+    "seq": 1,
+    "type": "api",
+    "session": "my-session",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "timestamp": "2026-03-20T15:30:05.123+00:00",
+    "duration_ms": 312,
+    "account": "myaccount",
+    "method": "GET",
+    "base_url": "https://www.zohoapis.com",
+    "url": "https://www.zohoapis.com/cliq/v2/channels",
+    "request_headers": { "Content-Type": "application/json" },
+    "request_body": null,
+    "response_status": 200,
+    "response_headers": { "Content-Type": "application/json" },
+    "response_body": "{\"channels\":[...]}",
+    "error": null
+  }
+]
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `SESSION_NOT_FOUND` | No session with the specified `--id` or `--name` exists. | Run `trace session list` to see available sessions. |
+| `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` from `trace session list`. |
+| `INVALID_ARGS` | Both `--id` and `--name` provided, or neither, or `--type` is not `api`/`pex`. | Provide exactly one of `--id` or `--name`. |
+
+---
+
+### trace session close
+
+Seal a trace session. In-flight `api call` writes are drained for `--wait-ms` milliseconds, then the session is marked `closed` and no further entries are accepted.
+
+```
+USAGE:
+    zapi-cli trace session close [OPTIONS]
+
+OPTIONS:
+    --id <ID>        Session UUID (mutually exclusive with --name)
+    --name <NAME>    Session name (mutually exclusive with --id)
+    --wait-ms <MS>   Drain window before sealing, in milliseconds (default: 5000)
+```
+
+#### Example
+
+```bash
+zapi-cli trace session close --id 550e8400-e29b-41d4-a716-446655440000
+```
+
+#### Example output
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "unique_id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "my-session"
+  }
+}
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace session list` to see available sessions. |
+| `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` instead. |
+
+---
+
+### trace session reopen
+
+Re-activate a closed session. Subsequent `api call` invocations append entries to the existing trace file, with sequence numbers continuing from the last `entry_count`.
+
+```
+USAGE:
+    zapi-cli trace session reopen [OPTIONS]
+
+OPTIONS:
+    --id <ID>        Session UUID (mutually exclusive with --name)
+    --name <NAME>    Session name (mutually exclusive with --id)
+```
+
+#### Example
+
+```bash
+zapi-cli trace session reopen --id 550e8400-e29b-41d4-a716-446655440000
+```
+
+#### Example output
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "unique_id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "my-session",
+    "status": "active"
+  }
+}
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace session list` to see available sessions. |
+| `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` instead. |
+
+---
+
+### trace session remove
+
+Remove a session from the sessions index. The trace file at `export_path` is **preserved** on disk.
+
+```
+USAGE:
+    zapi-cli trace session remove [OPTIONS]
+
+OPTIONS:
+    --id <ID>        Session UUID (mutually exclusive with --name)
+    --name <NAME>    Session name (mutually exclusive with --id)
+```
+
+> **Note:** This only removes the session metadata entry. The trace file (NDJSON) at `export_path` is not deleted.
+
+#### Example
+
+```bash
+zapi-cli trace session remove --id 550e8400-e29b-41d4-a716-446655440000
+```
+
+#### Example output
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "unique_id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "my-session"
+  }
+}
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace session list` to see available sessions. |
+| `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` instead. |
+
+---
+
+### trace config set
+
+Persist the default export path used when `trace session start` is called without `--export-path`.
+
+```
+USAGE:
+    zapi-cli trace config set [OPTIONS]
+
+OPTIONS:
+    --default-export-path <PATH>    Directory or file path for trace output (required)
+```
+
+This value is stored in `trace-config.json` in the zapi-cli config directory.
+
+#### Example
+
+```bash
+zapi-cli trace config set --default-export-path /tmp/traces/
+```
+
+#### Example output
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "default_export_path": "/tmp/traces/"
+  }
+}
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `INVALID_ARGS` | `--default-export-path` was not provided. | Pass `--default-export-path <PATH>`. |
+
+---
+
+### trace config show
+
+Show the current trace configuration.
+
+```
+USAGE:
+    zapi-cli trace config show [OPTIONS]
+```
+
+#### Example
+
+```bash
+zapi-cli trace config show
+```
+
+#### Example output
+
+```json
+{
+  "default_export_path": "/tmp/traces/"
+}
+```
+
+> **Note:** Output is plain JSON — no `{"status":"ok","data":...}` wrapper. `default_export_path` is `null` if no default has been configured.
 
 ---
 
@@ -936,7 +1408,7 @@ zapi-cli api call \
 
 ```bash
 # Build a time-windowed API query
-NOW=$(zapi-cli util time-ms | jq -r '.data.ts')
+NOW=$(zapi-cli util time-ms | jq -r '.ts')
 ONE_HOUR_AGO=$((NOW - 3600000))
 
 zapi-cli api call \
@@ -975,6 +1447,9 @@ All error responses are emitted on **stderr** as:
 | `STATE_MISMATCH` | 1 | The OAuth callback `state` parameter did not match the generated CSRF token. | Indicates a possible CSRF attack or a stale/replayed callback. Discard and re-run `account login`. |
 | `LOGIN_TIMEOUT` | 1 | The browser-based OAuth callback was not received within 120 seconds. | Ensure the browser opened and you completed the sign-in before the timeout. Re-run `account login`. |
 | `INTERNAL_ERROR` | 1 | An unhandled internal exception occurred. | File a bug report with the full stderr output. |
+| `SESSION_NOT_FOUND` | 1 | The specified session `--id` or `--name` does not exist in the sessions index. | Run `trace session list` to enumerate valid sessions. |
+| `SESSION_AMBIGUOUS` | 1 | Multiple sessions share the specified `--name`; cannot resolve to a unique session. | Use `--id` with the specific `unique_id` from `trace session list`. |
+| `EXPORT_PATH_NOT_SET` | 1 | `trace session start` had no `--export-path` and no default is configured. | Run `trace config set --default-export-path <PATH>` or pass `--export-path` explicitly. |
 
 ---
 

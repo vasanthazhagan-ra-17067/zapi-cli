@@ -7,6 +7,7 @@ using ZapiCli.Core;
 using ZapiCli.Core.Accounts;
 using ZapiCli.Core.Api;
 using ZapiCli.Core.Auth;
+using ZapiCli.Core.Trace;
 using ZapiCli.Keychain;
 
 namespace ZapiCli;
@@ -56,6 +57,17 @@ internal static class Program
         services.AddHttpClient("zapi-api", client =>
             client.Timeout = TimeSpan.FromSeconds(30));
         services.AddSingleton<ApiClient>();
+
+        // Trace system: ITraceConfigStore → ITraceSession → ITraceWriter → TraceExporter.
+        services.AddSingleton<ITraceConfigStore>(sp =>
+            new TraceConfigStore(configDir, sp.GetRequiredService<ILogger<TraceConfigStore>>()));
+        services.AddSingleton<ITraceSession>(sp =>
+            new TraceSession(
+                configDir,
+                sp.GetRequiredService<ITraceConfigStore>(),
+                sp.GetRequiredService<ILogger<TraceSession>>()));
+        services.AddSingleton<ITraceWriter, TraceWriter>();
+        services.AddSingleton<TraceExporter>();
 
         // Logging: Warning+ to stderr only so the JSON stdout contract is never broken.
         services.AddLogging(logging =>
@@ -130,6 +142,8 @@ internal static class Program
                     .WithDescription("Output the current UTC time as a Unix millisecond timestamp.");
                 util.AddCommand<UtilCommands.UtilUuidCommand>("uuid")
                     .WithDescription("Generate a random UUID v4.");
+                util.AddCommand<UtilCommands.UtilTimeNowCommand>("time-now")
+                    .WithDescription("Output the current India Standard Time (GMT+5:30) as DD/MM/YY hh:mm:ss AM/PM.");
             });
 
             config.AddBranch("scope", scope =>
@@ -138,6 +152,33 @@ internal static class Program
                     .WithDescription("Add one or more scopes to an account (sets needs_reauth=true).");
                 scope.AddCommand<ScopeCommands.ScopeListCommand>("list")
                     .WithDescription("List the scopes configured for an account.");
+            });
+
+            config.AddBranch("trace", trace =>
+            {
+                trace.AddBranch("session", session =>
+                {
+                    session.AddCommand<TraceCommands.StartSessionCommand>("start")
+                        .WithDescription("Start a new named trace session.");
+                    session.AddCommand<TraceCommands.ListSessionsCommand>("list")
+                        .WithDescription("List all trace sessions.");
+                    session.AddCommand<TraceCommands.ExportSessionCommand>("export")
+                        .WithDescription("Export trace entries from a session.");
+                    session.AddCommand<TraceCommands.CloseSessionCommand>("close")
+                        .WithDescription("Close a trace session (waits for in-flight calls).");
+                    session.AddCommand<TraceCommands.ReopenSessionCommand>("reopen")
+                        .WithDescription("Reopen a closed session for further tracing.");
+                    session.AddCommand<TraceCommands.RemoveSessionCommand>("remove")
+                        .WithDescription("Remove a session entry (trace file is preserved).");
+                });
+
+                trace.AddBranch("config", traceConfig =>
+                {
+                    traceConfig.AddCommand<TraceCommands.TraceConfigSetCommand>("set")
+                        .WithDescription("Set trace configuration (e.g. default export path).");
+                    traceConfig.AddCommand<TraceCommands.TraceConfigShowCommand>("show")
+                        .WithDescription("Show current trace configuration.");
+                });
             });
         });
 

@@ -36,7 +36,7 @@ zapi-cli ships as a self-contained single binary (`dotnet publish -r <rid> /p:Pu
 
 - No GUI or interactive TUI — all output is machine-readable JSON.
 - No OAuth scope management UI (Phase 2).
-- No trace session recording (Phase 2).
+- No trace session recording (Phase 2; see §11).
 - No API registry (Phase 2).
 - No WebSocket or Pex/real-time connection handling (Phase 3).
 - No ZohoCorp (`@zohocorp.com`) account support — hard blocked by design.
@@ -232,7 +232,7 @@ An AI agent working in a GitHub Copilot session needs to fetch open support tick
   - Output contract + exit codes
   - Unit tests for `AccountStore`, `OAuthProvider`, `ApiClient`
 
-- **Phase 2** (future): Scope management (`scope add/remove/list`), trace sessions (`trace session start/list/export/close/remove`), API registry (`api registry list/add/show/remove`)
+- **Phase 2** (future): Scope management (`scope add/remove/list`), trace sessions (`trace session start/list/export/close/reopen/remove` + `trace config set/show`), API registry (`api registry list/add/show/remove`)
 
 - **Phase 3** (future): Generic WebSocket connections (`ws` group), Pex/WMS real-time protocol (`pex` group)
 
@@ -405,7 +405,7 @@ An AI agent working in a GitHub Copilot session needs to fetch open support tick
 ### Phase 2
 
 - **Scope management** (`scope add/remove/list`): Add and remove OAuth scopes per account; setting `needs_reauth = true` triggers auto-refresh on the next `api call`.
-- **Trace sessions** (`trace session start/list/export/close/remove`): Session-scoped append-only log of all `api call` invocations recorded automatically while a session is active; exported as a JSON array.
+- **Trace sessions** (`trace session start/list/export/close/reopen/remove` + `trace config set/show`): Session-scoped live trace of all `api call` invocations, written to disk on every call. Each session has a UUID (primary key, immutable) and a human-readable name (non-unique). The trace file is written live at the user-configured export path — no deferred flush needed. `trace session close` waits for in-flight API calls to drain (configurable timeout) before sealing. Sessions can be reopened to append further calls to the existing trace file. A default export directory can be set globally via `trace config set`.
 - **API registry** (`api registry list/add/show/remove`): Persistent local registry of known API endpoints (`id`, `url`, `method`, `purpose`) for agent discovery.
 
 ### Phase 3

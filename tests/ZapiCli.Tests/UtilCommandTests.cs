@@ -85,4 +85,63 @@ public sealed class UtilCommandTests
 
         Assert.NotEqual(uuid1, uuid2);
     }
+
+    // ── util time-now ──────────────────────────────────────────────────────────────────
+
+    private static readonly TimeZoneInfo Ist =
+        TimeZoneInfo.CreateCustomTimeZone("IST", TimeSpan.FromHours(5.5),
+            "India Standard Time", "India Standard Time");
+
+    [Fact]
+    public async Task UtilTimeNowCommand_WritesNonEmptyNowField()
+    {
+        var writer = new InMemoryOutputWriter();
+        var cmd = new UtilCommands.UtilTimeNowCommand(writer);
+
+        var exitCode = await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimeNowSettings());
+
+        Assert.Equal(0, exitCode);
+        var json = writer.LastSuccessJson;
+        Assert.NotNull(json);
+        using var doc = JsonDocument.Parse(json);
+        Assert.True(doc.RootElement.TryGetProperty("now", out var nowProp));
+        Assert.False(string.IsNullOrEmpty(nowProp.GetString()));
+    }
+
+    [Fact]
+    public async Task UtilTimeNowCommand_FormatMatchesIndianPattern()
+    {
+        var writer = new InMemoryOutputWriter();
+        var cmd = new UtilCommands.UtilTimeNowCommand(writer);
+
+        await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimeNowSettings());
+
+        using var doc = JsonDocument.Parse(writer.LastSuccessJson!);
+        var nowStr = doc.RootElement.GetProperty("now").GetString()!;
+
+        // Expected pattern: DD/MM/YY HH:mm:ss.fff (24-hour with milliseconds)
+        Assert.Matches(@"^\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$", nowStr);
+    }
+
+    [Fact]
+    public async Task UtilTimeNowCommand_TimeIsWithin2SecondsOfIstNow()
+    {
+        var before = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Ist);
+        var writer = new InMemoryOutputWriter();
+        var cmd = new UtilCommands.UtilTimeNowCommand(writer);
+
+        await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimeNowSettings());
+
+        var after = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Ist);
+
+        using var doc = JsonDocument.Parse(writer.LastSuccessJson!);
+        var nowStr = doc.RootElement.GetProperty("now").GetString()!;
+        var parsed = DateTimeOffset.ParseExact(
+            nowStr,
+            "dd/MM/yy HH:mm:ss.fff",
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.True(parsed >= before.AddSeconds(-2) && parsed <= after.AddSeconds(2),
+            $"Parsed time {parsed} is not within 2 seconds of IST now [{before}, {after}]");
+    }
 }

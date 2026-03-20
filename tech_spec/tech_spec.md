@@ -250,15 +250,27 @@ Storage: `<configDir>/zapi-cli/registry.json`
 
 ### Group: `trace`
 
-> Session-scoped API call trace. One analysis run = one named session. `api call` and `pex drain` automatically append entries when a session is active — no extra flag required.
+> Session-scoped API call trace. Each session has a UUID (primary key, immutable) and a human-readable name (non-unique label). The trace file is written **live on every API call** — there is no deferred export step. `api call` and `pex drain` automatically append entries when a session is active. A default export directory can be configured once; it is used whenever `--export-path` is omitted at session start.
+
+#### `trace session`
 
 | Subcommand | Flags | Description |
 |-----------|-------|-------------|
-| `session start` | `--name` (req) | Create and activate a named trace session |
-| `session list` | — | List all sessions: name, start time, entry count, status |
-| `session export` | `--name` (req), `[--truncate-body <bytes>]`, `[--type api\|pex]`, `[--product <name>]` | Dump full session trace to stdout as JSON array (non-destructive) |
-| `session close` | `--name` (req) | Mark session inactive; file preserved for export |
-| `session remove` | `--name` (req) | Delete session entry and all trace files |
+| `session start` | `--name` (req), `[--export-path <path>]` | Create and activate a named session; assigns a UUID; resolves export path; begins live writing. Error if neither `--export-path` nor a default path is configured. |
+| `session list` | — | List all sessions: uuid, name, start_time, entry_count, status, export_path |
+| `session export` | `(--id <uuid>` or `--name <name>)` one req, `[--truncate-body <chars>]`, `[--type api\|pex]` | Re-read the live trace file from disk and output JSON array to stdout (non-destructive; file is already up to date) |
+| `session close` | `(--id <uuid>` or `--name <name>)` one req, `[--wait-ms <ms>]` (default: 5000) | Set status to "closing"; wait `wait-ms` for in-flight calls to complete; then mark "closed" |
+| `session reopen` | `(--id <uuid>` or `--name <name>)` one req | Reactivate a closed session; subsequent calls append to the existing trace file, continuing the seq counter |
+| `session remove` | `(--id <uuid>` or `--name <name>)` one req | Remove session from the index; trace file at `export_path` is **preserved** |
+
+> **Name disambiguation:** If `--name` is used and multiple sessions share that name, the command fails with `SESSION_AMBIGUOUS` listing the matching UUIDs. Use `--id` to be unambiguous.
+
+#### `trace config`
+
+| Subcommand | Flags | Description |
+|-----------|-------|-------------|
+| `config set` | `--default-export-path <path>` (req) | Set the default export directory used when `--export-path` is omitted at session start |
+| `config show` | — | Show current trace configuration (`default_export_path`) |
 
 ---
 
@@ -328,7 +340,30 @@ public sealed record AccountsRoot
 
 JSON property names use `snake_case` (configured via `JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower`).
 
-### Trace Entry Models
+### Trace Models
+
+**`TraceSessionEntry`** — one entry per session in `sessions.json`:
+
+```csharp
+public sealed record TraceSessionEntry
+{
+    public required string UniqueId { get; init; }        // UUID v4 — primary key, assigned at session start; immutable
+    public required string Name { get; init; }            // human-readable label — non-unique; two sessions may share a name
+    public required DateTimeOffset StartTime { get; init; }
+    public required string ExportPath { get; init; }      // resolved absolute path to the live trace file; set once at start
+    public int EntryCount { get; init; }                  // incremented under Mutex on every append; seq = new EntryCount
+    public required string Status { get; init; }          // active | closing | closed
+}
+```
+
+**`TraceConfig`** — persisted in `trace-config.json`:
+
+```csharp
+public sealed record TraceConfig
+{
+    public string? DefaultExportPath { get; init; }       // default export directory; null if not configured
+}
+```
 
 **`ApiTraceEntry`** — written by every `api call` when a session is active:
 
@@ -337,19 +372,20 @@ public sealed record ApiTraceEntry
 {
     public int Seq { get; init; }
     public string Type => "api";
-    public required string Session { get; init; }
+    public required string Session { get; init; }        // session name (human-readable label)
+    public required string SessionId { get; init; }      // session UUID — primary correlation key
     public required DateTimeOffset Timestamp { get; init; }
     public int DurationMs { get; init; }
     public required string Account { get; init; }
     public required string Method { get; init; }
-    public required string BaseUrl { get; init; }          // recorded for cross-product traceability
-    public required string Url { get; init; }              // full assembled URL
-    public Dictionary<string, string> RequestHeaders { get; init; } = [];   // Authorization excluded
+    public required string BaseUrl { get; init; }        // scheme+host+port only; e.g. "https://desk.zoho.com"
+    public required string Url { get; init; }            // full assembled URL including path and query
+    public Dictionary<string, string> RequestHeaders { get; init; } = [];   // security headers excluded (see §10)
     public string? RequestBody { get; init; }
     public int ResponseStatus { get; init; }
-    public Dictionary<string, string> ResponseHeaders { get; init; } = [];
+    public Dictionary<string, string> ResponseHeaders { get; init; } = [];  // set-cookie, www-authenticate excluded
     public string? ResponseBody { get; init; }
-    public string? Error { get; init; }                    // non-null on transport failure only
+    public string? Error { get; init; }                  // non-null on transport failure only (not HTTP 4xx/5xx)
 }
 ```
 
@@ -360,7 +396,8 @@ public sealed record PexTraceEntry
 {
     public int Seq { get; init; }
     public string Type => "pex";
-    public required string Session { get; init; }
+    public required string Session { get; init; }        // session name
+    public required string SessionId { get; init; }      // session UUID
     public required DateTimeOffset Timestamp { get; init; }
     public required string Account { get; init; }
     public int? RelatedApiSeq { get; init; }    // seq of most recent api entry before this drain; null if none
@@ -370,7 +407,7 @@ public sealed record PexTraceEntry
 }
 ```
 
-> `RequestHeaders` in `ApiTraceEntry` always excludes the `Authorization` header — tokens are **never** written to the trace.
+> Security headers are **never** written to trace entries. See §10 for the full exclusion lists.
 
 ---
 
@@ -522,7 +559,8 @@ Path resolution uses `Environment.GetFolderPath(Environment.SpecialFolder.Applic
 | `registry.json` | `<configDir>/registry.json` | Plain JSON *(future)* |
 | Pex event buffer | `<configDir>/pex-buffer/<account>.jsonl` | Newline-delimited JSON *(future)* |
 | Trace index | `<configDir>/traces/sessions.json` | Plain JSON |
-| Trace entries | `<configDir>/traces/<session-name>/trace.jsonl` | Newline-delimited JSON (append-only) |
+| Trace config | `<configDir>/trace-config.json` | Plain JSON |
+| Trace entries | User-specified `export_path` per session (stored in `sessions.json`); outside `<configDir>` if desired | Newline-delimited JSON, append-only, written live per call |
 | Secrets | OS Keychain | OS-managed, never on disk |
 | Keychain fallback | `<configDir>/keystore/<accountName>.bin` | AES-256 encrypted |
 
@@ -628,23 +666,71 @@ public sealed record ApiResponse
 
 ## 10. Trace Sessions
 
-> During an API analysis session the agent fires API calls and (optionally) drains Pex events. All calls are automatically recorded in a named session trace. After the session the agent exports the trace for developer reference.
+> Sessions provide a continuous, automatic record of every API call made during a developer or agent analysis run. The trace file is written **live on every API call** — no explicit export or flush step is needed. This guarantees that even a crash or unexpected process exit captures everything up to that point.
 
 ### Design Principles
 
-- **Always-on when a session is active.** `api call` and `pex drain` automatically append entries — no `--trace` flag to forget.
-- **Named sessions.** One analysis run = one session identified by a developer-readable name.
-- **Non-destructive export.** `trace session export` writes to stdout but does not delete the file; only `trace session remove` deletes it.
-- **Sequential numbering.** Every entry gets a monotonically increasing `seq` number.
-- **Fallback when no session is active.** Trace entries are silently dropped — no implicit session created.
+- **Live write-on-call.** `api call` and `pex drain` write to the trace file immediately on every invocation. The file is always current.
+- **Dual identity.** Every session has a `unique_id` (UUID v4, primary key, assigned at start, immutable) and a `name` (human-readable label, non-unique — two sessions may share a name).
+- **Name is non-unique.** UUID is the authoritative identifier. CLI commands accept `--id <uuid>` (unambiguous) or `--name <name>` (convenience; error `SESSION_AMBIGUOUS` if multiple sessions share that name).
+- **Export path at start.** The trace file path is resolved once at `session start` (from `--export-path` or from `trace-config.json` default) and stored permanently on the session entry. All subsequent writes target that path.
+- **Sequential numbering.** Every entry gets a monotonically increasing `seq` number per session, managed under a named Mutex.
+- **Close with drain.** `trace session close` sets status to `"closing"` (under Mutex), waits up to `--wait-ms` (default: 5000 ms) for in-flight calls to complete, then marks the session `"closed"`. Any call that checks the session during `"closing"` or `"closed"` state silently drops its trace entry without failing the API call.
+- **Reopenable.** A closed session can be reopened. Subsequent API calls append to the existing trace file, continuing the seq counter from where it left off.
+- **Non-destructive reads.** `trace session export` reads the trace file and outputs JSON to stdout but never modifies or deletes it. `trace session remove` removes the index entry; the trace file is preserved by default.
+- **No implicit session.** When no session is active, trace entries are silently dropped — no error, no file created.
+
+### Session Lifecycle
+
+```
+start → active → closing → closed
+                              ↑         ↓
+                           reopen ←←←←←╯
+```
+
+| Status | Behaviour |
+|--------|-----------|
+| `active` | Session accepting new trace entries |
+| `closing` | Session draining; any new entry is silently dropped; status set by `session close` |
+| `closed` | Session sealed; can be reopened with `session reopen` |
 
 ### Storage Layout
 
 ```
-<configDir>/zapi-cli/traces/
-  sessions.json                 ← index: name, startTime, entryCount, status (active | closed)
-  <session-name>/
-    trace.jsonl                 ← one JSON object per line (append-only)
+<configDir>/
+  traces/
+    sessions.json              ← session index
+  trace-config.json            ← default_export_path
+
+<export_path>/                 ← user-specified or default; may be outside <configDir>
+  <session-name>-<uuid-short>.json   ← JSONL; one JSON object per line; append-only; written live
+```
+
+> `<uuid-short>` = first 8 characters of the UUID. Example: `Desk-Analysis-c1a2b3d4.json`. If `--export-path` points directly to a file (path ends in `.json`), that exact path is used as-is.
+
+### `sessions.json` Shape
+
+```json
+{
+  "sessions": [
+    {
+      "unique_id": "c1a2b3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Desk-Analysis",
+      "start_time": "2026-03-20T10:00:00Z",
+      "export_path": "/Users/vasanth/traces/Desk-Analysis-c1a2b3d4.json",
+      "entry_count": 12,
+      "status": "active"
+    }
+  ]
+}
+```
+
+### `trace-config.json` Shape
+
+```json
+{
+  "default_export_path": "/Users/vasanth/traces"
+}
 ```
 
 ### `ApiTraceEntry` JSON shape
@@ -653,12 +739,13 @@ public sealed record ApiResponse
 {
   "seq": 1,
   "type": "api",
-  "session": "Desk-Tickets-2026-03-17",
-  "timestamp": "2026-03-17T10:23:45.123Z",
+  "session": "Desk-Analysis",
+  "session_id": "c1a2b3d4-e5f6-7890-abcd-ef1234567890",
+  "timestamp": "2026-03-20T10:23:45.123Z",
   "duration_ms": 342,
   "account": "work",
   "method": "GET",
-  "base_url": "https://desk.zoho.com/api/v1",
+  "base_url": "https://desk.zoho.com",
   "url": "https://desk.zoho.com/api/v1/tickets",
   "request_headers": { "Content-Type": "application/json" },
   "request_body": null,
@@ -669,28 +756,82 @@ public sealed record ApiResponse
 }
 ```
 
+### Security Header Filtering
+
+The following headers are **never** written to the trace file. Both lists are compile-time constants in `TraceWriter` — not user-configurable for removal, but additional entries can be added in future stories.
+
+**Request headers excluded:**
+
+| Header | Reason |
+|--------|--------|
+| `Authorization` | Access token |
+| `Cookie` | Session cookies that may carry auth tokens |
+| `X-Auth-Token` | Common alternative auth header |
+| `X-Api-Key` | API key authentication |
+
+**Response headers excluded:**
+
+| Header | Reason |
+|--------|--------|
+| `Set-Cookie` | Session token assignment |
+| `WWW-Authenticate` | Auth challenge details |
+
+### `ITraceSession` Contract
+
+```csharp
+public interface ITraceSession
+{
+    Task<TraceSessionEntry?> GetActiveSessionAsync(CancellationToken ct = default);
+    Task<TraceSessionEntry> StartSessionAsync(string name, string exportPath, CancellationToken ct = default);
+    Task CloseSessionAsync(string sessionId, int waitMs, CancellationToken ct = default);
+    Task ReopenSessionAsync(string sessionId, CancellationToken ct = default);
+    Task RemoveSessionAsync(string sessionId, CancellationToken ct = default);
+    Task<IReadOnlyList<TraceSessionEntry>> ListSessionsAsync(CancellationToken ct = default);
+    Task<int> IncrementEntryCountAsync(string sessionId, CancellationToken ct = default);
+    Task<TraceSessionEntry?> FindByIdAsync(string sessionId, CancellationToken ct = default);
+    Task<IReadOnlyList<TraceSessionEntry>> FindByNameAsync(string name, CancellationToken ct = default);
+}
+```
+
 ### Agent Workflow Integration
 
+```sh
+# One-time setup — persists across sessions:
+zapi-cli trace config set --default-export-path ./traces
+
+# Start a session (UUID auto-assigned):
+zapi-cli trace session start --name "Desk-Analysis"
+# → { "status": "ok", "data": { "unique_id": "c1a2b3d4-...", "name": "Desk-Analysis",
+#       "export_path": "./traces/Desk-Analysis-c1a2b3d4.json", "start_time": "...", "status": "active" } }
+
+# ... agent fires api calls — each writes to ./traces/Desk-Analysis-c1a2b3d4.json immediately ...
+
+# Close the session (waits up to 5s for in-flight calls):
+zapi-cli trace session close --id "c1a2b3d4-..."
+
+# Inspect the trace (optional — file is already complete at export_path):
+zapi-cli trace session export --id "c1a2b3d4-..." --type api
+
+# Reopen to append more calls later:
+zapi-cli trace session reopen --id "c1a2b3d4-..."
+# ... more api calls ...
+zapi-cli trace session close --id "c1a2b3d4-..."
 ```
-Session start:
-  zapi-cli trace session start --name "<FeatureName>-<YYYY-MM-DD>"
 
-... agent fires api calls — entries auto-appended ...
+### Export Command (Re-read Mode)
 
-Session complete:
-  zapi-cli trace session export --name "<FeatureName>-<YYYY-MM-DD>"
-    → agent captures stdout → saves to api-trace.json
-
-  zapi-cli trace session close --name "<FeatureName>-<YYYY-MM-DD>"
-```
-
-### Export Options
+`trace session export` re-reads the trace file from disk and outputs to stdout as a JSON array. The trace file itself is always up to date (written live per call), so this command is only needed for filtered viewing.
 
 | Flag | Description |
 |------|-------------|
-| `--truncate-body <bytes>` | Truncate `request_body` and `response_body` per entry at export time (full fidelity preserved in `.jsonl`) |
-| `--type api\|pex` | Export only entries of the given type |
-| `--product <name>` | Export only entries where `base_url` matches a registered product alias (requires API Registry) |
+| `--truncate-body <chars>` | Truncate `request_body` and `response_body` per entry in output only (full content preserved in file) |
+| `--type api\|pex` | Show only entries of the given type |
+
+### Concurrency
+
+- Named Mutex: `"Global\zapi-cli-trace-{sessionUniqueId}"` — scoped to the session UUID, not the name.
+- `IncrementEntryCountAsync` reads, increments, and writes `sessions.json` under the Mutex, then returns the new `entry_count` as the seq value.
+- Lock acquisition timeout: 2000 ms. On timeout, the trace entry is silently dropped — the API call continues normally.
 
 ---
 

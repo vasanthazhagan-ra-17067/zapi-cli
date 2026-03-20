@@ -62,7 +62,7 @@
       "account command group (add, list, remove, show, set-default, re-auth)",
       "ApiClient with host allowlist + ZohoCorp block",
       "api call command (--url required, full URL every invocation)",
-      "util commands (time-ms, uuid)"
+      "util commands (time-ms, uuid, time-now)"
     ],
     "v2": [
       "Scope management (scope add, remove, list)",
@@ -101,7 +101,7 @@
       "accountReAuth": "{ \"status\": \"ok\", \"data\": { \"name\": \"<name>\" } }",
       "scopeCommands": "Plain JSON object/array",
       "traceCommands": "Plain JSON result",
-      "utilCommands": "Plain JSON — e.g. {\"ts\": 1742256000000} or {\"uuid\": \"...\"}",
+      "utilCommands": "Plain JSON — e.g. {\"ts\": 1742256000000}, {\"uuid\": \"...\"}, or {\"now\": \"20/03/26 21:15:30.427\"} (IST, 24-hour + ms)",
       "apiRegistryCommands": "Plain JSON result"
     },
     "stderrErrorEnvelope": "{ \"error\": \"<human-readable>\", \"code\": \"<ERROR_CODE>\", \"exitCode\": <N> }",

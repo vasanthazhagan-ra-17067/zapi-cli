@@ -32,8 +32,9 @@ public sealed class ApiClientTests
     private static ApiClient MakeApiClient(
         FakeAccountStore store,
         FakeAuthProvider auth,
-        IHttpClientFactory httpFactory)
-        => new(auth, store, httpFactory, NullLogger<ApiClient>.Instance);
+        IHttpClientFactory httpFactory,
+        FakeTraceWriter? traceWriter = null)
+        => new(auth, store, httpFactory, traceWriter ?? new FakeTraceWriter(), NullLogger<ApiClient>.Instance);
 
     private static ApiRequest MakeRequest(
         string url = "https://cliq.zoho.com/api/v2/channels",

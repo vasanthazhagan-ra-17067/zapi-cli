@@ -42,7 +42,7 @@
     },
     {
       "storyId": 6,
-      "title": "Utility Commands (util time-ms, util uuid)",
+      "title": "Utility Commands (util time-ms, util uuid, util time-now)",
       "status": "Completed",
       "dependsOn": [2],
       "version": "v1",
@@ -59,7 +59,7 @@
     {
       "storyId": 8,
       "title": "Trace System + trace session Commands",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [5],
       "version": "v2",
       "phase": "Phase 4 — v2 Features"

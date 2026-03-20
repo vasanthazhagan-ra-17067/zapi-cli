@@ -53,4 +53,32 @@ internal static class UtilCommands
             return Task.FromResult(0);
         }
     }
+
+    // ─── util time-now ───────────────────────────────────────────────────────
+
+    private static readonly TimeZoneInfo Ist =
+        TimeZoneInfo.CreateCustomTimeZone("IST", TimeSpan.FromHours(5.5),
+            "India Standard Time", "India Standard Time");
+
+    public sealed class UtilTimeNowSettings : GlobalSettings { }
+
+    public sealed class UtilTimeNowCommand : AsyncCommand<UtilTimeNowSettings>
+    {
+        private readonly IOutputWriter _output;
+
+        public UtilTimeNowCommand(IOutputWriter output)
+        {
+            _output = output;
+        }
+
+        public override Task<int> ExecuteAsync(
+            CommandContext context,
+            UtilTimeNowSettings settings)
+        {
+            var istNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Ist);
+            var now = istNow.ToString("dd/MM/yy HH:mm:ss.fff");
+            _output.WriteJson(new { now });
+            return Task.FromResult(0);
+        }
+    }
 }

@@ -66,18 +66,20 @@
     },
     {
       "id": "OQ-009",
-      "question": "Should trace session names be restricted to a safe filename character set, or is any string accepted?",
-      "context": "Session names are used as filesystem directory names under <configDir>/traces/<session-name>/. Names containing slashes, colons, or other special characters would break path construction.",
-      "defaultAssumption": "Validate session names at trace session start: allow only alphanumeric characters, hyphens, underscores, and dots. Max length 64 characters. Reject invalid names with INVALID_ARGS before creating any filesystem paths.",
+      "question": "Session names are non-unique. When a CLI command accepts --name and multiple sessions share that name, how should the ambiguity be resolved?",
+      "context": "Session identity is now UUID (primary key). Name is a non-unique human label. CLI commands like 'trace session close --name foo' could match multiple sessions. The resolution must be safe and unambiguous.",
+      "defaultAssumption": "When --name is used and FindByNameAsync returns more than one session, throw ZapiCliException with SESSION_AMBIGUOUS (exit 1) and a message listing the matching UUIDs. The user must re-issue the command using --id <uuid>. Session name validation at start: allow only [a-zA-Z0-9_.-], max 64 chars, throw INVALID_ARGS on violation. No uniqueness check.",
       "status": "Open",
       "usedByStories": [8]
     },
     {
       "id": "OQ-010",
       "question": "How should concurrent api call invocations within the same trace session safely increment the seq counter without race conditions?",
-      "context": "The sessions.json entryCount field is the source of truth for seq. Concurrent agents calling api call on the same machine in the same trace session could corrupt this counter.",
-      "defaultAssumption": "Use a named Mutex (Mutex('Global\\\\zapi-cli-trace-<sessionName>')) around the read-increment-write cycle on sessions.json when appending a trace entry. The lock must be per-session-name scoped. If the lock cannot be acquired within 2 seconds, drop the trace entry silently (do not fail the api call).",
+      "context": "The sessions.json entryCount field is the source of truth for seq. Concurrent agents calling api call on the same machine in the same trace session could corrupt this counter. The Mutex must now be keyed by UUID (not session name) since names are no longer unique.",
+      "defaultAssumption": "Use a named Mutex keyed by UUID: 'Global\\\\zapi-cli-trace-{sessionUniqueId}'. WaitOne(2000) — if timeout, drop the trace entry silently (do not fail the api call). ReleaseMutex in finally. IncrementEntryCountAsync reads, increments, and writes sessions.json under this Mutex and returns the new value as the seq number.",
       "status": "Open",
+      "usedByStories": [8]
+    }
       "usedByStories": [8]
     },
     {
@@ -87,6 +89,38 @@
       "defaultAssumption": "Proceed with the ephemeral-port approach. If Zoho requires exact redirect_uri including port, expose an optional --port flag on account login so users can pre-register a fixed port URI (e.g. http://localhost:9004/callback) and pass --port 9004. Test against a real Zoho org during Story 12 acceptance testing.",
       "status": "Open",
       "usedByStories": [10, 11, 12]
+    },
+    {
+      "id": "OQ-012",
+      "question": "How does 'trace session close' ensure that all in-flight API calls have finished writing their trace entries before sealing the session?",
+      "context": "Each api call is a fresh process invocation. Close and an api call may run concurrently. The close operation must not seal the session while an active call is mid-write, or that entry would be silently lost.",
+      "defaultAssumption": "Status-based drain. CloseSessionAsync: (1) under Mutex set status to 'closing' in sessions.json; (2) wait --wait-ms ms (default 5000); (3) under Mutex set status to 'closed'. TraceWriter checks status before appending: 'closing' → log Warning + drop entry silently; 'closed' → return silently. Guarantee: any api call that acquired the Mutex and read 'active' BEFORE step 1 will complete its single write before close can acquire the Mutex for the 'closing' transition — so that entry is captured.",
+      "status": "Open",
+      "usedByStories": [8]
+    },
+    {
+      "id": "OQ-013",
+      "question": "When a closed session is reopened, should entryCount and seq reset to 0 or continue from where they left off?",
+      "context": "Re-opened sessions append to the same trace file. If seq resets to 1, the file will have duplicate seq values which breaks any tooling that relies on seq for ordering.",
+      "defaultAssumption": "Continue from the existing entryCount. ReopenSessionAsync only changes status back to 'active' — it does not modify EntryCount. IncrementEntryCountAsync reads the current value (e.g., 12) and returns 13 for the next seq. Entries in the re-opened phase have seq numbers continuing naturally from the original session.",
+      "status": "Open",
+      "usedByStories": [8]
+    },
+    {
+      "id": "OQ-014",
+      "question": "Should 'trace session remove' delete the trace file at ExportPath, or only remove the sessions.json entry?",
+      "context": "The trace file is at a user-specified path outside <configDir>. Silently deleting a file at an arbitrary user path could be destructive (the user may have included it in a report, etc.).",
+      "defaultAssumption": "Preserve the trace file by default. RemoveSessionAsync only removes the sessions.json entry. No --delete-file flag in Story 8 — if the user wants to delete the file, they do so manually. Document this behaviour in the command help text.",
+      "status": "Open",
+      "usedByStories": [8]
+    },
+    {
+      "id": "OQ-015",
+      "question": "What is the exact trace file name format when the export path is a directory vs a direct file path?",
+      "context": "Users can pass --export-path as a directory or direct .json file. The naming must be deterministic to avoid collisions when two sessions share the same name.",
+      "defaultAssumption": "If --export-path ends in '.json', use that exact path as-is. If it is a directory (or the default path), generate: '<session-name>-<uuid[0..7]>.json'. The 8-char UUID prefix ensures uniqueness even if two sessions share a name. Example: 'Desk-Analysis-c1a2b3d4.json'.",
+      "status": "Open",
+      "usedByStories": [8]
     }
   ]
 }

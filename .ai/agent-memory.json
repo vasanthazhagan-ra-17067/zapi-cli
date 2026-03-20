@@ -222,24 +222,28 @@
   },
   {
     "storyId": 6,
-    "title": "Utility Commands (util time-ms, util uuid)",
+    "title": "Utility Commands (util time-ms, util uuid, util time-now)",
     "status": "Completed",
     "completedDate": "2026-03-18",
+    "lastModifiedDate": "2026-03-20",
     "filesCreatedOrModified": [
       { "path": "src/ZapiCli/Commands/UtilCommands.cs", "action": "created" },
       { "path": "src/ZapiCli/Program.cs", "action": "modified" },
       { "path": "tests/ZapiCli.Tests/UtilCommandTests.cs", "action": "created" }
     ],
     "keyDecisionsMade": [
-      "Both command classes live in a single static class UtilCommands in UtilCommands.cs — consistent with the ApiCommands and AccountCommands pattern.",
+      "All command classes live in a single static class UtilCommands in UtilCommands.cs — consistent with the ApiCommands and AccountCommands pattern.",
       "CommandContext parameter passed as null! in unit tests — Spectre's CommandContext has no public constructor useful for testing and these commands don't use context.",
-      "WriteJson called with anonymous objects { ts } and { uuid } — SnakeCaseLower serializer renders 'ts' and 'uuid' correctly without any [JsonPropertyName] override."
+      "WriteJson called with anonymous objects { ts }, { uuid }, and { now } — SnakeCaseLower serializer renders keys correctly without any [JsonPropertyName] override.",
+      "util time-now uses TimeZoneInfo.CreateCustomTimeZone with a fixed +05:30 offset (IST) — avoids OS timezone database dependency, fully cross-platform.",
+      "util time-now format is 'dd/MM/yy HH:mm:ss.fff' — 24-hour clock with 3-digit milliseconds. Example: 20/03/26 21:15:30.427.",
+      "IST TimeZoneInfo instance declared as a private static readonly field on UtilCommands — shared across all UtilTimeNowCommand invocations."
     ],
     "openQuestionsResolved": [],
     "issuesEncountered": [],
     "stateAfterStory": {
       "build": "passing",
-      "tests": "81 passing",
+      "tests": "138 passing",
       "commandsWorking": [
         "account add",
         "account list",
@@ -249,7 +253,8 @@
         "account re-auth",
         "api call",
         "util time-ms",
-        "util uuid"
+        "util uuid",
+        "util time-now"
       ]
     }
   },
@@ -394,6 +399,78 @@
       "build": "passing",
       "tests": "135 passing, 0 failing",
       "commandsWorking": ["account add", "account login", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid", "scope add", "scope list"]
+    }
+  },
+  {
+    "storyId": 8,
+    "title": "Trace System + trace session Commands",
+    "status": "Completed",
+    "completedDate": "2026-03-20",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/Trace/TraceEntry.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Trace/ITraceSession.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Trace/ITraceConfigStore.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Trace/ITraceWriter.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Trace/TraceSession.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Trace/TraceConfigStore.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Trace/TraceWriter.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Trace/TraceExporter.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "modified — added SESSION_NOT_FOUND, SESSION_AMBIGUOUS, EXPORT_PATH_NOT_SET" },
+      { "path": "src/ZapiCli.Core/Api/ApiClient.cs", "action": "modified — inject ITraceWriter, capture trace info, write entry after each api call" },
+      { "path": "src/ZapiCli/Commands/TraceCommands.cs", "action": "created" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified — register trace services + trace command branches" },
+      { "path": "tests/ZapiCli.Tests/TraceTests.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeTraceWriter.cs", "action": "created" },
+      { "path": "tests/ZapiCli.Tests/ApiClientTests.cs", "action": "modified — MakeApiClient now passes FakeTraceWriter" }
+    ],
+    "keyDecisionsMade": [
+      "ApiTraceEntry.Session and ApiTraceEntry.SessionId are NOT 'required' — default to empty string. ApiClient builds entry without these; TraceWriter fills them from the active session via GetActiveSessionAsync.",
+      "ApiClient injects ITraceWriter only (not ITraceSession) — TraceWriter handles all session lookups internally. Clean separation: ApiClient provides HTTP data, TraceWriter owns session awareness.",
+      "Named Mutex for cross-process safety: on Windows 'Global\\zapi-cli-trace-{uuid}', on macOS/Linux 'zapi-cli-trace-{uuid}' (no Global\\ prefix — backslash invalid in POSIX semaphore names). RuntimeInformation.IsOSPlatform used for conditional naming.",
+      "Mutex + synchronous I/O via Task.Run wrapping: IncrementEntryCountAsync, UpdateStatusSync (for close/reopen) run sync file I/O inside Task.Run to avoid async/await thread-affinity violation with thread-affine Mutex.",
+      "IncrementEntryCountAsync returns -1 on Mutex timeout or session-not-found — TraceWriter checks for seq <= 0 and drops the entry silently with a LogWarning. No exception thrown for timeout.",
+      "ITraceSession.StartSessionAsync takes string? requestedExportPath (nullable) — export path resolution (including default config read) happens inside TraceSession.StartSessionAsync. Command stays thin: passes settings.ExportPath directly.",
+      "Export path resolution: ends-with-.json → use as exact file path; directory (or null with default configured) → <name>-<uuid[0..8]>.json using first 8 chars of UUID after removing dashes. UUID short-id: sessionId.Replace('-','')[..8].",
+      "TraceExporter uses synchronous File.ReadLines (not async) for simplicity — trace files are typically small.",
+      "Header key case preservation: Dictionary<string,string> keys are serialized with their original case by System.Text.Json (PolicyNamingPolicy does not apply to dict keys). Unit tests use case-insensitive EnumerateObject() helpers.",
+      "TraceWriter.AppendApiEntryAsync is awaited synchronously in ApiClient.CallAsync (not fire-and-forget) to satisfy the 'writes immediately' AC. Uses CancellationToken.None so a ctrl-C after the call still allows the entry to flush.",
+      "Sessions.json root is TraceSessionsRoot (inner private class in TraceSession) with List<TraceSessionEntry> Sessions. Serialized with OutputJsonOptions.Shared (SnakeCaseLower) so file keys match CLI output."
+    ],
+    "openQuestionsResolved": [
+      { "id": "OQ-009", "resolution": "Name validation: [a-zA-Z0-9_.-], max 64 chars. Regex: @\"^[a-zA-Z0-9_.\\\"-]{1,64}$\". No uniqueness check. SESSION_AMBIGUOUS on export/close/reopen/remove by --name when multiple match." },
+      { "id": "OQ-010", "resolution": "Named Mutex keyed by UUID. WaitOne(2000) — -1 returned on timeout. Task.Run wrapping to avoid async/await thread-affinity issue with Mutex." },
+      { "id": "OQ-012", "resolution": "Status-based drain: CloseSessionAsync sets 'closing' (step 1), waits waitMs, sets 'closed' (step 3). Both under Mutex. TraceWriter drops entry silently when status='closing' or session is null (closed)." },
+      { "id": "OQ-013", "resolution": "EntryCount NOT reset on reopen. ReopenSessionAsync only changes status to 'active'. IncrementEntryCount reads current EntryCount and increments — seq continues from where it left off." },
+      { "id": "OQ-014", "resolution": "RemoveSessionAsync removes only the sessions.json entry. Trace file at ExportPath is preserved by design." },
+      { "id": "OQ-015", "resolution": "Export file name when path is a directory: '<name>-<shortId>.json' where shortId = sessionId.Replace('-','')[..8]." }
+    ],
+    "issuesEncountered": [
+      {
+        "issue": "Existing ApiClientTests.cs used 3-arg MakeApiClient() which broke after adding ITraceWriter to ApiClient constructor",
+        "resolution": "Added FakeTraceWriter.cs and updated MakeApiClient() helper to accept optional FakeTraceWriter parameter defaulting to new FakeTraceWriter()"
+      },
+      {
+        "issue": "Tests checking x-custom / x-normal header presence used TryGetProperty with lowercase key but dict keys are preserved as-is (SnakeCaseLower only applies to object properties, not dict keys)",
+        "resolution": "Added HasProperty() and GetPropertyValue() case-insensitive helpers using EnumerateObject(). Updated all header assertions to use these helpers."
+      },
+      {
+        "issue": "CloseSession test asserted File.Exists after close but never wrote any entries — trace file only created on first TraceWriter write",
+        "resolution": "Added AppendApiEntryAsync call before close in the test to create the file first, then asserted it still exists after close."
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "154 passing, 0 failing",
+      "commandsWorking": [
+        "account add", "account login", "account list", "account show",
+        "account set-default", "account remove", "account re-auth",
+        "api call",
+        "util time-ms", "util uuid", "util time-now",
+        "scope add", "scope list",
+        "trace session start", "trace session list", "trace session export",
+        "trace session close", "trace session reopen", "trace session remove",
+        "trace config set", "trace config show"
+      ]
     }
   }
 ]

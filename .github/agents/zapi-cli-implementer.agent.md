@@ -205,7 +205,20 @@ After all ACs pass, append an entry to `.ai/agent-memory.json`:
 
 **Always write this update. If memory is not updated, the next session will re-implement completed work.**
 
+Also update the story file itself (`.ai/stories/story-{NN}.json`) — set the top-level `"status"` field to `"Completed"` and add a `"completedDate": "<YYYY-MM-DD>"` field.
+
 Also update `dependency-map.json` — set the completed story's `"status"` to `"Completed"`.
+
+Also update `docs/HELP.md` with every user-facing change introduced by this story. This includes, but is not limited to:
+- **New commands or subcommands** — add a full section following the existing format (usage block, options table, examples, example output, common errors table).
+- **New flags on existing commands** — add the flag to the options table and add an example if the flag materially changes behaviour.
+- **Changed output shapes** — update the example output block to match the new JSON structure exactly.
+- **New error codes** — add a row to the relevant command's "Common errors" table and to the global "Error Handling Reference" table at the bottom of HELP.md.
+- **Changed exit codes or error semantics** — update the exit code table and any affected command sections.
+- **New host allowlist entries** — update the allowlist bullet list in the `api call` section.
+- **Changed datacenters or config paths** — update the Datacenters table or Platform Notes section.
+
+Do not alter HELP.md sections that are unrelated to this story. Read the existing HELP.md before writing to ensure you match its formatting and style exactly.
 
 ---
 
@@ -235,7 +248,7 @@ After updating memory, report to the user:
 
 6. **ZohoCorp block and host allowlist are inviolable.** Do not weaken, conditionalize, or make them configurable. Any change that removes or gates these checks is incorrect.
 
-7. **Update memory or it didn't happen.** If you complete work but don't update `.ai/agent-memory.json`, the next session will not know what you did. Always update memory. Also update `dependency-map.json`.
+7. **Update memory or it didn't happen.** If you complete work but don't update `.ai/agent-memory.json`, the next session will not know what you did. Always update memory. Also update `dependency-map.json` and the story file.
 
 8. **Build must pass with 0 errors and 0 warnings.** Every story ends with this as an AC. `TreatWarningsAsErrors=true` means a warning is a build failure.
 
@@ -244,6 +257,8 @@ After updating memory, report to the user:
 10. **No business logic in `ZapiCli`.** If you catch yourself writing an `if` statement in a command class that is not flag validation, it belongs in `ZapiCli.Core`.
 
 11. **No URL construction.** `api call` always receives a full URL from the caller. The CLI never constructs URLs by concatenating base URL + path. This is ADR-0006 — non-negotiable.
+
+12. **Keep HELP.md current.** Every user-facing change — new commands, new flags, changed output shapes, new error codes — must be reflected in `docs/HELP.md` before the story is marked complete. HELP.md is the user-facing contract; if it is stale, the tool is effectively undocumented.
 
 ---
 

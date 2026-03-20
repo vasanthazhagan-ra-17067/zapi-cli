@@ -25,6 +25,21 @@ public static class ErrorCodes
     /// <summary>Thrown when the 120-second browser authentication window expires before a callback is received.</summary>
     public static readonly string LOGIN_TIMEOUT = "LOGIN_TIMEOUT";
 
+    /// <summary>Thrown when the requested trace session UUID or name does not match any session.</summary>
+    public static readonly string SESSION_NOT_FOUND = "SESSION_NOT_FOUND";
+
+    /// <summary>
+    /// Thrown when a command resolves by --name but multiple sessions share that name.
+    /// The user must re-issue with --id.
+    /// </summary>
+    public static readonly string SESSION_AMBIGUOUS = "SESSION_AMBIGUOUS";
+
+    /// <summary>
+    /// Thrown by <c>trace session start</c> when no --export-path is given and
+    /// no default export path has been configured via <c>trace config set</c>.
+    /// </summary>
+    public static readonly string EXPORT_PATH_NOT_SET = "EXPORT_PATH_NOT_SET";
+
     /// <summary>Used by the global exception handler for unhandled non-ZapiCliException errors.</summary>
     public static readonly string INTERNAL_ERROR = "INTERNAL_ERROR";
 }
