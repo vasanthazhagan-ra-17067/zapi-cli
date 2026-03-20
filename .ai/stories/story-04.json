@@ -2,7 +2,7 @@
   "storyId": 4,
   "title": "Account Command Group (add, list, remove, show, set-default, re-auth)",
   "description": "Implement all six account subcommands. account add is the most complex — it validates credentials, calls the Zoho user-info API, enforces the ZohoCorp block, stores credentials in the keychain, and persists account metadata. account remove revokes the server-side token before clearing local storage. re-auth explicitly refreshes the token using stored credentials.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [3],
   "prerequisiteState": "Stories 1-3 complete. AccountStore, OAuthProvider, ZohoCorpGuard, DcResolver all exist. IOutputWriter, ZapiCliException, ErrorCodes all wired. Program.cs DI working.",
   "goal": "All six account subcommands work end-to-end. After 'zapi-cli account add --name work --token xxx --client-id yyy --client-secret zzz', the account is persisted to accounts.json, credentials stored in keychain, and the tool outputs a success JSON. 'zapi-cli account list' returns a JSON array.",

@@ -2,7 +2,7 @@
   "storyId": 2,
   "title": "Output Contract + Error Infrastructure + Global Settings",
   "description": "Implement the central IOutputWriter interface, JsonOutputWriter (production), InMemoryOutputWriter (tests), ZapiCliException with typed error codes, GlobalSettings for global flags, and wire up Program.cs with the CommandApp. This establishes the no-wrapper JSON output contract that every command in the project must use.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [1],
   "prerequisiteState": "Story 1 complete. Three-project solution compiles. IKeychainProvider and all implementations exist. Program.cs is a stub.",
   "goal": "Every command can call IOutputWriter.WriteJson / WriteRaw / WriteError and get deterministic JSON on stdout/stderr respectively. The CommandApp is wired, global flags are parsed, and unhandled exceptions are converted to the error envelope on stderr.",

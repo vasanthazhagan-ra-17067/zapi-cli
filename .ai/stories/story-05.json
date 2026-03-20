@@ -2,7 +2,7 @@
   "storyId": 5,
   "title": "ApiClient + api call Command",
   "description": "Implement ApiClient with the compile-time host allowlist, ZohoCorp block at dispatch, automatic token refresh on 401 or NeedsReauth=true, and the api call command with full flag support. This is the primary value-delivery story — AI agents depend on this to invoke any Zoho product REST endpoint.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [3, 4],
   "prerequisiteState": "Stories 1-4 complete. AccountStore, OAuthProvider, ZohoCorpGuard, all account commands working. DI registered. IOutputWriter wired.",
   "goal": "zapi-cli api call --url 'https://cliq.zoho.com/api/v2/channels' --method GET returns the raw Zoho API response body on stdout. All security controls (host allowlist, ZohoCorp block, auto-refresh) fire before or during the HTTP call.",

@@ -2,7 +2,7 @@
   "storyId": 7,
   "title": "Scope Management Command Group (scope add, list)",
   "description": "Implement scope add and scope list subcommands. Adding a scope modifies the account's Scopes list in accounts.json and sets NeedsReauth=true, triggering an automatic token refresh on the next api call. Both scope commands enforce the ZohoCorp block. NOTE: scope remove is deferred to a future phase.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [4, 5],
   "prerequisiteState": "Stories 1-5 complete. All account commands, ApiClient, and auto-refresh on NeedsReauth=true are working and tested.",
   "goal": "After 'zapi-cli scope add --scope ZohoDesk.Tickets.READ', the scope is added to the target account's scopes[] in accounts.json and needs_reauth is set to true. The next api call for that account triggers an automatic token refresh.",

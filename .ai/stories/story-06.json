@@ -2,7 +2,7 @@
   "storyId": 6,
   "title": "Utility Commands (util time-ms, util uuid)",
   "description": "Implement the two utility commands: util time-ms outputs the current UTC time as a Unix millisecond timestamp, and util uuid generates a random UUID v4. These are stateless, have no dependencies on accounts or auth, and depend only on the output contract established in Story 2.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [2],
   "prerequisiteState": "Stories 1 and 2 complete. IOutputWriter, ZapiCliException, GlobalSettings, and Program.cs CommandApp all exist. No account or auth infrastructure required.",
   "goal": "zapi-cli util time-ms outputs {\"ts\": <unix ms timestamp>} and zapi-cli util uuid outputs {\"uuid\": \"<uuid v4>\"} on stdout as plain JSON. Both commands exit 0.",

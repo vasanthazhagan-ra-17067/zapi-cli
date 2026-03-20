@@ -2,7 +2,7 @@
   "storyId": 10,
   "title": "Browser OAuth Infrastructure: LocalCallbackServer + IOAuthBrowserFlow/OAuthBrowserFlow + ErrorCodes",
   "description": "Create the two new infrastructure types that the browser OAuth login flow depends on: a local HTTP callback server that receives the OAuth redirect, and the browser-flow helper that generates the CSRF state token, builds the Zoho authorization URL, and opens the system browser. Also add the two new error codes (STATE_MISMATCH, LOGIN_TIMEOUT) to ErrorCodes.cs. No existing commands or services are modified in this story.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [2],
   "prerequisiteState": "Stories 1–2 complete. ZapiCliException and ErrorCodes exist. IAuthProvider, DcResolver exist in ZapiCli.Core/Auth/. The project compiles cleanly.",
   "goal": "After this story: (1) LocalCallbackServer can be instantiated, will bind an ephemeral port, and WaitForCallbackAsync correctly receives a redirect from a browser with ?code=...&state=..., responds with a success HTML page to the browser, and disposes the HttpListener. (2) OAuthBrowserFlow can build a correctly-formatted Zoho OAuth authorization URL and open the system browser. (3) STATE_MISMATCH and LOGIN_TIMEOUT are in ErrorCodes.cs.",

@@ -2,7 +2,7 @@
   "storyId": 3,
   "title": "AccountStore + OAuthProvider + ZohoCorp Block + DcResolver",
   "description": "Implement the full account persistence layer, OAuth credential management, ZohoCorp domain hard-block, and datacenter URL resolver. This is the security-critical core story — all higher-level commands depend on it for account resolution, credential retrieval, and domain enforcement.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [1, 2],
   "prerequisiteState": "Stories 1 and 2 complete. IKeychainProvider, IOutputWriter, ZapiCliException, ErrorCodes all exist and compile. Program.cs DI wiring is in place.",
   "goal": "Produce a working AccountStore that persists AccountEntry records to accounts.json with correct permissions, a ZohoCorpGuard that unconditionally blocks ZohoCorp-domain accounts, a DcResolver that maps DC short names to Zoho Accounts URLs, and an OAuthProvider that stores/retrieves the full OAuth credential bundle (access_token + client_id + client_secret) as a single JSON blob in the OS keychain.",

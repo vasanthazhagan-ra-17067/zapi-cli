@@ -2,7 +2,7 @@
   "storyId": 12,
   "title": "AccountLoginCommand + DI Registration + CLI Wiring + Unit Tests",
   "description": "Add the AccountLoginSettings and AccountLoginCommand classes to AccountCommands.cs, register IOAuthBrowserFlow in DI, wire 'account login' into the Spectre.Console.Cli command tree in Program.cs, and write the full unit test suite for the login command. This is the final story that makes 'zapi-cli account login' a working end-to-end command.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [11],
   "prerequisiteState": "Stories 1–6, 10, and 11 complete. IAccountService.LoginAsync implemented. LoginConfig POCO exists. IOAuthBrowserFlow registered-ready. templates/account-login.json exists. All prior tests pass.",
   "goal": "After this story: 'zapi-cli account login --name dev --client-id X --client-secret Y --scope ZohoAPI.Resource.READ,ZohoAPI.Resource.WRITE' opens the system browser, waits for the OAuth callback, and outputs { \"status\": \"ok\", \"data\": { \"name\": \"dev\", \"dc\": \"us\" } }. The --file flag allows all inputs to be supplied from a JSON file, with CLI flags overriding individual fields.",

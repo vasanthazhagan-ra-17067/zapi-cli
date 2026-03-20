@@ -2,7 +2,7 @@
   "storyId": 11,
   "title": "AccountService Browser Login + LoginConfig Model + Template",
   "description": "Refactor AccountService to extract the shared token-exchange logic into a private helper, then add LoginAsync which orchestrates the full browser OAuth redirect flow using LocalCallbackServer and IOAuthBrowserFlow from Story 10. Also create the LoginConfig POCO (CLI-layer input model for the --file flag) and the static templates/account-login.json starter template. No commands or DI wiring are touched in this story — only domain logic and the two new files.",
-  "status": "Not Started",
+  "status": "Completed",
   "dependsOn": [4, 10],
   "prerequisiteState": "Stories 1–6 and Story 10 complete. AccountService, IAccountService, IAuthProvider, IAccountStore, DcResolver, ZohoCorpGuard all exist. IOAuthBrowserFlow and LocalCallbackServer exist from Story 10. ErrorCodes.STATE_MISMATCH and ErrorCodes.LOGIN_TIMEOUT exist. Project compiles cleanly.",
   "goal": "After this story: calling AccountService.LoginAsync starts a LocalCallbackServer, opens the browser to the Zoho OAuth authorization URL, waits for the redirect callback, verifies the CSRF state, and then completes token exchange + account persistence exactly as AddAccountAsync does. LoginConfig can be deserialized from a JSON file matching the templates/account-login.json schema.",
