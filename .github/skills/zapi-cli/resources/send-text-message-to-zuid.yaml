@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info:
+  title: Send Text Message to ZUID
+  version: "1.0"
+
+paths:
+  /api/v1/buddies/{zuid}/message:
+    post:
+      summary: Send a plain-text direct message to a user identified by their ZUID.
+      parameters:
+        - name: zuid
+          in: path
+          required: true
+          description: The ZUID of the recipient user.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - msg_id
+              properties:
+                text:
+                  type: string
+                  description: The plain-text content of the message to send.
+                msg_id:
+                  type: integer
+                  format: int64
+                  description: Client-generated message identifier used for deduplication and tracking.

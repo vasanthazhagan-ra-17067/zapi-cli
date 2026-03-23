@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info:
+  title: Get Channels With
+  version: "1.0"
+
+paths:
+  /api/v1/channels:
+    get:
+      summary: Retrieves a list of channels matching the specified channel IDs, optionally filtered by channel mode.
+      parameters:
+        - name: chid
+          in: query
+          required: true
+          description: Comma-separated list of channel IDs to fetch.
+          schema:
+            type: string
+            example: "channel1,channel2,channel3"
+        - name: mode
+          in: query
+          required: false
+          description: Optional channel mode to filter the results.
+          schema:
+            type: string

@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Get Group Call User Info
+  version: "2.0"
+paths:
+  /api/v2/users/{zuid}:
+    get:
+      summary: Retrieve user information used for group call context
+      parameters:
+        - name: zuid
+          in: path
+          required: true
+          description: ZUID of the user to fetch info for
+          schema:
+            type: string
+        - name: fields
+          in: query
+          required: false
+          description: Fields to include in the response
+          schema:
+            type: string
+            default: all

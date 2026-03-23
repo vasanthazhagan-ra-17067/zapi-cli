@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Get Channel With Name
+  version: "1.0"
+
+paths:
+  /api/v1/channelsbyname/{unfurlName}:
+    get:
+      summary: Retrieves a Cliq channel by its unfurl (unique) name.
+      parameters:
+        - name: unfurlName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique unfurl name of the channel to retrieve.

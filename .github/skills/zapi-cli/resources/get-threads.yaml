@@ -1,0 +1,64 @@
+openapi: 3.1.0
+info:
+  title: Get Threads
+  version: "2.0"
+
+paths:
+  /api/v2/threads:
+    get:
+      summary: Retrieve a paginated list of threads belonging to a channel, with optional filtering by follow-state, open/closed status, and keyword search.
+      parameters:
+        - name: parent_chat_id
+          in: query
+          required: true
+          description: The channel identifier (chid) whose threads are being requested.
+          schema:
+            type: string
+
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of threads to return (defaults to 15).
+          schema:
+            type: integer
+            default: 15
+
+        - name: state
+          in: query
+          required: false
+          description: Filter threads by follow state.
+          schema:
+            type: string
+            enum:
+              - followed
+              - not_followed
+
+        - name: type
+          in: query
+          required: false
+          description: When set to "open", only open (non-closed) threads are returned.
+          schema:
+            type: string
+            enum:
+              - open
+
+        - name: search_key
+          in: query
+          required: false
+          description: Keyword to search within threads.
+          schema:
+            type: string
+
+        - name: next_token
+          in: query
+          required: false
+          description: Opaque pagination cursor for the next page of non-search results.
+          schema:
+            type: string
+
+        - name: next_search_token
+          in: query
+          required: false
+          description: Opaque pagination cursor for the next page of search results (used when search_key is present).
+          schema:
+            type: string

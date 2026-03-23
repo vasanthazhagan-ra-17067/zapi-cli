@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: Get Transcripts
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/transcript:
+    get:
+      summary: Retrieves the message transcript for a given chat, with optional time-range and pagination controls.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the chat whose transcript is being requested.
+        - name: lineslimit
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Maximum number of transcript lines to return.
+        - name: time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Reference timestamp; when supplied, `fromtime` and `totime` are ignored.
+        - name: totime
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Upper bound timestamp for the transcript range (used only when `time` is not supplied).
+        - name: fromtime
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Lower bound timestamp for the transcript range (used only when `time` is not supplied).
+        - name: head_message
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: When true, includes the head/pinned message of the chat in the response.
+        - name: id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: UID of a specific message to anchor the transcript fetch around.
+        - name: sync
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Indicates whether the client requires a sync response.
+        - name: X-Reader-Version
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: ["1"]
+          description: Reader version header required by the transcript endpoint.

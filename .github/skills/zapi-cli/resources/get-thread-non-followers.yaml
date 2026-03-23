@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info:
+  title: Get Thread Non-Followers
+  version: "2.0"
+
+paths:
+  /api/v2/threads/{chid}/nonfollowers:
+    get:
+      summary: Retrieves the list of users who are not following a given thread, with optional filtering by search string and participant category.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the thread (channel ID).
+          schema:
+            type: string
+        - name: fields
+          in: query
+          required: false
+          description: Comma-separated list of user fields to return.
+          schema:
+            type: string
+            default: "name,email_id,user_id,user_role,is_external_user,presence"
+        - name: search
+          in: query
+          required: false
+          description: Optional search string to filter non-followers by name or other fields.
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          description: Optional category to filter the participant list (e.g. internal, external).
+          schema:
+            type: string

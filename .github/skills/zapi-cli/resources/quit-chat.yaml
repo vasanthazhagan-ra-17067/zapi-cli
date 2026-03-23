@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: Quit Chat
+  version: "1.0"
+
+servers:
+  - url: https://cliq.zoho.com
+
+paths:
+  /quitchat.api:
+    post:
+      summary: Removes the authenticated user from a chat session identified by the given chat ID and session ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chid
+                - sid
+              properties:
+                chid:
+                  type: string
+                  description: The unique identifier of the chat to quit.
+                sid:
+                  type: string
+                  description: The session ID associated with the chat.

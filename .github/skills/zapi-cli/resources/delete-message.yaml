@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: Cliq Delete Message API
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/messages/{msgUid}:
+    delete:
+      summary: Delete a message
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The channel/chat ID that contains the message.
+          schema:
+            type: string
+        - name: msgUid
+          in: path
+          required: true
+          description: The unique identifier of the message to delete.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - msgack_key
+              properties:
+                msgack_key:
+                  type: string
+                  description: Message acknowledgement key. Send an empty string when no ack key is available.
+                  example: ""
+                sid:
+                  type: string
+                  description: Optional session ID. Included only when the caller has a non-null sid value.
+                  example: "s_abc123"

@@ -1,0 +1,45 @@
+openapi: 3.1.0
+info:
+  title: Sync Contacts
+  version: "2.0"
+  description: >
+    This operation is dispatched via the PEX persistent-connection task
+    (pexLib.customTask.syncContacts) rather than a direct HTTP request.
+    The schema below documents the data payload submitted to the server.
+paths:
+  /v2/sync/contacts:
+    post:
+      summary: Sync the local contact database with the server using checksum-based diffing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - config
+              properties:
+                config:
+                  type: integer
+                  description: WMS application config identifier
+                crchash:
+                  type: object
+                  description: >
+                    CRC checksum payload used for incremental sync.
+                    Omitted when no local checksum is available.
+                  additionalProperties:
+                    type: object
+                    properties:
+                      crc:
+                        type: string
+                        description: Contact list CRC checksum
+                      totalsum:
+                        type: string
+                        description: Total database checksum as a string
+                presence_key:
+                  type: object
+                  description: >
+                    Map of presence topic titles to their header values,
+                    representing the current set of active presence subscriptions.
+                  additionalProperties:
+                    type: string

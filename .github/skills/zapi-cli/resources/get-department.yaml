@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Get Department
+  version: "2.0"
+
+paths:
+  /v2/organisations/{accountId}/departments/{departmentId}:
+    get:
+      summary: Retrieves the details of a specific department within an organisation.
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          description: The unique identifier of the organisation.
+          schema:
+            type: string
+        - name: departmentId
+          in: path
+          required: true
+          description: The unique identifier of the department to retrieve.
+          schema:
+            type: string

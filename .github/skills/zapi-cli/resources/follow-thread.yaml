@@ -1,0 +1,15 @@
+openapi: 3.1.0
+info:
+  title: Follow Thread
+  version: "2.0"
+paths:
+  /v2/threads/{chid}/follow:
+    post:
+      summary: Follow a thread so the current user receives notifications for it
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the thread to follow
+          schema:
+            type: string

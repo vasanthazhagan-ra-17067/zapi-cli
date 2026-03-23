@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Leave Group Chat
+  version: "2.0"
+
+paths:
+  /v2/chats/{chid}/leave:
+    post:
+      summary: Remove the authenticated user from the specified group chat.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: Unique identifier of the chat to leave.
+          schema:
+            type: string

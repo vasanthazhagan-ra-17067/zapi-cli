@@ -1,0 +1,32 @@
+openapi: 3.1.0
+
+info:
+  title: Get Starred Messages
+  version: "1.0"
+
+paths:
+  /api/v1/stars:
+    get:
+      summary: Retrieve a paginated list of messages starred by the authenticated user.
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          description: Maximum number of starred messages to return.
+          schema:
+            type: integer
+        - name: type
+          in: query
+          required: true
+          description: Star type filter; corresponds to the `starType` integer value.
+          schema:
+            type: integer
+        - name: totime
+          in: query
+          required: false
+          description: >
+            Upper bound timestamp (exclusive) for pagination. When provided,
+            only messages starred before `totime - 1` are returned.
+          schema:
+            type: integer
+            format: int64

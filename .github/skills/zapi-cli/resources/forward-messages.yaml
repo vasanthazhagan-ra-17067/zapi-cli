@@ -1,0 +1,49 @@
+openapi: 3.1.0
+info:
+  title: Forward Messages
+  version: "1.0"
+
+paths:
+  /api/v1/chats/{chid}/forward:
+    post:
+      summary: Forwards one or more messages from a source chat to one or more target chats or users.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The channel/chat ID of the source chat containing the messages to forward.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - msguids
+              properties:
+                msguids:
+                  type: string
+                  description: Comma-separated list of message UIDs (senderAndTimeID format) to forward.
+                  example: "1234567890_abc,1234567891_def"
+                userids:
+                  type: string
+                  description: Comma-separated list of recipient user ZUIDs. Provide this to forward to individual users.
+                  example: "111111111,222222222"
+                fwdasgroup:
+                  type: boolean
+                  description: Whether to forward to the user recipients as a group conversation. Set to false when forwarding to individual users via userids.
+                  example: false
+                fwdchidlists:
+                  type: string
+                  description: Comma-separated list of target channel/chat IDs to forward the messages into.
+                  example: "chid_abc,chid_xyz"
+                sid:
+                  type: string
+                  description: Optional session ID associated with the originating conversation context.
+                  example: "session_abc123"
+                retain_trace:
+                  type: boolean
+                  description: When true, the forwarded messages retain attribution metadata indicating they were forwarded (show forward info).
+                  example: true

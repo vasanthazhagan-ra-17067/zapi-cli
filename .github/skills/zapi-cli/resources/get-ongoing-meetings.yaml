@@ -1,0 +1,18 @@
+openapi: 3.1.0
+info:
+  title: Get Ongoing Meetings
+  version: "2.0"
+
+paths:
+  /api/v2/mediasessions:
+    get:
+      summary: Retrieve the list of live (ongoing) meetings for the authenticated user
+      parameters:
+        - name: filter
+          in: query
+          required: true
+          description: Must be set to "live" to retrieve currently active meetings
+          schema:
+            type: string
+            enum:
+              - live

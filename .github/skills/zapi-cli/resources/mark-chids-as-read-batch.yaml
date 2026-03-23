@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Mark Chats As Read (Batch)
+  version: "1.0"
+
+paths:
+  /markasread.api:
+    post:
+      summary: Mark one or more chats as read for the authenticated user in a single batch request (up to 100 chids per call).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - chid
+              properties:
+                chid:
+                  type: string
+                  description: Comma-separated list of chat IDs (chids) to mark as read (maximum 100 per request).
+                  example: "chid1,chid2,chid3"

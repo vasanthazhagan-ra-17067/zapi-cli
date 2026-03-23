@@ -1,0 +1,18 @@
+openapi: 3.1.0
+info:
+  title: Get All Pinned Categories
+  version: "2.0"
+
+paths:
+  /v2/pincategories:
+    get:
+      summary: Retrieves all pinned categories (pin folders) for the authenticated user, optionally including chat metadata for each category.
+      parameters:
+        - name: include_chats
+          in: query
+          required: false
+          description: When set to "true", includes chat metadata alongside each pinned category.
+          schema:
+            type: string
+            enum:
+              - "true"

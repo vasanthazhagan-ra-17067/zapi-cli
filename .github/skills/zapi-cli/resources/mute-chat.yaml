@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: Mute Chat
+  version: "1.0"
+
+paths:
+  /api/v1/chats/{chid}/mute:
+    post:
+      summary: Mute a chat for the authenticated user for a specified duration.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat to mute.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - time
+              properties:
+                time:
+                  type: string
+                  description: >
+                    Mute duration in seconds as a string. Use "-1" to mute
+                    forever. Common values: "3600" (1 hour), "28800" (8 hours),
+                    "86400" (1 day), "604800" (1 week).
+                  examples:
+                    one_hour:
+                      value: "3600"
+                    eight_hours:
+                      value: "28800"
+                    one_day:
+                      value: "86400"
+                    one_week:
+                      value: "604800"
+                    forever:
+                      value: "-1"

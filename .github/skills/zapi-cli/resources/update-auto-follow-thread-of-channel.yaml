@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: Update Auto Follow Thread of Channel
+  version: "1.0"
+
+paths:
+  /api/v1/channels/{ocid}:
+    put:
+      summary: Enable or disable automatic thread following for the authenticated user in a specific channel.
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier (OCID) of the channel.
+        - name: auto_follow_threads
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - enable
+              - disable
+          description: Whether to enable or disable auto-following of threads in the channel.

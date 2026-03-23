@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Sync Channels
+  version: "1.0"
+
+paths:
+  /synchannels.api:
+    post:
+      summary: Synchronises the authenticated user's channel list from the server using an incremental timestamp-based sync.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - lastsynctime
+              properties:
+                lastsynctime:
+                  type: string
+                  description: The Unix timestamp (in milliseconds) of the last successful channel sync, used to fetch only changes since that point.
+                  example: "1709721600000"

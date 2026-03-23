@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: Get State-Supported Plan Details
+  version: "2.0"
+
+paths:
+  /api/v2/clientsync/state-supported:
+    get:
+      summary: Retrieves the client-sync state-supported plan details (feature flags, configurations, and settings) for the authenticated user, optionally using a checksum to detect changes since the last fetch.
+      parameters:
+        - name: client_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - desktop
+          description: The type of client making the request.
+        - name: checksum
+          in: query
+          required: false
+          schema:
+            type: integer
+            nullable: true
+          description: A checksum value from the previous response; if the server data is unchanged it returns HTTP 304.

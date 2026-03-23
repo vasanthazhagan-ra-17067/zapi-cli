@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: Expand or Collapse Pinned Folder
+  version: "2.0"
+
+paths:
+  /v2/pincategories/{id}:
+    put:
+      summary: Expand or collapse a pinned folder (pin category) identified by its ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the pinned category (folder) to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state
+              properties:
+                state:
+                  type: string
+                  enum:
+                    - expanded
+                    - collapsed
+                  description: The desired expand/collapse state of the pinned folder.

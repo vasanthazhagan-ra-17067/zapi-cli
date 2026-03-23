@@ -1,0 +1,15 @@
+openapi: 3.1.0
+info:
+  title: Get Thread
+  version: "2.0"
+paths:
+  /v2/threads/{chid}:
+    get:
+      summary: Retrieves the thread (chat) details for the given channel/chat ID.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the thread/chat channel.
+          schema:
+            type: string

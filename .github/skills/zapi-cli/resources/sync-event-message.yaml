@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Zoho Cliq – Sync Event Message
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/messages/{msgUid}/syncevent:
+    post:
+      summary: Sync the event card for a specific message in a chat channel
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat channel.
+          schema:
+            type: string
+        - name: msgUid
+          in: path
+          required: true
+          description: The unique identifier of the message whose event card should be synced.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: No request body parameters are required. An empty object may be sent.
+              example: {}

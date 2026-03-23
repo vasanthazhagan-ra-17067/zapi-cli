@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: Search Messages
+  version: "1.0"
+
+paths:
+  /api/v1/messagesearch:
+    get:
+      summary: Search messages across chats using one or more filter criteria such as text content, sender, recipient, date range, file type, or link.
+      parameters:
+        - name: message
+          in: query
+          required: false
+          description: Text string to search for within message content.
+          schema:
+            type: string
+
+        - name: lim
+          in: query
+          required: false
+          description: Maximum number of messages to return.
+          schema:
+            type: integer
+
+        - name: from
+          in: query
+          required: false
+          description: Comma-separated list of sender ZUIDs to filter messages by who sent them.
+          schema:
+            type: string
+
+        - name: to
+          in: query
+          required: false
+          description: Comma-separated list of recipient ZUIDs to filter messages by who received them.
+          schema:
+            type: string
+
+        - name: in
+          in: query
+          required: false
+          description: Chat ID (chid) to restrict the search to a specific chat.
+          schema:
+            type: string
+
+        - name: fromtime
+          in: query
+          required: false
+          description: Start of the date range filter as a Unix timestamp in milliseconds.
+          schema:
+            type: integer
+            format: int64
+
+        - name: totime
+          in: query
+          required: false
+          description: End of the date range filter as a Unix timestamp in milliseconds.
+          schema:
+            type: integer
+            format: int64
+
+        - name: filetype
+          in: query
+          required: false
+          description: File type to filter messages that contain attachments of this type (e.g. "image", "document").
+          schema:
+            type: string
+
+        - name: file
+          in: query
+          required: false
+          description: File name text to filter messages whose attachments match.
+          schema:
+            type: string
+
+        - name: link
+          in: query
+          required: false
+          description: URL or partial link text to filter messages that contain a matching link.
+          schema:
+            type: string
+
+        - name: pno
+          in: query
+          required: false
+          description: Page number for paginating through results. Omitted (defaults to 1) when fetching the first page.
+          schema:
+            type: integer
+            default: 1

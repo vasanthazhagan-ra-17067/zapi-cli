@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info:
+  title: Get Buddies (With Type)
+  version: "2.0"
+paths:
+  /v2/buddies:
+    get:
+      summary: Retrieve buddies filtered by invitation or friendship status
+      parameters:
+        - name: status
+          in: query
+          required: true
+          description: >
+            Buddy relationship status to filter by:
+            requested = outgoing invite sent by the current user;
+            pending = incoming invite awaiting acceptance;
+            confirmed = accepted contact
+          schema:
+            type: string
+            enum:
+              - requested
+              - pending
+              - confirmed

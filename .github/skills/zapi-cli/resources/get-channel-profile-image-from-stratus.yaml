@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: Get Channel Profile Image From Stratus
+  version: "1.0"
+servers:
+  - url: https://stratus-resources.zoho.com
+paths:
+  /zohocliq-{scopeId}-photos/{photoId}:
+    get:
+      summary: Download a channel profile image stored in Stratus using the channel scope ID and photo ID
+      parameters:
+        - name: scopeId
+          in: path
+          required: true
+          description: Scope ID of the channel; used to construct the Stratus bucket name (zohocliq-{scopeId}-photos)
+          schema:
+            type: string
+        - name: photoId
+          in: path
+          required: true
+          description: Photo download ID of the channel image
+          schema:
+            type: string
+        - name: extraParam
+          in: query
+          required: false
+          description: >-
+            JSON-encoded string carrying additional Stratus request metadata.
+            Contains keys: x-cliq-resource-module ("channel_img"),
+            event-id (photoId), and x-cli-msg.appaccount_id.
+          schema:
+            type: string

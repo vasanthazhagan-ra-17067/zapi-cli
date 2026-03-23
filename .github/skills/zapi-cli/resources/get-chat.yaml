@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Get Chat
+  version: "1.0"
+
+paths:
+  /api/v1/chats:
+    get:
+      summary: Retrieves a single chat by its chat ID for the specified user.
+      parameters:
+        - name: chat_ids
+          in: query
+          required: true
+          description: The unique identifier of the chat to retrieve.
+          schema:
+            type: string

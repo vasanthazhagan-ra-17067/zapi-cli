@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Make Chat With Chid (Pin / Unpin)
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/{pintype}:
+    post:
+      summary: Pin or unpin a chat identified by its chid, optionally assigning it to a pinned category.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: Unique identifier of the chat to pin or unpin.
+          schema:
+            type: string
+        - name: pintype
+          in: path
+          required: true
+          description: Action to perform — `pin` to pin the chat or `unpin` to unpin it.
+          schema:
+            type: string
+            enum:
+              - pin
+              - unpin
+      requestBody:
+        description: Optional body sent only when pinning (`pintype = pin`) and a category is specified.
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category_id:
+                  type: string
+                  description: ID of the pinned folder/category to place the chat into.
+              required:
+                - category_id

@@ -1,0 +1,21 @@
+openapi: 3.1.0
+info:
+  title: Delete Reminder User
+  version: "2.0"
+paths:
+  /api/v2/reminders/{reminder_id}/users/{user_id}:
+    delete:
+      summary: Remove a user from an existing reminder
+      parameters:
+        - name: reminder_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the reminder
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ZUID of the user to remove from the reminder

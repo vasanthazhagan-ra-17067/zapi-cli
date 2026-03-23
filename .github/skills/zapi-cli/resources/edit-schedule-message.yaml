@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: Edit Scheduled Message
+  version: "2.0"
+paths:
+  /v2/chats/{chid}/scheduledmessages/{scheduleId}:
+    put:
+      summary: Edit the text (and optionally the time) of an existing scheduled message
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The chat ID that contains the scheduled message
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the scheduled message to edit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Updated message text (with member mentions converted to markdown)
+                reply_to:
+                  type: string
+                  description: UID of the message being replied to (optional)
+                schedule_time:
+                  type: string
+                  description: New epoch timestamp (ms) at which to send the message; mutually exclusive with schedule_status
+                schedule_status:
+                  type: string
+                  description: Named schedule status (e.g. "morning"); used when schedule_time is absent
+              required:
+                - text

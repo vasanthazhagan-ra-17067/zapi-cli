@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: Modify Thread Followers
+  version: "2.0"
+
+paths:
+  /api/v2/threads/{chid}/followers:
+    post:
+      summary: Add one or more users as followers of a thread.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the thread (channel/chat ID).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_ids
+              properties:
+                user_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: List of ZUIDs of the users to add as followers.
+
+    delete:
+      summary: Remove one or more users from the followers list of a thread.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the thread (channel/chat ID).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_ids
+              properties:
+                user_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: List of ZUIDs of the users to remove from followers.

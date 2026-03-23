@@ -1,0 +1,15 @@
+openapi: 3.1.0
+info:
+  title: Leave From Channel
+  version: "1.0"
+paths:
+  /api/v1/channels/{ocid}/leave:
+    post:
+      summary: Remove the authenticated user from the specified channel.
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          description: The unique object-identifier (OCID) of the channel to leave.
+          schema:
+            type: string

@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: Reorder Pinned Chat
+  version: "2.0"
+
+paths:
+  /v2/pincategories/{categoryId}:
+    put:
+      summary: Reorders a pinned chat within a pin category, optionally placing it above a specified chat.
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          description: The unique identifier of the pin category in which the chat should be reordered.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chat_id
+                - last_sync_time
+              properties:
+                chat_id:
+                  type: string
+                  description: The unique identifier of the chat to reorder within the pin category.
+                last_sync_time:
+                  type: integer
+                  format: int64
+                  description: Client-side timestamp in milliseconds used for sync conflict resolution; defaults to the current time if not supplied.
+                pin_above:
+                  type: string
+                  description: The chat ID of the chat that this chat should be pinned above; omit to place the chat at the bottom of the category.

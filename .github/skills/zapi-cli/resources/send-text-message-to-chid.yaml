@@ -1,0 +1,144 @@
+openapi: 3.1.0
+info:
+  title: Send Text Message to Chat (chid)
+  version: "1.0"
+
+paths:
+  /sendofficechatmessage.api:
+    post:
+      summary: Send a plain-text message from an authenticated user to a Cliq chat channel identified by chid.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - chid
+                - msg
+                - msgid
+              properties:
+                chid:
+                  type: string
+                  description: >
+                    The chat channel ID that the message is sent to.
+                msg:
+                  type: string
+                  description: >
+                    The message text, pre-processed to replace member-mention
+                    markdown tokens with the server-expected format.
+                msgid:
+                  type: string
+                  description: >
+                    Client-generated unique message ID used for deduplication.
+                    Must be the current time in milliseconds as a Unix timestamp
+                    (e.g. Date().timeIntervalSince1970 * 1000, formatted as a string).
+                sid:
+                  type: string
+                  description: >
+                    Optional session ID. Also sent as the X-SID request header.
+                thread_message_id:
+                  type: string
+                  description: >
+                    UID of the parent (head) message when sending a threaded
+                    reply. Mutually exclusive with reply_to.
+                reply_to:
+                  type: string
+                  description: >
+                    UID of the message being replied to in a quote-reply context.
+                    Used only when thread_message_id is absent.
+                reply_from:
+                  type: string
+                  description: >
+                    chid of the chat from which the quoted message originates.
+                    Sent alongside reply_to when the replied message is from a
+                    different channel.
+                post_in_parent:
+                  type: boolean
+                  description: >
+                    When true, the server also posts the message in the parent
+                    chat of a thread channel.
+                chat_key:
+                  type: string
+                  description: >
+                    Set to the same value as chid when the request is made in
+                    the context of an encrypted meeting resource
+                    (X-Encrypted-Meeting-Resource-Id header is also set).
+                commandid:
+                  type: string
+                  description: >
+                    ID of the slash command that produced this message, if any.
+                selections:
+                  type: string
+                  description: >
+                    JSON array string of slash-command suggestion objects that
+                    the user selected; each element is a JSON-encoded suggestion
+                    dict (e.g. '[{"key":"value"},...]').
+                action:
+                  type: string
+                  enum:
+                    - head_message_reply
+                  description: >
+                    Indicates the semantic action associated with the message.
+                    Currently the only recognised value is "head_message_reply".
+      x-headers:
+        - name: X-Consents-Version
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: ["1"]
+          description: >
+            Consent version header, always sent with value "1".
+        - name: X-Encrypted-Meeting-Resource-Id
+          in: header
+          required: false
+          schema:
+            type: string
+          description: >
+            Encrypted meeting resource ID; included when the message is sent
+            in the context of an ongoing encrypted AV call.
+        - name: X-SID
+          in: header
+          required: false
+          schema:
+            type: string
+          description: >
+            Session ID header; mirrors the sid body field when a session ID
+            is present.
+
+  /guestapi/v2/chats/{chid}/message:
+    post:
+      summary: Send a plain-text message from a guest user to a Cliq chat channel identified by chid.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: >
+            The chat channel ID that the message is sent to.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - id
+              properties:
+                text:
+                  type: string
+                  description: >
+                    The message text, pre-processed to replace member-mention
+                    markdown tokens with the server-expected format.
+                id:
+                  type: string
+                  description: >
+                    Client-generated unique message ID used for deduplication.
+                reply_to:
+                  type: string
+                  description: >
+                    UID of the message being replied to in a quote-reply context.

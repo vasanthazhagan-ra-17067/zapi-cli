@@ -1,0 +1,24 @@
+openapi: 3.1.0
+info:
+  title: Get Chat and Guest Info
+  version: "2.0"
+
+paths:
+  /{guestUrl}:
+    get:
+      summary: Retrieves guest metadata and the associated chat for an external guest session using a pre-issued guest URL.
+      parameters:
+        - name: guestUrl
+          in: path
+          required: true
+          description: The relative path to the guest resource as issued by the server (e.g. api/v2/guests/{guestToken}).
+          schema:
+            type: string
+        - name: x-cliq-mobile-guest
+          in: header
+          required: true
+          description: Must be set to "true" to identify the request as originating from a mobile guest client.
+          schema:
+            type: string
+            enum:
+              - "true"

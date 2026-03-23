@@ -1,0 +1,49 @@
+openapi: 3.1.0
+info:
+  title: Zoho Cliq – Get Slash Command Suggestions
+  version: "1.0"
+
+paths:
+  /api/v1/commands/{commandId}/suggestions:
+    post:
+      summary: Fetch dynamic input suggestions for a slash command based on the current chat context
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          description: Unique identifier of the slash command whose suggestions are being requested.
+          schema:
+            type: string
+        - name: X-Geo-Location
+          in: header
+          required: false
+          description: >
+            JSON-serialised geographic context forwarded when the user has granted
+            location permission. Includes latitude, longitude, accuracy, altitude,
+            and a status field ("granted" | "denied" | "prompt").
+          schema:
+            type: string
+            example: '{"latitude":12.9716,"longitude":77.5946,"accuracy":10.0,"altitude":900.0,"status":"granted"}'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - chid
+                - message
+              properties:
+                chid:
+                  type: string
+                  description: Channel / conversation ID in which the slash command is being typed.
+                message:
+                  type: string
+                  description: Current text in the message-compose area, including the slash command prefix.
+                selections:
+                  type: string
+                  description: >
+                    JSON array string of previously selected suggestion objects
+                    (each element is the JSON representation of a Suggestion dict).
+                    Omitted when no prior selections exist.
+                  example: '[{"id":"opt1","label":"Option 1"},{"id":"opt2","label":"Option 2"}]'

@@ -1,0 +1,30 @@
+openapi: 3.1.0
+
+info:
+  title: Get Unfurled Data
+  version: "1.0"
+
+servers:
+  - url: https://cliq.zoho.com
+    description: Zoho Cliq production server (IDC)
+  - url: https://cliq.localzoho.com
+    description: Zoho Cliq local development server
+
+paths:
+  /getunfurleddata.api:
+    post:
+      summary: Fetches unfurled link-preview metadata for a given URL.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - link
+              properties:
+                link:
+                  type: string
+                  description: The URL whose link-preview (unfurl) metadata should be fetched.
+                  example: "https://www.example.com/some-article"

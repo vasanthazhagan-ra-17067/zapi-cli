@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info:
+  title: Reschedule Message
+  version: "2.0"
+paths:
+  /v2/chats/{chid}/scheduledmessages/{scheduleId}:
+    put:
+      summary: Reschedule a single scheduled message to a new time or status
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The chat ID that contains the scheduled message
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the scheduled message to reschedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedule_time:
+                  type: string
+                  description: New epoch timestamp (ms) at which to send the message; mutually exclusive with schedule_status; must be accompanied by schedule_timezone
+                schedule_timezone:
+                  type: string
+                  description: IANA timezone identifier; required when schedule_time is provided
+                schedule_status:
+                  type: string
+                  description: Named schedule status (e.g. "morning"); used when schedule_time is absent

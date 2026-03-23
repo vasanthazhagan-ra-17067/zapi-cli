@@ -1,0 +1,58 @@
+openapi: 3.1.0
+info:
+  title: Get Chat Participants
+  version: "1.0"
+
+paths:
+  /api/v1/chats/{chid}/participants:
+    get:
+      summary: Retrieves a paginated list of participants for a given chat, with optional filtering by search string, category, and mode.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: Unique identifier of the chat.
+          schema:
+            type: string
+
+        - name: fields
+          in: query
+          required: false
+          description: Comma-separated list of participant fields to return (e.g. "all,presence,usage_count").
+          schema:
+            type: string
+
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of participants to return in a single response.
+          schema:
+            type: integer
+
+        - name: mode
+          in: query
+          required: false
+          description: Fetch mode controlling which subset of participants is returned (maps to GetParticipantsMode).
+          schema:
+            type: string
+
+        - name: next_token
+          in: query
+          required: false
+          description: Opaque pagination cursor returned by a previous response; omit to fetch from the beginning.
+          schema:
+            type: string
+
+        - name: search
+          in: query
+          required: false
+          description: Search string used to filter participants by name or other indexed fields.
+          schema:
+            type: string
+
+        - name: category
+          in: query
+          required: false
+          description: Participant category filter (maps to GetParticipantsCategory).
+          schema:
+            type: string

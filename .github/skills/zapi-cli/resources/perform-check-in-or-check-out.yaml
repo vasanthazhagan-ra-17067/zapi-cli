@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info:
+  title: Zoho Cliq – Attendance Check-In / Check-Out
+  version: "2.0"
+
+paths:
+  /api/v2/me/checkin:
+    put:
+      summary: Check in the current user
+      parameters:
+        - name: X-Geo-Location
+          in: header
+          required: false
+          description: >
+            JSON-serialised geographic location captured at the time of check-in.
+            Sent only when location data is available.
+          schema:
+            type: string
+            example: '{"latitude":12.9716,"longitude":77.5946,"accuracy":10.0}'
+
+  /api/v2/me/checkout:
+    put:
+      summary: Check out the current user
+      parameters:
+        - name: X-Geo-Location
+          in: header
+          required: false
+          description: >
+            JSON-serialised geographic location captured at the time of check-out.
+            Sent only when location data is available.
+          schema:
+            type: string
+            example: '{"latitude":12.9716,"longitude":77.5946,"accuracy":10.0}'

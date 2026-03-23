@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: Mark Message As Unread
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/unread:
+    put:
+      summary: Marks a specific chat message as unread for the given user.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat channel containing the message.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message_id
+                - time
+              properties:
+                message_id:
+                  type: string
+                  description: The unique identifier (UID) of the message to mark as unread.
+                time:
+                  type: string
+                  description: The timestamp of the message, represented as a numeric string (milliseconds since epoch).

@@ -1,0 +1,57 @@
+openapi: 3.1.0
+info:
+  title: Create Channel
+  version: "1.0"
+paths:
+  /v1/channels:
+    post:
+      summary: Creates a new channel with the specified name, scope, reply mode, and optional members/permissions.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+                - scope
+                - config
+              properties:
+                name:
+                  type: string
+                  description: The display name of the new channel.
+                description:
+                  type: string
+                  description: Optional description for the channel.
+                scope:
+                  type: string
+                  description: The channel level/scope (e.g. raw integer value corresponding to public, private, team, or external).
+                config:
+                  type: string
+                  description: >
+                    JSON-encoded string containing channel configuration.
+                    Example: {"reply_mode": "threads", "leave_join_info": "enable"}.
+                    reply_mode is one of "normal_reply", "threads", or "both".
+                    leave_join_info is "enable" or "disable".
+                userids:
+                  type: string
+                  description: Comma-separated list of ZUIDs of users to add to the channel on creation.
+                admin_permission:
+                  type: integer
+                  description: Bitmask integer representing admin permissions within the channel.
+                moderator_permission:
+                  type: integer
+                  description: Bitmask integer representing moderator permissions within the channel.
+                member_permission:
+                  type: integer
+                  description: Bitmask integer representing member permissions within the channel.
+                open_to_all:
+                  type: boolean
+                  description: Whether the channel is visible/open to all users. Applicable for public and team scopes.
+                scopeids:
+                  type: string
+                  description: Comma-separated list of team IDs to scope the channel to. Applicable for team scope only.
+                cphoto:
+                  type: string
+                  format: binary
+                  description: Optional channel profile photo file to upload (sent as multipart/form-data when present).

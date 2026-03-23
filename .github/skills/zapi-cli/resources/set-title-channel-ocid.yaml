@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: Set Channel Title (OCID)
+  version: "1.0"
+
+paths:
+  /api/v1/channels/{ocid}:
+    put:
+      summary: Updates the display name of a channel identified by its OCID.
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The OCID of the channel whose title is to be updated.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: The new display name for the channel.

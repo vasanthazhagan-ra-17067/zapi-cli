@@ -1,0 +1,57 @@
+openapi: 3.1.0
+info:
+  title: Declare Form
+  version: "2.0"
+paths:
+  /api/v2/forms/{formId}/actions/submit:
+    post:
+      summary: Submit a completed interactive form along with all selected field values.
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the form.
+        - name: X-Consents-Version
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: ["1"]
+          description: Consents version header; must be "1".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                values:
+                  type: object
+                  description: Map of all field names to their final selected/entered values. Omitted if the form has no user-provided values.
+                  additionalProperties: true
+  /api/v2/forms/{formId}/actions/cancel:
+    post:
+      summary: Cancel (dismiss) an interactive form without submitting it.
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the form.
+        - name: X-Consents-Version
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: ["1"]
+          description: Consents version header; must be "1".
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Empty body sent on cancellation.

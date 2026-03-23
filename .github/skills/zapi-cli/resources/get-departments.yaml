@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: Get Departments
+  version: "2.0"
+
+paths:
+  /v2/departments:
+    get:
+      summary: Retrieves a paginated, optionally filtered list of departments for the authenticated user.
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Text to filter departments by name.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Maximum number of departments to return.
+        - name: next_token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor returned by a previous response; omit for the first page.

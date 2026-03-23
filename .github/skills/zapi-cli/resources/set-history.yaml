@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: Set Chat History
+  version: "2.0"
+
+paths:
+  /v2/chats/{chid}/history:
+    put:
+      summary: Enable or disable message history for a chat identified by its channel ID.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the chat channel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state
+              properties:
+                state:
+                  type: string
+                  enum:
+                    - enable
+                    - disable
+                  description: Whether to enable or disable history for the chat.

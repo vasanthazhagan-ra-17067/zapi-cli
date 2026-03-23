@@ -1,0 +1,58 @@
+openapi: 3.1.0
+
+info:
+  title: Send Giphy Message
+  version: "1.0"
+
+paths:
+  /v1/chats/{chid}/sharegif:
+    post:
+      summary: Send a Giphy GIF as a message to a chat channel.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the target chat channel.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+                - width
+                - height
+                - msgid
+              properties:
+                url:
+                  type: string
+                  description: The URL of the Giphy GIF to share.
+                width:
+                  type: string
+                  description: The display width of the GIF in pixels (formatted as an integer string, e.g. "480").
+                height:
+                  type: string
+                  description: The display height of the GIF in pixels (formatted as an integer string, e.g. "270").
+                msgid:
+                  type: string
+                  description: >
+                    Client-generated unique identifier for this message.
+                    Must be the current time in milliseconds as a Unix timestamp
+                    (e.g. Date().timeIntervalSince1970 * 1000, formatted as a string).
+                sid:
+                  type: string
+                  description: Optional session ID to associate with the message.
+                thread_message_id:
+                  type: string
+                  description: UID of the parent message when sending the GIF as a threaded reply.
+                post_in_parent:
+                  type: boolean
+                  description: When true, the GIF is also posted in the parent chat of a thread.
+                action:
+                  type: string
+                  enum:
+                    - head_message_reply
+                  description: Optional action qualifier; "head_message_reply" indicates the GIF is a reply to the head message of a thread.

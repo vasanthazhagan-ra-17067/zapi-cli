@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Get User Read Status
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/messages/{msgUid}:
+    get:
+      summary: Retrieves the per-user read status for a specific message in a chat.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat channel.
+          schema:
+            type: string
+        - name: msgUid
+          in: path
+          required: true
+          description: The unique identifier of the message.
+          schema:
+            type: string
+        - name: fields
+          in: query
+          required: true
+          description: Comma-separated list of fields to return; must be "read_status" for this operation.
+          schema:
+            type: string
+            enum:
+              - read_status

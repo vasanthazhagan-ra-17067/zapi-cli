@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Decline Contact Invite
+  version: "1.0"
+paths:
+  /approvecontact.api:
+    post:
+      summary: Decline (remind me later) a pending contact invite from another user
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - userid
+                - status
+              properties:
+                userid:
+                  type: string
+                  description: ZUID of the user whose invite is being declined
+                status:
+                  type: string
+                  enum:
+                    - remindmelater
+                  description: Action to perform on the invite

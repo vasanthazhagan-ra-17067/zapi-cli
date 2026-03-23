@@ -1,0 +1,15 @@
+openapi: 3.1.0
+info:
+  title: Unfollow Thread
+  version: "2.0"
+paths:
+  /v2/threads/{chid}/unfollow:
+    post:
+      summary: Unfollow a thread so the current user no longer receives notifications for it
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the thread to unfollow
+          schema:
+            type: string

@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: Unstar Message
+  version: "1.0"
+paths:
+  /api/v1/stars/{msgZuid}_{msgtime}_{chid}:
+    delete:
+      summary: Removes the star from a previously starred message identified by its sender ZUID, timestamp, and chat ID.
+      parameters:
+        - name: msgZuid
+          in: path
+          required: true
+          description: The ZUID of the user who sent the message.
+          schema:
+            type: string
+        - name: msgtime
+          in: path
+          required: true
+          description: The timestamp of the message (epoch milliseconds).
+          schema:
+            type: integer
+            format: int64
+        - name: chid
+          in: path
+          required: true
+          description: The channel or chat ID to which the message belongs.
+          schema:
+            type: string

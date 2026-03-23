@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Mark Chat As Read Up To Message UID
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/messages/{msgUid}/markread:
+    post:
+      summary: Marks all messages in a chat as read up to and including the specified message UID.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat channel.
+          schema:
+            type: string
+        - name: msgUid
+          in: path
+          required: true
+          description: The UID of the message up to which all messages should be marked as read.
+          schema:
+            type: string

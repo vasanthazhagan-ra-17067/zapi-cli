@@ -1,0 +1,27 @@
+openapi: 3.1.0
+info:
+  title: Complete (or Incomplete) Reminder
+  version: "2.0"
+paths:
+  /api/v2/reminders/{reminderID}/complete:
+    put:
+      summary: Mark a reminder as complete. Use the /incomplete variant path to revert a reminder back to incomplete.
+      parameters:
+        - name: reminderID
+          in: path
+          required: true
+          description: Unique identifier of the reminder to mark complete.
+          schema:
+            type: string
+          example: "1775998001154490623"
+  /api/v2/reminders/{reminderID}/incomplete:
+    put:
+      summary: Mark a previously completed reminder as incomplete (reopen it).
+      parameters:
+        - name: reminderID
+          in: path
+          required: true
+          description: Unique identifier of the reminder to mark incomplete.
+          schema:
+            type: string
+          example: "1775998001154490623"

@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: Change Channel Participant Role
+  version: "1.0"
+
+paths:
+  /v1/channels/{ocid}/changeroles:
+    post:
+      summary: Changes the role of a participant within a channel.
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the channel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+                - admins
+              properties:
+                role:
+                  type: integer
+                  description: The numeric raw value of the role to assign to the participant.
+                admins:
+                  type: string
+                  description: The participant ID (ZUID) of the user whose role is being changed.

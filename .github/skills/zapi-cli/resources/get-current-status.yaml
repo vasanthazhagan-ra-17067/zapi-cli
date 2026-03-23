@@ -1,0 +1,10 @@
+openapi: 3.1.0
+info:
+  title: Get Current Status
+  version: "2.0"
+
+paths:
+  /api/v2/statuses/current:
+    get:
+      summary: Retrieves the current effective status (ephemeral or persistent) for the authenticated user.
+      parameters: []

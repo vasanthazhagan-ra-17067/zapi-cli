@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: Fork Chat With Chid
+  version: "1.0"
+
+paths:
+  /api/v1/chats/{chid}/fork:
+    post:
+      summary: Fork an existing chat identified by its chat ID into a new chat, optionally copying participants and seeding it from a specific message.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique chat ID of the source chat to fork.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userids
+                - title
+                - msguid
+                - includeparticipants
+              properties:
+                userids:
+                  type: string
+                  description: Comma-separated list of member ZUIDs to add to the forked chat.
+                  example: "1234567890,9876543210"
+                sid:
+                  type: string
+                  description: Session ID associated with the source message thread (empty string if not applicable).
+                  example: ""
+                title:
+                  type: string
+                  description: Title for the newly created forked chat.
+                  example: "Discussion thread"
+                msguid:
+                  type: string
+                  description: Unique ID of the message from which the fork originates.
+                  example: "1700000000000001"
+                includeparticipants:
+                  type: boolean
+                  description: Whether to include the existing participants of the source chat in the forked chat.
+                  example: true

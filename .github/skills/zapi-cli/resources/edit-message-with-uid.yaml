@@ -1,0 +1,40 @@
+openapi: 3.1.0
+info:
+  title: Edit Message With UID
+  version: "1.0"
+
+paths:
+  /sendofficechatmessage.api:
+    post:
+      summary: Edit an existing channel message identified by its UID, replacing its text content.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - chid
+                - msg
+                - msguid
+                - notifyedit
+              properties:
+                chid:
+                  type: string
+                  description: The channel ID that contains the message being edited.
+                msg:
+                  type: string
+                  description: The new message text, with member mentions encoded as Markdown.
+                msguid:
+                  type: string
+                  description: The UID of the message to edit.
+                notifyedit:
+                  type: string
+                  enum:
+                    - "true"
+                    - "false"
+                  description: Whether to send an edit notification to channel participants.
+                msgid:
+                  type: string
+                  nullable: true
+                  description: The numeric message ID of the message to edit (optional; used for logging/tracing).

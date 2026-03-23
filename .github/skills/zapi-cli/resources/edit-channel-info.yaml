@@ -1,0 +1,46 @@
+openapi: 3.1.0
+info:
+  title: Edit Channel Info
+  version: "1.0"
+paths:
+  /v1/channels/{channelId}:
+    put:
+      summary: Updates an existing channel's name, description, visibility, team membership, reply configuration, and optional photo.
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier (ocid) of the channel to edit.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: New display name for the channel.
+                description:
+                  type: string
+                  description: New description for the channel.
+                open_to_all:
+                  type: boolean
+                  description: Whether the channel is open/visible to all organisation members.
+                gids:
+                  type: string
+                  description: Comma-separated list of team IDs that the channel should be scoped to.
+                scope:
+                  type: string
+                  description: Scope level value corresponding to the selected team IDs (required when gids is provided).
+                config:
+                  type: string
+                  description: >
+                    JSON string specifying channel configuration. Either reply mode
+                    ({"reply_mode": "normal_reply" | "threads" | "both"}) or
+                    leave/join notifications ({"leave_join_info": "enable" | "disable"}).
+                cphoto:
+                  type: string
+                  format: binary
+                  description: New channel photo file to upload.

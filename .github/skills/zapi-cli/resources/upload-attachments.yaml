@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Upload Form Attachments
+  version: "2.0"
+paths:
+  /api/v2/forms/{formId}/files:
+    post:
+      summary: Upload a file attachment for a specific field in an interactive form.
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the form.
+        - name: X-SID
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Optional session ID associated with the form interaction.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+                - field_name
+              properties:
+                files:
+                  type: string
+                  format: binary
+                  description: The file to upload.
+                field_name:
+                  type: string
+                  description: The name of the form field this file is attached to.

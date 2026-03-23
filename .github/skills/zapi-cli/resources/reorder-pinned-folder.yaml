@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: Reorder Pinned Folder
+  version: "2.0"
+
+paths:
+  /v2/pincategories/{id}:
+    put:
+      summary: Updates the position of a pinned folder by specifying which folder it should appear above.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the pinned folder to reorder.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - last_sync_time
+              properties:
+                last_sync_time:
+                  type: integer
+                  format: int64
+                  description: Client-side timestamp in milliseconds used for sync conflict resolution.
+                pin_above:
+                  type: string
+                  description: The ID of the folder above which this folder should be pinned. Omit to place the folder at the bottom of the pinned list.

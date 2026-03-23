@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: Zoho Cliq – Remove Message Reaction
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/messages/{msgUid}/reactions:
+    delete:
+      summary: Remove an emoji reaction from a chat message
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat channel
+          schema:
+            type: string
+        - name: msgUid
+          in: path
+          required: true
+          description: The unique identifier of the message whose reaction is being removed
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - emoji_code
+              properties:
+                emoji_code:
+                  type: string
+                  description: The emoji reaction code to remove from the message
+                is_linked_message:
+                  type: boolean
+                  description: >
+                    Set to true when the message is a thread-linked message.
+                    Omit or set to false for regular messages.

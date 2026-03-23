@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: Edit Reminder
+  version: "2.0"
+paths:
+  /api/v2/reminders/{reminderID}:
+    put:
+      summary: Update the content and/or trigger time of an existing reminder.
+      parameters:
+        - name: reminderID
+          in: path
+          required: true
+          description: Unique identifier of the reminder to edit.
+          schema:
+            type: string
+          example: "1775998001154339971"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: Updated text content of the reminder. Omitted when empty.
+                  example: Hello 1234568
+                time:
+                  type: integer
+                  format: int64
+                  description: Updated trigger time as a Unix epoch in milliseconds.
+                  example: 1607410800000

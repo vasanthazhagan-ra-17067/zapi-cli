@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Remove Members from Channel
+  version: "1.0"
+
+paths:
+  /api/v1/channels/{ocid}/deletemember:
+    post:
+      summary: Remove one or more members from a channel identified by its organisation channel ID.
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          description: The organisation channel ID of the channel from which members will be removed.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - ulist
+              properties:
+                ulist:
+                  type: string
+                  description: Comma-separated list of user ZUIDs to remove from the channel.
+                  example: "100000001,100000002"

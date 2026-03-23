@@ -1,0 +1,63 @@
+openapi: 3.1.0
+info:
+  title: Invoke DRE Function
+  version: "1.0"
+
+paths:
+  /executefunction.api:
+    post:
+      summary: Invoke a DRE (Dynamic Response Engine) function by name, triggering bot button/action handlers for a given channel message.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - fname
+                - chid
+                - msgid
+                - isTempResponse
+                - btnindex
+              properties:
+                fname:
+                  type: string
+                  description: The name of the DRE function to invoke.
+                chid:
+                  type: string
+                  description: The channel ID in which the message resides.
+                msgid:
+                  type: string
+                  description: The ID of the message whose action triggered this function call.
+                isTempResponse:
+                  type: string
+                  enum:
+                    - "true"
+                    - "false"
+                  description: Whether the triggering message is a temporary (ephemeral) response.
+                btnindex:
+                  type: string
+                  description: The index of the button that was interacted with.
+                msguid:
+                  type: string
+                  description: The unique identifier (UID) of the message; optional, included when available.
+                event:
+                  type: string
+                  enum:
+                    - click
+                    - swipe
+                  description: The interaction event type that triggered this invocation.
+                input:
+                  type: string
+                  description: Optional user-supplied input associated with the action (e.g. text entered in an input widget).
+      headers:
+        X-Consents-Version:
+          description: Consent version marker; always sent as "1".
+          schema:
+            type: string
+            example: "1"
+        X-SID:
+          description: Session ID for the current interactive session; included only when a session is active.
+          schema:
+            type: string

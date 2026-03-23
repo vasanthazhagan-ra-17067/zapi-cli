@@ -1,0 +1,24 @@
+openapi: 3.1.0
+info:
+  title: Get User Check-In/Out Status
+  version: "2.0"
+servers:
+  - url: https://cliq.zoho.com
+paths:
+  /v2/users/{contactZuid}:
+    get:
+      summary: Retrieve the check-in/check-out and presence status for a specific user
+      parameters:
+        - name: contactZuid
+          in: path
+          required: true
+          description: ZUID of the contact whose check-in/out status is being queried
+          schema:
+            type: string
+        - name: fields
+          in: query
+          required: false
+          description: Comma-separated list of field groups to include; always sent as "all,checkin_status,presence"
+          schema:
+            type: string
+            default: "all,checkin_status,presence"

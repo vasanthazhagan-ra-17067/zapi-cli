@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info:
+  title: Get Non-State-Supported Plan Details
+  version: "2.0"
+paths:
+  /api/v2/clientsync/non-state-supported:
+    get:
+      summary: Retrieves plan details for features that are not managed by the server-side state-sync mechanism.
+      parameters:
+        - name: client_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - desktop
+          description: The type of client making the request.

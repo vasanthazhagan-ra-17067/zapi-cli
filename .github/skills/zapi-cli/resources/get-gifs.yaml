@@ -1,0 +1,24 @@
+openapi: 3.1.0
+info:
+  title: Get GIFs
+  version: "2.0"
+servers:
+  - url: https://cliq.zoho.com
+paths:
+  /api/v2/gifs:
+    get:
+      summary: Search for GIFs by keyword with optional pagination
+      parameters:
+        - name: search
+          in: query
+          required: true
+          description: Search keyword string to find matching GIFs
+          schema:
+            type: string
+        - name: p_no
+          in: query
+          required: false
+          description: Page number for pagination; only sent when greater than 0
+          schema:
+            type: integer
+            minimum: 1

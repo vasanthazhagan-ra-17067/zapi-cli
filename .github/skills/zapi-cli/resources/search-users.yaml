@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: Search Users
+  version: "2.0"
+paths:
+  /v2/users:
+    get:
+      summary: Search for users by name or identifier with an optional result limit
+      parameters:
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search string to filter users
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of results to return
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "all,presence,usage_count"
+          description: Comma-separated list of field groups to include in the response

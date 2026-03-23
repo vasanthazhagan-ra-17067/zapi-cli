@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Remove Sticky Message
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/stickymessage:
+    delete:
+      summary: Removes the sticky message from the specified chat.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat whose sticky message should be removed.
+          schema:
+            type: string

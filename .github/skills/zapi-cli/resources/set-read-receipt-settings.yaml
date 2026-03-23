@@ -1,0 +1,27 @@
+openapi: 3.1.0
+info:
+  title: Set Read Receipt Settings
+  version: "1.0"
+
+servers:
+  - url: https://cliq.zoho.com
+
+paths:
+  /updatemobilesettings.api:
+    post:
+      summary: Enables or disables read-receipt delivery for the authenticated user's mobile settings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - read_reciept
+              properties:
+                read_reciept:
+                  type: integer
+                  enum: [0, 1]
+                  description: >
+                    Controls whether read receipts are enabled (1) or disabled (0)
+                    for the user.

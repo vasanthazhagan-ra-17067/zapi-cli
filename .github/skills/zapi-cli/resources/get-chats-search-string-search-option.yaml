@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Get Chats (Search String / Search Option)
+  version: "1.0"
+
+paths:
+  /api/v1/chats:
+    get:
+      summary: Search chats and/or threads by title up to a given time, optionally filtered to threads only.
+      parameters:
+        - name: title
+          in: query
+          required: true
+          description: Search string matched against chat/thread titles.
+          schema:
+            type: string
+        - name: totime
+          in: query
+          required: true
+          description: Upper time boundary for the search, expressed as a Unix epoch in milliseconds.
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          description: >
+            When set to `threads`, restricts results to thread chats only.
+            Omit this parameter to search across both chats and threads.
+          schema:
+            type: string
+            enum:
+              - threads
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results to return.
+          schema:
+            type: integer

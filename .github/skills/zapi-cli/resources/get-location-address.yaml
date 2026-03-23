@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: Get Location Address
+  version: "2.0"
+servers:
+  - url: https://cliq.zoho.com
+paths:
+  /api/v2/geolocations/{latitude},{longitude}:
+    get:
+      summary: Retrieve the address for a specific geographic coordinate
+      parameters:
+        - name: latitude
+          in: path
+          required: true
+          description: Latitude of the location coordinate
+          schema:
+            type: number
+            format: double
+        - name: longitude
+          in: path
+          required: true
+          description: Longitude of the location coordinate
+          schema:
+            type: number
+            format: double

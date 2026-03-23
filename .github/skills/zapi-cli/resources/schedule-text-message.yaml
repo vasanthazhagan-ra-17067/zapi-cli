@@ -1,0 +1,53 @@
+openapi: 3.1.0
+info:
+  title: Schedule Text Message
+  version: "2.0"
+paths:
+  /v2/chats/{chid}/scheduledmessages:
+    post:
+      summary: Schedule a text message to be sent in a chat at a future time
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The chat ID to send the scheduled message in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Message text with member mentions converted to Cliq markdown format
+                id:
+                  type: string
+                  description: >
+                    Client-generated unique message ID used for deduplication.
+                    Must be the current time in milliseconds as a Unix timestamp
+                    (e.g. Date().timeIntervalSince1970 * 1000, formatted as a string).
+                schedule_time:
+                  type: string
+                  description: ISO-formatted date string (yyyyMMdd'T'HHmm'00', e.g. "20260307T090000") at which to send the message; mutually exclusive with schedule_status
+                schedule_status:
+                  type: string
+                  description: Named schedule status used when schedule_time is absent; one of "check_in", "check_out", "user_available", "call_end"
+                schedule_timezone:
+                  type: string
+                  description: IANA timezone identifier for the scheduled time (e.g. "Asia/Kolkata"); taken from TimeZone.identifier
+                reply_to:
+                  type: string
+                  description: UID of the message being replied to; only sent when a reply context exists
+                reply_from:
+                  type: string
+                  description: Chat ID of the message being replied to; only sent when reply_to is set
+                post_in_parent:
+                  type: boolean
+                  description: Whether to post in the parent chat if applicable; only included in the request body when true
+              required:
+                - text
+                - id
+                - schedule_timezone

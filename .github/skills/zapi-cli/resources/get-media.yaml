@@ -1,0 +1,111 @@
+openapi: 3.1.0
+info:
+  title: Get Media
+  version: "2.0"
+
+paths:
+  /v2/chats/{chid}/media:
+    get:
+      summary: Retrieve a paginated list of media items (images, videos, audio, files, or links) shared in a specific chat.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The chat ID whose media is being fetched.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Maximum number of results to return.
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [image, video, audio, file, link]
+          description: Category of media to retrieve.
+        - name: fromtime
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: Start of the time range filter (Unix timestamp in milliseconds).
+        - name: totime
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: End of the time range filter (Unix timestamp in milliseconds).
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Free-text search term to filter media items.
+        - name: user_ids
+          in: query
+          required: false
+          schema:
+            type: string
+          description: ZUID of the sender to filter media by a specific user.
+        - name: next_token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor returned by the previous page to fetch the next set of results.
+
+  /v2/media:
+    get:
+      summary: Retrieve a paginated list of media items (images, videos, audio, files, or links) across all chats for the authenticated user.
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Maximum number of results to return.
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [image, video, audio, file, link]
+          description: Category of media to retrieve.
+        - name: fromtime
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: Start of the time range filter (Unix timestamp in milliseconds).
+        - name: totime
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: End of the time range filter (Unix timestamp in milliseconds).
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Free-text search term to filter media items.
+        - name: user_ids
+          in: query
+          required: false
+          schema:
+            type: string
+          description: ZUID of the sender to filter media by a specific user.
+        - name: next_token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor returned by the previous page to fetch the next set of results.

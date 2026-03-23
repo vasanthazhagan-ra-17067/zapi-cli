@@ -1,0 +1,29 @@
+openapi: 3.1.0
+
+info:
+  title: Post Temp Message
+  version: "1.0"
+
+paths:
+  /api/v1/chats/{chid}/shareintegrationresponse:
+    post:
+      summary: Posts a temporary integration-response message to a chat identified by its channel ID.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat channel to post the message into.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - msgid
+              properties:
+                msgid:
+                  type: string
+                  description: The message timestamp (msgtime) cast to a string, used to identify the temporary message being shared.

@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: Get Channels
+  version: "1.0"
+
+paths:
+  /api/v1/channels:
+    get:
+      summary: Retrieves a paginated list of channels available to the authenticated user, optionally filtered by category, scope, or team.
+      parameters:
+        - name: mode
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Fetch mode controlling which channel set is returned (e.g. "joined", "allowed").
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of channels to return.
+        - name: fromtime
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Epoch timestamp (milliseconds) to fetch channels updated after this time.
+        - name: totime
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Epoch timestamp (milliseconds) to fetch channels updated before this time.
+        - name: next_token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor returned by a previous response to fetch the next page.
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Channel category type used to filter results (e.g. "team", "org").
+        - name: team_ids
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated team identifier(s); required when scope is "team".

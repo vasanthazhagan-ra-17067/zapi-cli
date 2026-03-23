@@ -1,0 +1,8 @@
+openapi: 3.1.0
+info:
+  title: Get Presence Keys
+  version: "2.0"
+paths:
+  /api/v2/presence/keys:
+    get:
+      summary: Retrieve the list of presence subscription keys available to the authenticated user

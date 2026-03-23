@@ -1,0 +1,15 @@
+openapi: 3.1.0
+info:
+  title: Get Users Email
+  version: "2.0"
+paths:
+  /v2/users/email:
+    get:
+      summary: Retrieve email addresses for a batch of users identified by their ZUIDs
+      parameters:
+        - name: user_ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of ZUIDs (batched to max 100 per request)

@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Join Channel
+  version: "1.0"
+
+paths:
+  /api/v1/channels/{ocid}/join:
+    post:
+      summary: Join the channel identified by the given channel OCID on behalf of the specified user.
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          description: Unique identifier (OCID) of the channel to join.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object

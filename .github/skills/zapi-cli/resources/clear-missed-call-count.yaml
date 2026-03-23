@@ -1,0 +1,21 @@
+openapi: 3.1.0
+info:
+  title: Clear Missed Call Count
+  version: "2.0"
+paths:
+  /api/v2/settings/calls:
+    put:
+      summary: Clear the missed 1-2-1 call count for the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - clear_missed_121_calls
+              properties:
+                clear_missed_121_calls:
+                  type: boolean
+                  description: Set to true to clear the missed call count.
+                  example: true

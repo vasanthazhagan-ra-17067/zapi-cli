@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Get Frequent Users
+  version: "2.0"
+paths:
+  /v2/users:
+    get:
+      summary: Retrieve the authenticated user's buddy list sorted by interaction frequency
+      parameters:
+        - name: buddies
+          in: query
+          required: true
+          schema:
+            type: boolean
+            default: true
+          description: When true, limits results to users in the buddy list
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "all,usage_count"
+          description: Comma-separated list of field groups to include in the response
+        - name: sort_by
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "usage_count"
+          description: Field to sort results by

@@ -1,0 +1,24 @@
+openapi: 3.1.0
+info:
+  title: Remove Members
+  version: "1.0"
+paths:
+  /deletemember.api:
+    post:
+      summary: Removes one or more members from a Cliq channel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chid
+                - ulist
+              properties:
+                chid:
+                  type: string
+                  description: The unique identifier of the channel from which members are to be removed.
+                ulist:
+                  type: string
+                  description: Comma-separated list of ZUIDs of the users to remove from the channel.

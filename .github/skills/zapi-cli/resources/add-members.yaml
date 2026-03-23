@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Add Members
+  version: "1.0"
+
+servers:
+  - url: https://cliq.zoho.com
+    description: Zoho Cliq production server
+
+paths:
+  /addmember.api:
+    post:
+      summary: Add one or more members to an existing Cliq channel.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - chid
+                - ulist
+              properties:
+                chid:
+                  type: string
+                  description: The unique identifier of the channel to add members to.
+                ulist:
+                  type: string
+                  description: Comma-separated list of ZUIDs of the users to add.

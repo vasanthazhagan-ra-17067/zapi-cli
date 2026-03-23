@@ -1,0 +1,18 @@
+openapi: 3.1.0
+info:
+  title: Get WMS Domain Info
+  version: "2.0"
+
+paths:
+  /api/v2/clientsync/domains:
+    get:
+      summary: Retrieves the WMS domain and subdomain information for the authenticated user.
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - wms_domain
+          description: Specifies the domain type to retrieve; must be "wms_domain".

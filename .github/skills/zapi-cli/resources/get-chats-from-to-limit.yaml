@@ -1,0 +1,56 @@
+openapi: 3.1.0
+info:
+  title: Get Chats (from / to / limit)
+  version: "1.0"
+
+paths:
+  /api/v1/chats:
+    get:
+      summary: Retrieve a paginated list of chats for the authenticated user, optionally filtered by time range or threaded view.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of chats to return.
+          schema:
+            type: integer
+        - name: type
+          in: query
+          required: false
+          description: Pass `threads` to fetch threaded chats instead of regular chats.
+          schema:
+            type: string
+            enum:
+              - threads
+        - name: fromtime
+          in: query
+          required: false
+          description: Lower time bound (Unix timestamp in milliseconds). Ignored when `type=threads`.
+          schema:
+            type: integer
+            format: int64
+        - name: totime
+          in: query
+          required: false
+          description: Upper time bound (Unix timestamp in milliseconds). Ignored when `type=threads`.
+          schema:
+            type: integer
+            format: int64
+        - name: muted
+          in: query
+          required: false
+          description: Whether to include muted chats. Passed as `false` by the client in non-threaded mode.
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+        - name: joined
+          in: query
+          required: false
+          description: Whether to return only chats the user has joined. Always `true` in this call variant.
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"

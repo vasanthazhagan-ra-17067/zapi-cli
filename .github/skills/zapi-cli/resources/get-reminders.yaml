@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: Get Reminders
+  version: "2.0"
+paths:
+  /api/v2/reminders:
+    get:
+      summary: Fetch a paginated list of reminders filtered by category and optional date range
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - mine
+              - mine-completed
+              - others
+              - others-completed
+          description: >
+            Reminder category to filter by. Omit when using next_set_token for
+            pagination.
+        - name: fromtime
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: >
+            Start of the date range as a Unix timestamp in milliseconds.
+            Used when category is provided and pagination is not active.
+        - name: totime
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: >
+            End of the date range as a Unix timestamp in milliseconds.
+            Used together with fromtime.
+        - name: next_set_token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            Pagination token returned from a previous response. When present,
+            category, fromtime, and totime are ignored.

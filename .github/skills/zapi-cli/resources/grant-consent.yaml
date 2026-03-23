@@ -1,0 +1,47 @@
+openapi: 3.1.0
+info:
+  title: Grant Consent
+  version: "1.0"
+
+paths:
+  /api/v1/executions/{typeId}/confirmconsent:
+    post:
+      summary: Grant (or deny) consent for a slash-command execution
+      parameters:
+        - name: typeId
+          in: path
+          required: true
+          description: Integer identifier of the execution type (always 1 from the client)
+          schema:
+            type: integer
+            example: 1
+        - name: X-Consents-Version
+          in: header
+          required: true
+          description: Consents version header (always "1")
+          schema:
+            type: string
+            enum:
+              - "1"
+        - name: X-SID
+          in: header
+          required: false
+          description: Optional session ID associated with the execution
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+                - allow_for_extension
+              properties:
+                key:
+                  type: string
+                  description: Consent key identifying the specific consent item
+                allow_for_extension:
+                  type: boolean
+                  description: Whether to allow the consent for the entire extension (true) or just this execution (false)

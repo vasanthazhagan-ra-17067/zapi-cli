@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: Zoho Cliq – Get Slash Commands
+  version: "2.0"
+
+paths:
+  /api/v2/commands:
+    get:
+      summary: Retrieve the list of available slash commands with incremental-sync support
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          description: Maximum number of slash-command records to return in a single response.
+          schema:
+            type: integer
+            example: 50
+        - name: sync_token
+          in: query
+          required: false
+          description: >
+            Opaque token returned by a previous response; when supplied, only
+            commands added or modified since that checkpoint are returned.
+          schema:
+            type: string

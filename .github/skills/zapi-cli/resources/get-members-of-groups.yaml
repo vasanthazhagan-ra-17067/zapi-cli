@@ -1,0 +1,20 @@
+openapi: 3.1.0
+info:
+  title: Get Members of Groups
+  version: "1.0"
+
+servers:
+  - url: https://cliq.zoho.com
+
+paths:
+  /getgroupmembers.api:
+    get:
+      summary: Retrieves the members belonging to one or more groups identified by their group IDs.
+      parameters:
+        - name: groupid
+          in: query
+          required: true
+          description: Comma-separated list of group IDs whose members should be fetched.
+          schema:
+            type: string
+            example: "group1,group2,group3"

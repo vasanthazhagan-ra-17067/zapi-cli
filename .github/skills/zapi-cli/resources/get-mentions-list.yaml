@@ -1,0 +1,32 @@
+openapi: 3.1.0
+
+info:
+  title: Get Mentions List
+  version: "1.0"
+
+paths:
+  /getmymentions.api:
+    get:
+      summary: Retrieve a paginated list of messages in which the authenticated user has been mentioned.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of mention entries to return.
+          schema:
+            type: integer
+            format: int64
+        - name: fromtime
+          in: query
+          required: false
+          description: Lower bound timestamp (inclusive); only mentions at or after this time are returned.
+          schema:
+            type: integer
+            format: int64
+        - name: totime
+          in: query
+          required: false
+          description: Upper bound timestamp (exclusive); only mentions before this time are returned.
+          schema:
+            type: integer
+            format: int64

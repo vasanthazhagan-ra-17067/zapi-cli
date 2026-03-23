@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Get Presence
+  version: "2.0"
+paths:
+  /v2/presence:
+    get:
+      summary: Retrieve presence status for one or more users
+      parameters:
+        - name: user_ids
+          in: query
+          required: true
+          description: Comma-separated list of ZUIDs whose presence status to fetch
+          schema:
+            type: string
+          example: "12345678,98765432"

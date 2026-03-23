@@ -1,0 +1,21 @@
+openapi: 3.1.0
+info:
+  title: Clear All Custom User Status
+  version: "1.0"
+
+paths:
+  /clearcstatus.api:
+    post:
+      summary: Clears all custom statuses set for the specified user, resetting them to the default state.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - user
+              properties:
+                user:
+                  type: string
+                  description: The ZUID of the user whose custom statuses should be cleared.

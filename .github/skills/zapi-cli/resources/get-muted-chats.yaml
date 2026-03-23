@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: Get Muted Chats
+  version: "1.0"
+
+paths:
+  /api/v1/chats:
+    get:
+      summary: Retrieves the list of chats that the user has muted, up to a specified limit.
+      parameters:
+        - name: muted
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - "true"
+          description: Filter chats to return only muted chats.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 100
+          description: Maximum number of muted chats to return.

@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: Get Call History
+  version: "2.0"
+
+paths:
+  /api/v2/mediasessions:
+    get:
+      summary: Retrieve the call history for the authenticated user
+      parameters:
+        - name: X-API-VERSION
+          in: header
+          required: true
+          description: API version header (always "1")
+          schema:
+            type: string
+            enum:
+              - "1"
+        - name: limit
+          in: query
+          required: true
+          description: Maximum number of call records to return
+          schema:
+            type: integer
+            example: 50
+        - name: type
+          in: query
+          required: true
+          description: Filter calls by session type
+          schema:
+            type: string
+            enum:
+              - all
+              - direct_call
+              - audio_conference
+              - video_conference
+              - handshake
+              - assembly
+        - name: recipient_id
+          in: query
+          required: false
+          description: Filter call history by a specific recipient identifier
+          schema:
+            type: string
+        - name: sync_token
+          in: query
+          required: false
+          description: Opaque token for incremental sync; returns only records newer than the token
+          schema:
+            type: string
+        - name: next_token
+          in: query
+          required: false
+          description: Pagination cursor returned in a previous response to fetch the next page
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          description: Free-text search string to filter call records
+          schema:
+            type: string

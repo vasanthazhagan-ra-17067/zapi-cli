@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Get Scheduled Attachment
+  version: "2.0"
+servers:
+  - url: https://cliq.zoho.com
+paths:
+  /v2/attachments/{fileUrl}/scheduledmessages/{scheduledMsgId}:
+    get:
+      summary: Download an attachment associated with a scheduled message
+      parameters:
+        - name: fileUrl
+          in: path
+          required: true
+          description: File URL identifier of the attachment
+          schema:
+            type: string
+        - name: scheduledMsgId
+          in: path
+          required: true
+          description: Unique identifier of the scheduled message
+          schema:
+            type: string
+        - name: guest_id
+          in: query
+          required: false
+          description: Guest user ID; only included when the requesting user is a guest
+          schema:
+            type: string

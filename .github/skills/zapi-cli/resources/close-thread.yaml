@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: Zoho Cliq – Close Thread
+  version: "2.0"
+
+paths:
+  /v2/threads/{chid}:
+    put:
+      summary: Close a thread
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the thread (channel/chat ID) to close.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - close
+                  description: Action to perform on the thread. Must be "close".
+            example:
+              action: close

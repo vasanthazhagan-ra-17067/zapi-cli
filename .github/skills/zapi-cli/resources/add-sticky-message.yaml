@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: Add Sticky Message
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/stickymessage:
+    post:
+      summary: Pin (sticky) a message in a chat by setting its expiry time and optional notification flag.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat in which the message will be stickied.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+                - expiry_time
+                - notify
+              properties:
+                id:
+                  type: string
+                  description: The unique identifier (UID) of the message to be made sticky.
+                expiry_time:
+                  type: integer
+                  description: >
+                    Unix timestamp in milliseconds at which the sticky message should expire.
+                    Pass -1 to indicate no expiry (the message remains sticky indefinitely).
+                  example: 1741305600000
+                notify:
+                  type: boolean
+                  description: Whether to send a notification to chat participants when the message is stickied.

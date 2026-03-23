@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Get Message
+  version: "2.0"
+
+paths:
+  /api/v2/chats/{chid}/messages/{msgUid}:
+    get:
+      summary: Retrieves a single message by its UID from the specified chat.
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          description: The unique identifier of the chat containing the message.
+          schema:
+            type: string
+        - name: msgUid
+          in: path
+          required: true
+          description: The unique identifier of the message to retrieve.
+          schema:
+            type: string

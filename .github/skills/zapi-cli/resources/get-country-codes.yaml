@@ -1,0 +1,18 @@
+openapi: 3.1.0
+info:
+  title: Get Country Codes
+  version: "2.0"
+servers:
+  - url: https://cliq.zoho.com
+paths:
+  /api/v2/countries:
+    get:
+      summary: Retrieve the list of country codes, optionally filtered by version
+      parameters:
+        - name: version
+          in: query
+          required: false
+          description: Version number of the country codes data; defaults to 0 when not supplied
+          schema:
+            type: integer
+            default: 0

@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: Edit Attachment With UID
+  version: "1.0"
+paths:
+  /v1/attachments/{attachmentPath}:
+    put:
+      summary: Edits an existing attachment message in a chat by updating its comment text and notification preference.
+      parameters:
+        - name: attachmentPath
+          in: path
+          required: true
+          description: The relative URL path that uniquely identifies the attachment resource (the `rurl` of the attachment).
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - msguid
+                - id
+                - notifyedit
+                - comment
+              properties:
+                msguid:
+                  type: string
+                  description: The UID of the attachment message to edit.
+                id:
+                  type: string
+                  description: The channel or chat ID (chid) that contains the attachment.
+                notifyedit:
+                  type: boolean
+                  description: Whether participants should be notified about the edit.
+                comment:
+                  type: string
+                  description: The updated comment text for the attachment, with member-mention markdown applied.

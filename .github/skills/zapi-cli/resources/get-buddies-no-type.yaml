@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info:
+  title: Get Buddies (No Type)
+  version: "2.0"
+paths:
+  /v2/users:
+    get:
+      summary: Retrieve the full buddy/contact list for the authenticated user
+      parameters:
+        - name: buddies
+          in: query
+          required: false
+          description: When true, returns only buddy contacts
+          schema:
+            type: boolean
+            default: true
+        - name: fields
+          in: query
+          required: false
+          description: Comma-separated list of fields to include in each user object
+          schema:
+            type: string
+            default: "all,usage_count"

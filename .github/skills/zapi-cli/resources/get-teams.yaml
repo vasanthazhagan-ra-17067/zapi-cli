@@ -1,0 +1,19 @@
+openapi: 3.1.0
+info:
+  title: Get Teams
+  version: "2.0"
+
+paths:
+  /api/v2/teams:
+    get:
+      summary: Retrieves the list of teams available to the authenticated user, optionally filtered to only those the user has joined.
+      parameters:
+        - name: joined
+          in: query
+          required: true
+          description: When "true", returns only teams the user has joined; when "false", returns all teams.
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"

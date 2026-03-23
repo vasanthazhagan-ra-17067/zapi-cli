@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Accept Contact Invite
+  version: "1.0"
+paths:
+  /approvecontact.api:
+    post:
+      summary: Accept a pending contact invite from another user
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - userid
+                - status
+              properties:
+                userid:
+                  type: string
+                  description: ZUID of the user whose invite is being accepted
+                status:
+                  type: string
+                  enum:
+                    - accept
+                  description: Action to perform on the invite

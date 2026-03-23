@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Reschedule All Messages
+  version: "2.0"
+paths:
+  /v2/chats/{chid}/scheduledmessages:
+    put:
+      summary: Bulk-reschedule all scheduled messages in a chat (by old time/status to a new time/status)
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The chat ID whose scheduled messages should be rescheduled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                time:
+                  type: integer
+                  format: int64
+                  description: Old epoch timestamp (ms) that identifies which messages to reschedule
+                schedule_timezone:
+                  type: string
+                  description: IANA timezone identifier; provided together with time
+                status:
+                  type: string
+                  description: Old named schedule status that identifies which messages to reschedule
+                schedule_time:
+                  type: string
+                  description: New epoch timestamp (ms) for the rescheduled messages; mutually exclusive with schedule_status
+                schedule_status:
+                  type: string
+                  description: New named schedule status; used when schedule_time is absent

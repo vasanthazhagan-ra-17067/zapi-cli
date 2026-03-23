@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info:
+  title: Get Chats by Chat IDs
+  version: "1.0"
+
+paths:
+  /api/v1/chats:
+    get:
+      summary: Retrieve one or more chats by their chat IDs (chids).
+      parameters:
+        - name: chat_ids
+          in: query
+          required: true
+          description: Comma-separated list of chat IDs (chids) to fetch.
+          schema:
+            type: string
+          example: "ch_abc123,ch_def456"

@@ -1,0 +1,45 @@
+openapi: 3.1.0
+info:
+  title: Get Location Suggestions
+  version: "2.0"
+servers:
+  - url: https://cliq.zoho.com
+paths:
+  /api/v2/geolocations:
+    get:
+      summary: Search for location suggestions matching a text query, with optional geographic boundary
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Free-text search string to find matching locations
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results to return
+          schema:
+            type: integer
+            default: 10
+        - name: lat
+          in: query
+          required: false
+          description: Latitude of the boundary center; used together with lon and radius to restrict results
+          schema:
+            type: number
+            format: double
+        - name: lon
+          in: query
+          required: false
+          description: Longitude of the boundary center; used together with lat and radius to restrict results
+          schema:
+            type: number
+            format: double
+        - name: radius
+          in: query
+          required: false
+          description: Radius (in metres) around the boundary coordinate to restrict results
+          schema:
+            type: number
+            format: double

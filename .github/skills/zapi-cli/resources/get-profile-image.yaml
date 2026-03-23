@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Get Profile Image
+  version: "1.0"
+servers:
+  - url: https://cliq.zoho.com
+paths:
+  /botimg/{photoId}/photo.api:
+    get:
+      summary: >-
+        Download the thumbnail profile image for a message source (bot, channel,
+        command, applet, or extension). The path prefix varies by source type:
+        botimg/ (bot), channel/ (channel), commandimg/ (command),
+        appletimg/ (applet), appimg/ (extension/function/scheduler).
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          description: Photo download ID for the message source
+          schema:
+            type: string
+        - name: fs
+          in: query
+          required: false
+          description: File size/format specifier; always sent as "THUMBNAIL"
+          schema:
+            type: string
+            enum:
+              - THUMBNAIL
+            default: THUMBNAIL

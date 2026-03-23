@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Delete Channel
+  version: "1.0"
+
+paths:
+  /api/v1/channels/{ocid}:
+    delete:
+      summary: Permanently deletes the channel identified by the given organisation channel ID (ocid).
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          description: The unique organisation channel ID of the channel to delete.
+          schema:
+            type: string

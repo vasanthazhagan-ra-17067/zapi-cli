@@ -1,0 +1,67 @@
+openapi: "3.1.0"
+info:
+  title: Send Attachment
+  version: "1.0"
+paths:
+  /api/v1/attachments:
+    post:
+      summary: Upload a file attachment and deliver it as a message to the specified chat.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+                - id
+                - msgid
+              properties:
+                files:
+                  type: string
+                  format: binary
+                  description: The file to upload and send as an attachment.
+                id:
+                  type: string
+                  description: The chat ID (chid) of the destination chat.
+                msgid:
+                  type: string
+                  description: >
+                    Client-generated unique message ID used for deduplication.
+                    Must be the current time in milliseconds as a Unix timestamp
+                    (e.g. Date().timeIntervalSince1970 * 1000, formatted as a string).
+                comment:
+                  type: string
+                  description: >
+                    JSON-encoded comment to accompany the file.
+                    Format: `{"1": "<comment text>"}`.
+                add_info:
+                  type: string
+                  description: >
+                    JSON-encoded additional metadata for the message.
+                    Example for a voice message: `{"1": {"is_voice": true}}`.
+                thread_message_id:
+                  type: string
+                  description: UID of the parent thread message when posting inside a thread.
+                reply_to:
+                  type: string
+                  description: UID of the message being replied to (used outside threads).
+                reply_from:
+                  type: string
+                  description: >
+                    Chat ID of the channel that contains the message referenced by
+                    `reply_to`. Only relevant when `reply_to` is set.
+                post_in_parent:
+                  type: boolean
+                  description: >
+                    When `true`, the message is also posted in the parent chat of a
+                    thread. When `false` (or omitted for non-thread messages) it is
+                    confined to the thread.
+                action:
+                  type: string
+                  enum:
+                    - head_message_reply
+                  description: >
+                    Optional action qualifier for the message.
+                    `head_message_reply` indicates a reply directed at the head message
+                    of a thread.

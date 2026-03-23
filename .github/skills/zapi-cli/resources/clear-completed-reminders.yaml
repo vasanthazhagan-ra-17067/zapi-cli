@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Clear Completed Reminders
+  version: "2.0"
+paths:
+  /api/v2/reminders/clearcompleted:
+    delete:
+      summary: Delete all completed reminders for the current user or for others
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category
+              properties:
+                category:
+                  type: string
+                  enum:
+                    - mine-completed
+                    - others-completed
+                  description: >
+                    Specifies whose completed reminders to clear.
+                    Use "mine-completed" for the current user's reminders,
+                    or "others-completed" for reminders assigned to others.

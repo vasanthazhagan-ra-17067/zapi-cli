@@ -1,0 +1,27 @@
+openapi: 3.1.0
+info:
+  title: Mark Reaction Message UID as Read
+  version: "2.0"
+
+paths:
+  /api/v2/reactions/markread:
+    post:
+      summary: Marks the specified reaction message as read for the given chat channel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chat_idvsmessage_ids
+              properties:
+                chat_idvsmessage_ids:
+                  type: object
+                  description: A map of chat ID to the list of message UIDs to mark as read.
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                  example:
+                    "1234567890": ["msg_uid_abc", "msg_uid_def"]

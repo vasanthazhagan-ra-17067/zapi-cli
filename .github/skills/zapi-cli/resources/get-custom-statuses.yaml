@@ -1,0 +1,10 @@
+openapi: 3.1.0
+info:
+  title: Get Custom Statuses
+  version: "2.0"
+
+paths:
+  /api/v2/statuses:
+    get:
+      summary: Retrieves the list of custom statuses configured by the authenticated user.
+      parameters: []

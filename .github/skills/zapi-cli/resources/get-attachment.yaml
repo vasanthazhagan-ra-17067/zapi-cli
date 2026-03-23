@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: Get Attachment
+  version: "1.0"
+
+paths:
+  /api/v1/attachments/{fileUrl}:
+    get:
+      summary: Downloads an attachment file (or its thumbnail) identified by its remote URL path.
+      parameters:
+        - name: fileUrl
+          in: path
+          required: true
+          description: The opaque path identifier of the attachment, as returned by the server when the file was uploaded.
+          schema:
+            type: string
+        - name: guest_id
+          in: query
+          required: false
+          description: Guest user identifier; included only when the caller is an unauthenticated guest (replaces Zoho auth credentials).
+          schema:
+            type: string
+        - name: x-service
+          in: query
+          required: false
+          description: Service name forwarded to the download proxy server (always "CLIQ"); present only when a dedicated download server URL is configured.
+          schema:
+            type: string
+            example: CLIQ
+        - name: event-id
+          in: query
+          required: false
+          description: The original attachment file URL passed as an event identifier to the download proxy server; present only when a dedicated download server URL is configured.
+          schema:
+            type: string
+        - name: x-cli-msg
+          in: query
+          required: false
+          description: JSON-encoded client message forwarded to the download proxy; set to `{"thumbnail":true}` when a thumbnail rendition is requested via the download server.
+          schema:
+            type: string
+            example: '{"thumbnail":true}'

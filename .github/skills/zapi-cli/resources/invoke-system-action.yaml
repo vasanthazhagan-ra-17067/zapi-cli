@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: Invoke System Action
+  version: "1.0"
+
+paths:
+  /executesystemaction.api:
+    post:
+      summary: Invoke a named system action provided in the button details of a bot/integration message
+      parameters:
+        - name: X-SID
+          in: header
+          required: false
+          description: >
+            The authenticated user's current session ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - api
+                - chid
+              properties:
+                api:
+                  type: string
+                  description: >
+                    The system action name sourced from the bot/integration
+                    message button's `action.data.api` field (button action type
+                    `"system.api"`).
+                chid:
+                  type: string
+                  description: >
+                    The ID of the chat that contains the bot/integration message
+                    whose button triggered this action. Passed directly from the
+                    message model's `chid`.

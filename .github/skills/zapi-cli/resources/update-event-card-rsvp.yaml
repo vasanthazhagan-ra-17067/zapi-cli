@@ -1,0 +1,45 @@
+openapi: 3.1.0
+info:
+  title: Zoho Cliq – Update Event Card RSVP Status
+  version: "1.0"
+
+paths:
+  /api/v1/events/{uid}/updatestatus:
+    put:
+      summary: Update the RSVP status of the authenticated user for a calendar event card
+      parameters:
+        - name: uid
+          in: path
+          required: true
+          description: The unique identifier of the event (eventsUid from EventCard)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - calendaruid
+                - status
+                - calendarid
+                - organizer
+              properties:
+                calendaruid:
+                  type: string
+                  description: The UID of the calendar that owns the event (EventCard.calendarUid)
+                status:
+                  type: string
+                  description: The RSVP response status of the user
+                  enum:
+                    - ACCEPTED
+                    - DECLINED
+                    - TENTATIVE
+                    - NEEDS-ACTION
+                calendarid:
+                  type: string
+                  description: The identifier of the calendar (EventCard.calendarId)
+                organizer:
+                  type: string
+                  description: The ZUID of the event organizer (EventCard.organizerZuid)

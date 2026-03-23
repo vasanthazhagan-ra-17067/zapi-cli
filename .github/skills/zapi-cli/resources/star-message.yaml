@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Star Message
+  version: "1.0"
+
+paths:
+  /api/v1/stars:
+    post:
+      summary: Stars a message in a channel by recording a star type against the message identifier.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - chid
+                - msguid
+                - type
+              properties:
+                chid:
+                  type: string
+                  description: The unique identifier of the channel that contains the message.
+                msguid:
+                  type: string
+                  description: >
+                    Composite message identifier constructed as `{message_zuid}_{message_time}`
+                    (e.g. "123456789_1709123456789").
+                type:
+                  type: integer
+                  description: >
+                    Star category applied to the message.
+                    1 = important (red),
+                    2 = todo (green),
+                    3 = note (yellow),
+                    4 = boss (light blue),
+                    5 = followUp (dark blue).
+                  enum: [1, 2, 3, 4, 5]

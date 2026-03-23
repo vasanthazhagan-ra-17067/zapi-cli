@@ -1,0 +1,21 @@
+openapi: 3.1.0
+info:
+  title: Set Emoji Skin Tone Settings
+  version: "1.0"
+
+paths:
+  /updatemobilesettings.api:
+    post:
+      summary: Updates the authenticated user's emoji skin-tone preference in their mobile settings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - emojiskintone
+              properties:
+                emojiskintone:
+                  type: string
+                  description: The skin-tone modifier to apply to emoji (e.g. "1", "2", "3", "4", "5", "6").

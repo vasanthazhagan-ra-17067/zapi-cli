@@ -1,0 +1,49 @@
+openapi: 3.1.0
+info:
+  title: Modify Form Input
+  version: "2.0"
+paths:
+  /api/v2/forms/{formId}/actions/input:
+    post:
+      summary: Fetch dynamic input suggestions/options for a form field as the user types a search query.
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the form.
+        - name: X-Consents-Version
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: ["1"]
+          description: Consents version header; must be "1".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - target
+                - values
+              properties:
+                target:
+                  type: object
+                  description: Identifies the field being typed into and carries the search text.
+                  required:
+                    - name
+                    - query
+                  properties:
+                    name:
+                      type: string
+                      description: The identifier (name) of the input field.
+                    query:
+                      type: string
+                      description: The current text entered by the user.
+                values:
+                  type: object
+                  description: Map of all current field names to their selected/entered values.
+                  additionalProperties: true

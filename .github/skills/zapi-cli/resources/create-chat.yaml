@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info:
+  title: Create Chat
+  version: "1.0"
+
+servers:
+  - url: https://cliq.zoho.com
+
+paths:
+  /createim.api:
+    post:
+      summary: Creates a new individual or group instant-message chat for the given list of users.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - autojoin
+                - attach
+                - type
+                - userList
+                - sid
+              properties:
+                autojoin:
+                  type: string
+                  description: Whether the creator should automatically join the chat. Always "true".
+                  example: "true"
+                attach:
+                  type: string
+                  description: Whether to attach the chat. Always "true".
+                  example: "true"
+                type:
+                  type: string
+                  description: Chat type — "im" for a one-to-one chat, "nim" for a new group chat.
+                  enum:
+                    - im
+                    - nim
+                userList:
+                  type: string
+                  description: Comma-separated list of ZUIDs of the participants to include in the chat.
+                  example: "45903742,56866852"
+                sid:
+                  type: string
+                  description: The session ID of the authenticated user.
+                title:
+                  type: string
+                  description: Display title for the chat. Required for group chats ("nim"); omitted for one-to-one chats.
+                  example: "Alice, Bob & Carol"

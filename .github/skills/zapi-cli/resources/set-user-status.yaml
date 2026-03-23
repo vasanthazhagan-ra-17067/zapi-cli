@@ -1,0 +1,24 @@
+openapi: 3.1.0
+info:
+  title: Set User Status
+  version: "1.0"
+
+paths:
+  /setstatus.api:
+    post:
+      summary: Sets the presence status and optional status message for the specified user.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - scode
+              properties:
+                scode:
+                  type: string
+                  description: Numeric status code representing the presence state (e.g. available, busy, away, invisible).
+                smsg:
+                  type: string
+                  description: Status message text to display alongside the status code.

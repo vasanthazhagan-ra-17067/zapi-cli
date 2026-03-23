@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Clear All Channel Messages
+  version: "1.0"
+
+paths:
+  /api/v1/channels/{ocid}/clearmessages:
+    post:
+      summary: Clears all messages in the specified channel.
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          description: The unique identifier (OCID) of the channel whose messages should be cleared.
+          schema:
+            type: string

@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info:
+  title: Search Channels
+  version: "1.0"
+
+paths:
+  /api/v1/channels:
+    get:
+      summary: Search for channels the authenticated user is allowed to join or has already joined, filtered by a search string.
+      parameters:
+        - name: mode
+          in: query
+          required: true
+          schema:
+            type: string
+          description: >
+            Determines the channel set to search. Use `allowed` to search
+            channels the user may join, or `joined` to search channels the
+            user is already a member of.
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The search string used to filter channels by name.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of channels to return in a single response.
+        - name: nextToken
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor returned by a previous response to retrieve the next page of results.

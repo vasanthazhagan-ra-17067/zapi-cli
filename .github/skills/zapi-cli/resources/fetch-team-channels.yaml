@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Fetch Team Channels
+  version: "1.0"
+
+paths:
+  /api/v1/channels:
+    get:
+      summary: Retrieves the list of channels accessible to the authenticated user, optionally filtered by a name search string and restricted to one or more team (space) IDs.
+      parameters:
+        - name: mode
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - allowed
+          description: Restricts results to channels the user is allowed to access.
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters channels whose names contain this string.
+        - name: team_ids
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of team (space) SCIDs to scope the channel results.

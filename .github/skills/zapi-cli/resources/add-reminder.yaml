@@ -1,0 +1,47 @@
+openapi: 3.1.0
+info:
+  title: Add Reminder
+  version: "2.0"
+paths:
+  /api/v2/reminders:
+    post:
+      summary: Create a new reminder, optionally linked to a chat message and/or targeted at another user/entity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                  description: Origin of the reminder creation. Always sent as "message_action".
+                  example: message_action
+                content:
+                  type: string
+                  description: Text content of the reminder. Omitted when empty.
+                  example: Review the proposal
+                time:
+                  type: integer
+                  format: int64
+                  description: Reminder trigger time as a Unix epoch in milliseconds.
+                  example: 1607324400000
+                message:
+                  type: object
+                  description: Reference to the chat message that triggered this reminder. Omitted when no message is associated.
+                  properties:
+                    chat_id:
+                      type: string
+                      description: Identifier of the chat the message belongs to.
+                      example: "5000000012345"
+                    time:
+                      type: string
+                      description: Message timestamp (msgtime) as a string.
+                      example: "1607310000000"
+                  required:
+                    - chat_id
+                    - time
+              additionalProperties:
+                description: Target entity fields merged from reminder.target.getRequestDict when the reminder is not self-directed (toMe == false). Keys and values are target-type dependent.
+              required:
+                - source

@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: Schedule Giphy Message
+  version: "1.0"
+paths:
+  /v1/chats/{chid}/sharegif:
+    post:
+      summary: Schedule a Giphy GIF message to be sent in a chat at a future time
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The chat ID to send the scheduled GIF in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  description: Public URL of the Giphy GIF
+                msgid:
+                  type: string
+                  description: >
+                    Client-generated unique message ID used for deduplication.
+                    Must be the current time in milliseconds as a Unix timestamp
+                    (e.g. Date().timeIntervalSince1970 * 1000, formatted as a string).
+                width:
+                  type: string
+                  description: Display width of the GIF in pixels, formatted as integer string with no decimal places (e.g. "320"); derived from CGFloat using String(format:"%.0f", width)
+                height:
+                  type: string
+                  description: Display height of the GIF in pixels, formatted as integer string with no decimal places (e.g. "480"); derived from CGFloat using String(format:"%.0f", height)
+                schedule_time:
+                  type: string
+                  description: ISO-formatted date string (yyyyMMdd'T'HHmm'00', e.g. "20260307T090000") at which to send the GIF; mutually exclusive with schedule_status; sent only when non-empty
+                schedule_status:
+                  type: string
+                  description: Named schedule status used when schedule_time is absent; one of "check_in", "check_out", "user_available", "call_end"
+                schedule_timezone:
+                  type: string
+                  description: IANA timezone identifier for the scheduled time (e.g. "Asia/Kolkata"); taken from TimeZone.identifier; may be nil/absent if timezone is not available
+                post_in_parent:
+                  type: boolean
+                  description: Whether to post in the parent chat if applicable; only included in the request body when true
+              required:
+                - url
+                - msgid
+                - width
+                - height

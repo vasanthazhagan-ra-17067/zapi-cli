@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: Set Chat Title (chid)
+  version: "1.0"
+paths:
+  /settitle.api:
+    post:
+      summary: Sets the display title of a chat identified by its chid.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chid
+                - title
+                - uname
+              properties:
+                chid:
+                  type: string
+                  description: The unique identifier of the chat whose title is being changed.
+                title:
+                  type: string
+                  description: The new title to assign to the chat.
+                uname:
+                  type: string
+                  description: The ZUID of the user performing the title change.

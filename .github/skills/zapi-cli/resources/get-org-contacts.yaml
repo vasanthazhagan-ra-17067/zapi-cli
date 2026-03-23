@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Get Org Contacts
+  version: "1.0"
+paths:
+  /getorgusers.api:
+    get:
+      summary: Search for users within the organisation by a search string
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search string to filter organisation users
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results to return

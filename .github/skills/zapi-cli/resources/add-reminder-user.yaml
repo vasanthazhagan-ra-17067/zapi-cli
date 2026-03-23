@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Add Reminder User
+  version: "2.0"
+paths:
+  /api/v2/reminders/{reminder_id}/users:
+    post:
+      summary: Add one or more users to an existing reminder
+      parameters:
+        - name: reminder_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the reminder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_ids
+              properties:
+                user_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: List of ZUIDs of users to add to the reminder

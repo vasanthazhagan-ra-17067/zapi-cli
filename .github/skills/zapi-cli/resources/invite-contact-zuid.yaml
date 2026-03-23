@@ -1,0 +1,20 @@
+openapi: 3.1.0
+info:
+  title: Invite Contact by ZUID
+  version: "1.0"
+paths:
+  /addcontact.api:
+    post:
+      summary: Send a contact invite to a user identified by their ZUID
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - ulist
+              properties:
+                ulist:
+                  type: string
+                  description: ZUID of the user to invite

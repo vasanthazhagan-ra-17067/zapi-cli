@@ -1,0 +1,12 @@
+openapi: 3.1.0
+info:
+  title: Get Hidden Chat Products
+  version: "1.0"
+servers:
+  - url: https://cliq.zoho.com
+    description: Zoho Cliq production server
+paths:
+  /getmobilepreferences.api:
+    get:
+      summary: Retrieves the mobile preferences for a user, including the set of product identifiers whose chatlet integrations are hidden in the chat UI.
+      parameters: []

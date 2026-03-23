@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Add Members to Channel
+  version: "1.0"
+
+paths:
+  /api/v1/channels/{ocid}/invite:
+    post:
+      summary: Invite one or more users to a channel by posting a comma-separated list of user ZUIDs.
+      parameters:
+        - name: ocid
+          in: path
+          required: true
+          description: The unique organisation-scoped channel identifier.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ulist
+              properties:
+                ulist:
+                  type: string
+                  description: Comma-separated list of user ZUIDs to add to the channel.
+                  example: "1234567890,9876543210"

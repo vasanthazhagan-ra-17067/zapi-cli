@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Unsubscribe Bot
+  version: "1.0"
+
+paths:
+  /api/v1/bots/{botId}/unsubscribe:
+    post:
+      summary: Unsubscribe the authenticated user from a bot
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          description: Unique identifier of the bot to unsubscribe from
+          schema:
+            type: string

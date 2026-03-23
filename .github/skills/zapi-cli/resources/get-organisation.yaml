@@ -1,0 +1,10 @@
+openapi: 3.1.0
+info:
+  title: Get Organisation
+  version: "2.0"
+
+paths:
+  /api/v2/organisations:
+    get:
+      summary: Retrieves the organisation details for the authenticated user, confirming whether the user belongs to an active organisation account.
+      parameters: []

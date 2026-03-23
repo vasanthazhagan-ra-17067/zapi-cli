@@ -1,0 +1,41 @@
+openapi: 3.1.0
+info:
+  title: Get Command Image
+  version: "1.0"
+servers:
+  - url: https://cliq.zoho.com
+paths:
+  /commandimg/{photoId}/photo.api:
+    get:
+      summary: Downloads the photo associated with a bot command by its photo ID.
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the command image (photo).
+        - name: x-service
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - cliq_resources
+          description: Service identifier used for resource routing.
+        - name: event-id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The photo/event ID; matches the `photoId` path parameter.
+        - name: x-cli-msg
+          in: query
+          required: true
+          schema:
+            type: string
+          description: >
+            JSON-encoded metadata string containing the resource module, app account ID,
+            and resource type. Structure:
+            `{"x-cliq-resource-module":"photos","appaccount_id":"<appAccountId>","type":"commandimg"}`.
+          example: '{"x-cliq-resource-module":"photos","appaccount_id":"123456789","type":"commandimg"}'

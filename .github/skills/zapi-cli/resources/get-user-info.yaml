@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Get User Info
+  version: "2.0"
+paths:
+  /v2/users:
+    get:
+      summary: Retrieve profile and presence information for a single user by ZUID
+      parameters:
+        - name: user_ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ZUID of the user to look up
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "all,presence,usage_count"
+          description: Comma-separated list of field groups to include in the response

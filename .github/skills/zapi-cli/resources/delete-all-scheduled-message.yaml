@@ -1,0 +1,15 @@
+openapi: 3.1.0
+info:
+  title: Delete All Scheduled Messages
+  version: "2.0"
+paths:
+  /v2/chats/{chid}/scheduledmessages:
+    delete:
+      summary: Delete all scheduled messages in a chat
+      parameters:
+        - name: chid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The chat ID whose scheduled messages should all be deleted

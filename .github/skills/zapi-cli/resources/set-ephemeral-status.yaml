@@ -1,0 +1,34 @@
+openapi: 3.1.0
+info:
+  title: Set Ephemeral Status
+  version: "2.0"
+
+paths:
+  /api/v2/statuses/ephemeral:
+    put:
+      summary: Sets a temporary (ephemeral) presence status for the authenticated user, optionally with an expiry time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - message
+              properties:
+                code:
+                  type: string
+                  enum:
+                    - available
+                    - busy
+                    - away
+                    - dnd
+                    - invisible
+                  description: Presence state for the ephemeral status.
+                message:
+                  type: string
+                  description: Status message text to display while the ephemeral status is active.
+                expiry:
+                  type: integer
+                  description: Duration in milliseconds after which the ephemeral status expires automatically.

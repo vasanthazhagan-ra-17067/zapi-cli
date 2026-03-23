@@ -1,0 +1,45 @@
+openapi: 3.1.0
+info:
+  title: Modify Form
+  version: "2.0"
+paths:
+  /api/v2/forms/{formId}/actions/change:
+    post:
+      summary: Notify the server of a field-level change in an interactive form, returning updated form state.
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the form.
+        - name: X-Consents-Version
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: ["1"]
+          description: Consents version header; must be "1".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - target
+                - values
+              properties:
+                target:
+                  type: object
+                  description: Identifies the form field that triggered the change.
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      description: The identifier (name) of the field that changed.
+                values:
+                  type: object
+                  description: Map of all current field names to their selected/entered values.
+                  additionalProperties: true

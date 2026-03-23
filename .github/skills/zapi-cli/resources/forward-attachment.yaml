@@ -1,0 +1,65 @@
+openapi: 3.1.0
+info:
+  title: Forward Attachment
+  version: "1.0"
+
+paths:
+  /api/v1/attachments/{attachment_path}/forward:
+    post:
+      summary: Forward an existing attachment to a target chat or channel, optionally with a comment.
+      parameters:
+        - name: attachment_path
+          in: path
+          required: true
+          description: The relative URL path (rurl) of the attachment to forward.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+                - type
+                - mod
+                - msgid
+                - source_chid
+              properties:
+                id:
+                  type: string
+                  description: The target chat or channel ID to forward the attachment to.
+                type:
+                  type: string
+                  enum:
+                    - chat
+                    - channel
+                  description: >
+                    Destination type — "chat" for direct chats, threads, and bots;
+                    "channel" for channel conversations.
+                mod:
+                  type: string
+                  enum:
+                    - att
+                  description: Module identifier; always "att" for attachment forwards.
+                msgid:
+                  type: string
+                  description: ID of the message that contains the attachment being forwarded.
+                source_chid:
+                  type: string
+                  description: The chat/channel ID from which the attachment originates.
+                source_msguid:
+                  type: string
+                  description: UID of the source message (included when available).
+                sid:
+                  type: string
+                  description: Optional session ID for the request.
+                retain_trace:
+                  type: boolean
+                  description: >
+                    When true, forward attribution info (who originally sent the
+                    attachment) is preserved in the forwarded message.
+                comment:
+                  type: string
+                  description: Optional text comment to accompany the forwarded attachment.

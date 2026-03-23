@@ -1,0 +1,9 @@
+openapi: 3.1.0
+info:
+  title: Get Missed Call Count
+  version: "2.0"
+paths:
+  /api/v2/mediasessions/summary:
+    get:
+      summary: Retrieve the count of missed 1-2-1 calls and the last-viewed timestamp for the authenticated user.
+      parameters: []

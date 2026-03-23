@@ -1,0 +1,15 @@
+openapi: 3.1.0
+info:
+  title: Group Call Initiation Info
+  version: "2.0"
+paths:
+  /api/v2/conferences/{callID}:
+    get:
+      summary: Retrieve initiation and join information for a group/conference call by its call ID.
+      parameters:
+        - name: callID
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the conference/call.

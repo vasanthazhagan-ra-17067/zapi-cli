@@ -1,0 +1,61 @@
+openapi: 3.1.0
+info:
+  title: Get Department Members and Meetings
+  version: "2.0"
+
+paths:
+  /v2/departments/{departmentId}/members:
+    get:
+      summary: Retrieves the members of a specific department along with their active calls, check-in status, presence, and other live-feed fields.
+      parameters:
+        - name: departmentId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the department.
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "all,active_calls,checkin_status,live_feed_status,user_status,presence,usage_count"
+          description: Comma-separated list of field groups to include in the response.
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "remote_tools"
+          description: Source context identifier for the request.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of members to return.
+
+  /v2/users/{userZuid}/reportees:
+    get:
+      summary: Retrieves the direct reportees of a given user along with their active calls, check-in status, presence, and other live-feed fields.
+      parameters:
+        - name: userZuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ZUID of the user whose direct reports are being fetched.
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "all,active_calls,checkin_status,live_feed_status,user_status,presence,usage_count"
+          description: Comma-separated list of field groups to include in the response.
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "remote_tools"
+          description: Source context identifier for the request.

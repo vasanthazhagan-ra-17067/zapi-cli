@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info:
+  title: Get Chats by Recipient and Search String
+  version: "1.0"
+
+paths:
+  /api/v1/chats:
+    get:
+      summary: Retrieves a paginated list of chats filtered by recipient and an optional title search string.
+      parameters:
+        - name: recipient
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The recipient identifier used to filter chats.
+        - name: title
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional search string matched against chat titles (maps to the `searchString` parameter in the Swift method).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of chats to return.
+        - name: totime
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: Unix timestamp (milliseconds) used as the upper bound for pagination.

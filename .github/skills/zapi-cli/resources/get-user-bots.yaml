@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info:
+  title: Get User Bots
+  version: "2.0"
+
+paths:
+  /api/v2/bots:
+    get:
+      summary: Retrieve the list of bots for the authenticated user
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of bots to return (client sends 1000 by default)
+          schema:
+            type: integer
+            example: 1000
+        - name: sync_token
+          in: query
+          required: false
+          description: Opaque token used to fetch only bots changed since the last sync
+          schema:
+            type: string
