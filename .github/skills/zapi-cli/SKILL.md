@@ -58,17 +58,27 @@ All requests are made via the `zapi-cli` binary. The following commands are avai
 | Command | When to use |
 |---------|-------------|
 | `account list` | **Always call first** to verify which accounts are present and healthy for the session. |
+| `account add` | Register a new Zoho account using an OAuth Self-Client grant code (non-interactive setup). |
+| `account login` | Authenticate a new account via browser-based OAuth login (interactive setup). |
 | `account show --name <NAME>` | Check a specific account's `needs_reauth` status before making calls. |
+| `account set-default --name <NAME>` | Set the account to be used when `--account` is not specified on individual commands. |
+| `account remove --name <NAME>` | Remove an account and revoke its OAuth token from the Zoho servers. |
 | `account re-auth --name <NAME>` | Re-authenticate an account whose refresh token has expired. Call this when exit code is `2` or `needs_reauth` is `true`. |
 | `api call --url <URL> -X <METHOD>` | Fire an HTTP request against a Zoho endpoint. The OAuth token is injected automatically. |
 | `api registry add / list / show / update / remove` | Manage the local registry of named API endpoints for reuse across sessions. |
 | `trace session start` | Begin recording all `api call` requests/responses to a structured JSON file. |
+| `trace session list` | List all known trace sessions with their current status and entry counts. |
 | `trace session export` | Read back the recorded trace entries, with optional type filtering and body truncation. |
-| `trace session close` | Seal the trace session when analysis is complete. |
+| `trace session close` | Seal a trace session after draining in-flight writes. |
+| `trace session reopen` | Re-activate a closed trace session to append new entries. |
+| `trace session remove` | Remove a session from the sessions index (trace file is preserved). |
+| `trace config set --default-export-path <PATH>` | Persist the default export path for trace sessions. |
+| `trace config show` | Display the current trace configuration. |
 | `scope add --scope <SCOPE>` | Add an OAuth scope to an account and flag it for silent re-auth on the next `api call`. |
 | `scope list` | List all OAuth scopes configured for an account. |
 | `util time-ms` | Get current Unix milliseconds — useful for time-range query parameters. |
 | `util uuid` | Generate a UUID v4 — useful for idempotency keys. |
+| `util time-now` | Get current India Standard Time (IST) as a formatted timestamp. |
 
 ---
 
@@ -95,6 +105,39 @@ Every command outputs **strict JSON** to stdout. Errors go to **stderr**. The ag
 | `2` | Authentication expired — call `account re-auth` before retrying |
 
 > **Agent note:** Always check the exit code first. Exit code `2` means the account needs re-authentication — invoke `$CLI account re-auth --name <ACCOUNT>` before retrying the failed command.
+
+---
+
+## Global Flags
+
+These flags are accepted by all subcommands:
+
+| Flag | Type | Description |
+|---|---|---|
+| `-a, --account <ACCOUNT>` | string | Override the default account for this invocation only. |
+| `--json` | boolean | Force JSON output mode (useful if a subcommand has non-JSON output). |
+| `--no-input` | boolean | Disable all interactive prompts; fail instead of prompting. |
+| `-h, --help` | boolean | Print help for the current command. |
+
+---
+
+## Datacenters
+
+The `--dc` flag is accepted by `account add` and `account login`. Use the value matching the datacenter where your Zoho organization was registered.
+
+| Value | Region | Accounts base URL |
+|---|---|---|
+| `us` | United States | `https://accounts.zoho.com` |
+| `eu` | Europe | `https://accounts.zoho.eu` |
+| `in` | India | `https://accounts.zoho.in` |
+| `au` | Australia | `https://accounts.zoho.com.au` |
+| `cn` | China | `https://accounts.zoho.com.cn` |
+| `jp` | Japan | `https://accounts.zoho.jp` |
+| `sa` | Saudi Arabia | `https://accounts.zoho.sa` |
+| `uk` | United Kingdom | `https://accounts.zoho.uk` |
+| `ca` | Canada | `https://accounts.zohocloud.ca` |
+
+**Default:** `us`
 
 ---
 
@@ -533,12 +576,20 @@ The CLI only accepts URLs from these Zoho hosts. Any other host returns `HOST_NO
 | Code | Exit | Action |
 |---|---|---|
 | `ACCOUNT_NOT_FOUND` | 1 | Run `account list` — use a valid account name. |
+| `ACCOUNT_ALREADY_EXISTS` | 1 | Choose a different account name or remove the existing account first. |
 | `NO_DEFAULT_ACCOUNT` | 1 | Run `account set-default --name <NAME>` or pass `--account`. |
 | `AUTH_FAILURE` | 2 | Verify credentials; re-add the account if persistent. |
 | `NEEDS_REAUTH` | 2 | Run `account re-auth --name <NAME>` then retry. |
 | `API_ERROR` | 1 | Inspect the `data` field in stderr for the Zoho error details. |
 | `HOST_NOT_ALLOWED` | 1 | Use a URL under `zoho.com`, `zohoapis.com`, etc. |
 | `INVALID_ARGS` | 1 | A required flag is missing — run the command with `--help`. |
+| `IO_ERROR` | 1 | Verify file path exists and is readable (e.g., for `--body-file`). |
+| `KEYCHAIN_ERROR` | 1 | Check OS keychain permissions; on Linux verify libsecret/GNOME Keyring. |
+| `ACCOUNT_DOMAIN_BLOCKED` | 1 | Only customer Zoho accounts permitted; use a non-`@zohocorp.*` account. |
+| `EMAIL_REQUIRED` | 1 | Ensure OAuth scopes include user profile permissions. |
+| `STATE_MISMATCH` | 1 | Indicates possible CSRF attack; discard and re-run the login command. |
+| `LOGIN_TIMEOUT` | 1 | Browser callback not received within 120 seconds; ensure browser opened and re-run. |
+| `INTERNAL_ERROR` | 1 | Unhandled internal exception; file a bug report with the full stderr output. |
 | `REGISTRY_ENTRY_NOT_FOUND` | 1 | Run `api registry list` to see valid IDs. |
 | `REGISTRY_ENTRY_ALREADY_EXISTS` | 1 | Use `api registry update --id <ID>` instead of `add`. |
 | `SESSION_NOT_FOUND` | 1 | Run `trace session list` to see valid session IDs. |

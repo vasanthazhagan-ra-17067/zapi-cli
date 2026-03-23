@@ -1,5 +1,148 @@
 {
-  "lastSyncedHelpMd": null,
-  "syncedItems": [],
-  "sessionLog": []
+  "lastSyncedHelpMd": "2026-03-23",
+  "syncedItems": [
+    {
+      "type": "new-command",
+      "subject": "account add",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "account login",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "account set-default",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "account remove",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "util time-now",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "trace session list",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "trace session reopen",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "trace session remove",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "trace config set",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-command",
+      "subject": "trace config show",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "ACCOUNT_ALREADY_EXISTS",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "IO_ERROR",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "KEYCHAIN_ERROR",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "ACCOUNT_DOMAIN_BLOCKED",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "EMAIL_REQUIRED",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "STATE_MISMATCH",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "LOGIN_TIMEOUT",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "INTERNAL_ERROR",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "Global Flags section",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "Datacenters reference",
+      "syncedDate": "2026-03-23",
+      "artefactsModified": ["SKILL.md"]
+    }
+  ],
+  "sessionLog": [
+    {
+      "date": "2026-03-23",
+      "deltaType": "new-command",
+      "subject": "account add, account login, account set-default, account remove, util time-now, trace session list, trace session reopen, trace session remove, trace config set, trace config show",
+      "artefactsModified": ["SKILL.md"],
+      "summary": "Added 10 missing commands to CLI — Available Operations table from HELP.md documentation."
+    },
+    {
+      "date": "2026-03-23",
+      "deltaType": "new-error-code",
+      "subject": "ACCOUNT_ALREADY_EXISTS, IO_ERROR, KEYCHAIN_ERROR, ACCOUNT_DOMAIN_BLOCKED, EMAIL_REQUIRED, STATE_MISMATCH, LOGIN_TIMEOUT, INTERNAL_ERROR",
+      "artefactsModified": ["SKILL.md"],
+      "summary": "Added 8 new error codes to Complete Error Code Reference table from HELP.md comprehensive error handling reference."
+    },
+    {
+      "date": "2026-03-23",
+      "deltaType": "changed-behaviour",
+      "subject": "Global Flags and Datacenters documentation",
+      "artefactsModified": ["SKILL.md"],
+      "summary": "Added Global Flags section documenting -a/--account, --json, --no-input, -h/--help flags. Added Datacenters section documenting all 9 supported datacenter codes (us, eu, in, au, cn, jp, sa, uk, ca) from HELP.md authentication overview."
+    }
+  ]
 }
