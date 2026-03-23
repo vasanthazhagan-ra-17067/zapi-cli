@@ -45,13 +45,22 @@ Every time you are invoked, execute this exact sequence.
    - `new-error-code` — a new symbolic error code that is not listed in the SKILL.md error table or the agent's rule set.
    - `changed-behaviour` — any other documented behavioural change (new DC, changed exit code semantics, new allowed host, etc.).
 
-5. **Identify the target change:**
-   - If the user specifies a particular command or section to sync, use that.
-   - If the user says "continue" or "next", pick the next unsynced delta from the diff.
-   - If all deltas are already in `syncedItems`, report "Nothing to sync — all artefacts are up to date." and exit.
+5. **Binary sync check:** Compare `build/` platform folders against `.github/skills/zapi-cli/tools/` to detect unsynced binary files.
+   - List all subdirectories in `build/` (e.g. `osx-x64`, `linux-arm64`, `win-x64`, etc.) using the `execute` tool.
+   - List all subdirectories in `.github/skills/zapi-cli/tools/`.
+   - For each platform directory found in `build/`:
+     - If the platform folder is **absent** from `tools/`, classify all files within it as a `new-binary-platform` delta.
+     - If the platform folder **exists** in both locations, compare each file's checksum with `md5` or `sha256sum`. If any file differs, classify it as an `updated-binary` delta.
+   - Record binary deltas in a separate list from the HELP.md deltas — they are processed independently, not as part of the HELP.md diff.
+
+6. **Identify the target change:**
+   - If the user specifies a particular command, section, or platform to sync, use that.
+   - If the user says "continue" or "next", pick the next unsynced delta — binary deltas take priority over HELP.md deltas when both are present.
+   - If all deltas (both HELP.md and binary) are already in `syncedItems`, report "Nothing to sync — all artefacts are up to date." and exit.
 
 **At this point you should know:**
 - Exactly what has changed in `HELP.md` since the last sync.
+- Which platform binaries in `build/` differ from or are absent in `.github/skills/zapi-cli/tools/`.
 - Which artefact(s) need to be updated for the current target change.
 - The precise sections in each artefact that require editing.
 
@@ -93,6 +102,23 @@ Apply the planned changes. Rules that govern every edit:
 - **Rules section:** If a new rule emerges from a behavioural change (e.g. a new error code that requires a specific retry path), add it as a numbered rule.
 - **Do not edit** the two-phase workflow structure, the output location, or the variation exploration axes unless `HELP.md` documents a change that directly invalidates them.
 
+#### Binary tools folder update rules
+
+When binary deltas are identified in Phase 1 step 5, apply these rules before touching any markdown artefact:
+
+- **`new-binary-platform`:** Create the corresponding subdirectory under `.github/skills/zapi-cli/tools/<platform>/` and copy all files from `build/<platform>/` into it using:
+  ```bash
+  mkdir -p .github/skills/zapi-cli/tools/<platform>
+  cp build/<platform>/* .github/skills/zapi-cli/tools/<platform>/
+  ```
+- **`updated-binary`:** For each file whose checksum differs, overwrite the destination:
+  ```bash
+  cp build/<platform>/<file> .github/skills/zapi-cli/tools/<platform>/<file>
+  ```
+- After every copy, re-run the checksum comparison to confirm the destination matches the source.
+- Binary sync touches **only** files under `.github/skills/zapi-cli/tools/`. Never modify `SKILL.md`, `http-api-analysis.agent.md`, or any other markdown artefact as a side-effect of a binary sync.
+- If a platform is present in `tools/` but **absent** from `build/`, do **not** remove it. Flag it to the user and log it (see **How to Handle Problems** below).
+
 #### General edit discipline
 
 - **Read before writing.** Always re-read the exact section you are about to modify immediately before editing. The file on disk is the truth.
@@ -128,8 +154,8 @@ After verification passes, update `.github/agents/memory/zapi-cli-maintainer-mem
 ```json
 {
   "date": "<YYYY-MM-DD>",
-  "deltaType": "<new-command | new-flag | changed-output | new-error-code | changed-behaviour>",
-  "subject": "<command name or section title>",
+  "deltaType": "<new-command | new-flag | changed-output | new-error-code | changed-behaviour | new-binary-platform | updated-binary>",
+  "subject": "<command name, section title, or platform/file path>",
   "artefactsModified": ["SKILL.md", "http-api-analysis.agent.md"],
   "summary": "<one sentence describing what changed and why>"
 }
@@ -184,6 +210,8 @@ If `.github/agents/memory/zapi-cli-maintainer-memory.json` does not exist, creat
 | `changed-output` | An `#### Example output` block whose JSON shape differs from what is documented in SKILL.md | SKILL.md (output contract section or step examples) |
 | `new-error-code` | A symbolic `CODE` in all caps not present in the SKILL.md error table | SKILL.md (error code table), agent (rules section if a retry path is needed) |
 | `changed-behaviour` | Any prose change in HELP.md that contradicts current SKILL.md guidance (new DC value, changed exit code, new allowed host, etc.) | SKILL.md (relevant section), agent (rules if behavioural) |
+| `new-binary-platform` | A platform subdirectory exists in `build/` but has no counterpart under `.github/skills/zapi-cli/tools/` | `tools/<platform>/` (create folder and copy all files) |
+| `updated-binary` | A file in `build/<platform>/` has a checksum that differs from its counterpart in `tools/<platform>/` | `tools/<platform>/<file>` (overwrite with source) |
 
 ---
 
@@ -195,6 +223,8 @@ If `.github/agents/memory/zapi-cli-maintainer-memory.json` does not exist, creat
 4. **Never remove a documented command from SKILL.md** unless `HELP.md` itself no longer documents that command and the user has confirmed the removal.
 5. **Never update memory without verifying the edit first.** Phase 4 always precedes Phase 5.
 6. **Never skip the memory read in Phase 1.** Without it, you will re-process work that is already done.
+7. **Never manually edit or patch binary files.** Binary files under `tools/` are always replaced wholesale by copying from `build/`. Do not attempt to diff or merge binary content.
+8. **Never auto-remove a platform folder from `tools/`** even if it is absent from `build/`. Always alert the user first.
 
 ---
 
@@ -214,3 +244,9 @@ Bootstrap from the schema above and start a full diff against `HELP.md`. Log `"b
 
 **A command was removed from `HELP.md` but exists in SKILL.md:**
 Flag it as a `changed-behaviour` delta. Present it to the user for confirmation before removing it from the artefacts. Never auto-remove.
+
+**A platform folder exists in `tools/` but is absent from `build/`:**
+Do not remove the `tools/<platform>/` folder. Raise it as a `changed-behaviour` delta, log it in `sessionLog` with `"subject": "tools/<platform> — missing from build"`, and alert the user that the corresponding build artefact is gone. Wait for explicit user instruction before taking any destructive action.
+
+**A binary file in `build/<platform>/` is newer but its checksum is identical to `tools/<platform>/`:**
+Treat as already synced. Do not copy. Record nothing in `syncedItems` for this file — it is a no-op.

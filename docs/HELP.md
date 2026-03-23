@@ -60,6 +60,7 @@ Pre-built binaries are available for all major platforms:
 | Linux (x64) | `build/linux-x64/zapi-cli` |
 | Linux (ARM64) | `build/linux-arm64/zapi-cli` |
 | Windows (x64) | `build/win-x64/zapi-cli.exe` |
+| Windows (ARM64) | `build/win-arm64/zapi-cli.exe` |
 
 ### Make it executable and place it in your PATH
 

@@ -27,6 +27,7 @@ The binaries are bundled in the `tools/` subfolder alongside this SKILL.md. Sele
 | Linux x64 | `tools/linux-x64/zapi-cli` |
 | Linux arm64 | `tools/linux-arm64/zapi-cli` |
 | Windows x64 | `tools/win-x64/zapi-cli.exe` |
+| Windows arm64 | `tools/win-arm64/zapi-cli.exe` |
 
 ```bash
 # Detect platform and resolve the CLI binary path
@@ -40,6 +41,10 @@ elif [[ "$OS" == "Darwin" ]]; then
   CLI="$SKILL_DIR/tools/osx-x64/zapi-cli"
 elif [[ "$OS" == "Linux" && "$ARCH" == "aarch64" ]]; then
   CLI="$SKILL_DIR/tools/linux-arm64/zapi-cli"
+elif [[ ("$OS" == *"MINGW"* || "$OS" == *"CYGWIN"*) && "$ARCH" == "aarch64" ]]; then
+  CLI="$SKILL_DIR/tools/win-arm64/zapi-cli.exe"
+elif [[ "$OS" == *"MINGW"* || "$OS" == *"CYGWIN"* ]]; then
+  CLI="$SKILL_DIR/tools/win-x64/zapi-cli.exe"
 else
   CLI="$SKILL_DIR/tools/linux-x64/zapi-cli"
 fi

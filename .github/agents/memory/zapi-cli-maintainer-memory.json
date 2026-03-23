@@ -143,6 +143,28 @@
       "subject": "Global Flags and Datacenters documentation",
       "artefactsModified": ["SKILL.md"],
       "summary": "Added Global Flags section documenting -a/--account, --json, --no-input, -h/--help flags. Added Datacenters section documenting all 9 supported datacenter codes (us, eu, in, au, cn, jp, sa, uk, ca) from HELP.md authentication overview."
+    },
+    {
+      "date": "2026-03-23",
+      "deltaType": "new-binary-platform",
+      "subject": "win-arm64",
+      "artefactsModified": ["HELP.md", "SKILL.md"],
+      "summary": "Created tools/win-arm64/ and copied zapi-cli.exe from build/win-arm64/. Added Windows (ARM64) row to HELP.md installation table. Added Windows arm64 row to SKILL.md Tool Location table and added MINGW/CYGWIN+aarch64 detection branch to the bash platform-detection script."
+    },
+    {
+      "date": "2026-03-23",
+      "deltaType": "updated-binary",
+      "subject": "linux-arm64, linux-x64, osx-arm64, osx-x64, win-x64",
+      "artefactsModified": [],
+      "summary": "Overwrote all 5 existing platform binaries in tools/ to match updated binaries in build/. All checksums verified matching after copy."
     }
+  ],
+  "syncedBinaries": [
+    { "platform": "linux-arm64", "file": "zapi-cli", "syncedDate": "2026-03-23" },
+    { "platform": "linux-x64", "file": "zapi-cli", "syncedDate": "2026-03-23" },
+    { "platform": "osx-arm64", "file": "zapi-cli", "syncedDate": "2026-03-23" },
+    { "platform": "osx-x64", "file": "zapi-cli", "syncedDate": "2026-03-23" },
+    { "platform": "win-arm64", "file": "zapi-cli.exe", "syncedDate": "2026-03-23" },
+    { "platform": "win-x64", "file": "zapi-cli.exe", "syncedDate": "2026-03-23" }
   ]
 }
