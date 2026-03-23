@@ -9,6 +9,10 @@ public interface IAccountService
     /// <summary>
     /// Exchanges a grant code for OAuth tokens, validates identity via user-info, enforces the ZohoCorp block,
     /// stores credentials in the keychain, and persists the account entry.
+    /// <para>
+    /// <paramref name="scopes"/>: The OAuth scope strings that were selected when generating the grant code.
+    /// These are persisted in <see cref="AccountEntry.Scopes"/> so that scope list and scope add have a correct baseline.
+    /// </para>
     /// </summary>
     Task<(string Name, string Dc)> AddAccountAsync(
         string name,
@@ -17,6 +21,7 @@ public interface IAccountService
         string clientId,
         string clientSecret,
         string dc,
+        IEnumerable<string> scopes,
         CancellationToken ct = default);
 
     /// <summary>Returns masked projections of all accounts (no credential values).</summary>
@@ -42,8 +47,7 @@ public interface IAccountService
     Task RemoveAccountAsync(string name, CancellationToken ct = default);
 
     /// <summary>
-    /// Calls <see cref="ZapiCli.Core.Auth.IAuthProvider.RefreshTokenAsync"/> and clears
-    /// the <c>NeedsReauth</c> flag on success.
+    /// Calls <see cref="ZapiCli.Core.Auth.IAuthProvider.RefreshTokenAsync"/> to obtain a fresh access token.
     /// Throws <see cref="ZapiCliException"/> with <c>ACCOUNT_NOT_FOUND</c> if absent.
     /// </summary>
     Task ReAuthAsync(string name, CancellationToken ct = default);
@@ -71,17 +75,22 @@ public interface IAccountService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Adds one or more scopes to the account's scope list (deduplicating) and sets
-    /// <c>NeedsReauth = true</c> so the next <c>api call</c> triggers a token refresh.
-    /// Enforces the ZohoCorp block.
+    /// Adds one or more scopes to the account's scope list via the Zoho incremental authorization
+    /// two-step browser flow (scope enhancement). Enforces the ZohoCorp block.
     /// Throws <see cref="ZapiCliException"/> with <c>ACCOUNT_NOT_FOUND</c> if absent.
     /// </summary>
     /// <param name="accountName">Target account; if null, the default account is used.</param>
     /// <param name="scopesToAdd">Individual scope strings to add (already split and trimmed).</param>
+    /// <param name="callbackPort">
+    /// The local port the scope-enhancement callback HTTP server will bind to (default 8085).
+    /// Register <c>http://localhost:{callbackPort}/callback</c> as a redirect URI in the
+    /// Zoho Developer Console — this must match exactly.
+    /// </param>
     /// <returns>The account name and its updated scope list.</returns>
     Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
         string accountName,
         IEnumerable<string> scopesToAdd,
+        int callbackPort = 8085,
         CancellationToken ct = default);
 
     /// <summary>

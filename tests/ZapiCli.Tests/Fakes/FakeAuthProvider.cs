@@ -61,4 +61,17 @@ public sealed class FakeAuthProvider : IAuthProvider
         _tokens[accountName] = newToken;
         return Task.FromResult(newToken);
     }
+
+    public int GetScopeEnhancementTokenCallCount { get; private set; }
+    public string PresetEnhanceToken { get; set; } = "fake-enhance-token";
+    public string PresetEnhanceClientId { get; set; } = "fake-client-id";
+
+    public Task<(string EnhanceToken, string ClientId)> GetScopeEnhancementTokenAsync(
+        string accountName,
+        string dc,
+        CancellationToken ct = default)
+    {
+        GetScopeEnhancementTokenCallCount++;
+        return Task.FromResult((PresetEnhanceToken, PresetEnhanceClientId));
+    }
 }

@@ -20,5 +20,4 @@ public sealed record AccountEntry
 
     public List<string> Scopes { get; init; } = [];
     public bool IsDefault { get; init; }
-    public bool NeedsReauth { get; init; }
 }

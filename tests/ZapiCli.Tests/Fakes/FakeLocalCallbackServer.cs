@@ -36,6 +36,21 @@ internal sealed class FakeLocalCallbackServer : LocalCallbackServer
         return Task.FromResult((_code!, _state!));
     }
 
+    private ZapiCliException? _scopeEnhancedExceptionToThrow;
+
+    /// <summary>Configures the fake server to throw the given exception from WaitForScopeEnhancedCallbackAsync.</summary>
+    public void SetScopeEnhancedError(ZapiCliException ex) => _scopeEnhancedExceptionToThrow = ex;
+
+    public override Task WaitForScopeEnhancedCallbackAsync(
+        TimeSpan timeout,
+        CancellationToken ct = default)
+    {
+        if (_scopeEnhancedExceptionToThrow is not null)
+            throw _scopeEnhancedExceptionToThrow;
+
+        return Task.CompletedTask;
+    }
+
     public override void Dispose() { /* nothing to dispose — no real HttpListener */ }
 
     public override ValueTask DisposeAsync()

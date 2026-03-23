@@ -166,4 +166,78 @@ public sealed class OAuthProvider : IAuthProvider
 
         return newToken;
     }
+
+    // ─── GetScopeEnhancementTokenAsync ────────────────────────────────────────
+
+    public async Task<(string EnhanceToken, string ClientId)> GetScopeEnhancementTokenAsync(
+        string accountName,
+        string dc,
+        CancellationToken ct = default)
+    {
+        var json = await _keychain.GetAsync(MakeKey(accountName), ct).ConfigureAwait(false);
+        if (json is null)
+            throw new ZapiCliException(
+                $"No credentials found in keychain for account '{accountName}'.",
+                ErrorCodes.KEYCHAIN_ERROR,
+                exitCode: 2);
+
+        var creds = JsonSerializer.Deserialize<OAuthCredentials>(json, CamelCaseOptions);
+        if (creds is null)
+            throw new ZapiCliException(
+                $"Corrupted credential blob in keychain for account '{accountName}'.",
+                ErrorCodes.KEYCHAIN_ERROR,
+                exitCode: 2);
+
+        var baseUrl = DcResolver.GetAccountsBaseUrl(dc);
+        var formData = new Dictionary<string, string>
+        {
+            ["grant_type"] = "update_scopes_token",
+            ["client_id"] = creds.ClientId,
+            ["client_secret"] = creds.ClientSecret,
+            ["refresh_token"] = creds.RefreshToken,
+        };
+
+        using var httpClient = _httpClientFactory.CreateClient();
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await httpClient.PostAsync(
+                $"{baseUrl}/oauth/v2/token/scopeenhance",
+                new FormUrlEncodedContent(formData),
+                ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new ZapiCliException(
+                $"Scope enhancement token request failed: {ex.Message}",
+                ErrorCodes.SCOPE_ENHANCE_FAILED,
+                exitCode: 2);
+        }
+
+        if (!response.IsSuccessStatusCode)
+            throw new ZapiCliException(
+                $"Scope enhancement token request failed (HTTP {(int)response.StatusCode}).",
+                ErrorCodes.SCOPE_ENHANCE_FAILED,
+                exitCode: 2);
+
+        using var responseDoc = await JsonDocument.ParseAsync(
+            await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false),
+            cancellationToken: ct).ConfigureAwait(false);
+
+        if (!responseDoc.RootElement.TryGetProperty("access_token", out var atEl))
+            throw new ZapiCliException(
+                "Scope enhancement token response did not contain 'access_token'.",
+                ErrorCodes.SCOPE_ENHANCE_FAILED,
+                exitCode: 2);
+
+        var enhanceToken = atEl.GetString();
+        if (string.IsNullOrEmpty(enhanceToken))
+            throw new ZapiCliException(
+                "Scope enhancement token response returned an empty 'access_token'.",
+                ErrorCodes.SCOPE_ENHANCE_FAILED,
+                exitCode: 2);
+
+        return (enhanceToken, creds.ClientId);
+    }
 }

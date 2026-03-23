@@ -527,5 +527,143 @@
         "trace config set", "trace config show"
       ]
     }
+  },
+  {
+    "storyId": 13,
+    "title": "account add --scope (required) + Fix ExchangeAndFinalizeAsync Scope Persistence",
+    "status": "Completed",
+    "completedDate": "2026-03-23",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli/Commands/AccountCommands.cs", "action": "modified — added --scope option to AccountAddSettings.Validate(), scope parsing in AccountAddCommand.ExecuteAsync" },
+      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — added IEnumerable<string> scopes parameter to AddAccountAsync" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — added scopes parameter to AddAccountAsync, ExchangeAndFinalizeAsync; Scopes = [.. scopes]; LoginAsync passes scopes" },
+      { "path": "tests/ZapiCli.Tests/AccountCommandTests.cs", "action": "modified — updated AddAccountAsync calls with [] scopes; added Scope to AllValid test" },
+      { "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs", "action": "modified — updated FakeAccountService.AddAccountAsync stub signature" },
+      { "path": "tests/ZapiCli.Tests/Accounts/AccountAddScopesTests.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "scopes parameter is IEnumerable<string> throughout the service layer; materialised at AccountEntry with [.. scopes] collection expression",
+      "ExchangeAndFinalizeAsync signature extended with IEnumerable<string> scopes before CancellationToken",
+      "LoginAsync internal overload passes its scopes[] to ExchangeAndFinalizeAsync — both account add and account login now populate AccountEntry.Scopes correctly",
+      "Existing AddAccountAsync callers in tests pass empty [] scopes (no behavioral change to those tests)"
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "175 passing, 0 failing",
+      "commandsWorking": [
+        "account add", "account login", "account list", "account show",
+        "account set-default", "account remove", "account re-auth",
+        "api call",
+        "api registry list", "api registry add", "api registry update",
+        "api registry show", "api registry remove",
+        "util time-ms", "util uuid", "util time-now",
+        "scope add", "scope list",
+        "trace session start", "trace session list", "trace session export",
+        "trace session close", "trace session reopen", "trace session remove",
+        "trace config set", "trace config show"
+      ]
+    }
+  },
+  {
+    "storyId": 14,
+    "title": "Remove NeedsReauth — Dead Code Elimination",
+    "status": "Completed",
+    "completedDate": "2026-03-23",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs", "action": "modified — removed NeedsReauth property" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountListView.cs", "action": "modified — removed NeedsReauth property" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountShowView.cs", "action": "modified — removed NeedsReauth property" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — removed NeedsReauth from ExchangeAndFinalizeAsync, ListAccountsAsync, ShowAccountAsync, AddScopesAsync, ReAuthAsync" },
+      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — updated XML docs for ReAuthAsync and AddScopesAsync" },
+      { "path": "src/ZapiCli.Core/Api/ApiClient.cs", "action": "modified — removed NeedsReauth pre-refresh block and ClearNeedsReauthAsync method; renumbered steps" },
+      { "path": "src/ZapiCli/Commands/ScopeCommands.cs", "action": "modified — removed NeedsReauth reference from class XML doc and method comment" },
+      { "path": "tests/ZapiCli.Tests/AccountStoreTests.cs", "action": "modified — removed NeedsReauth from AccountEntry initializer and assertion" },
+      { "path": "tests/ZapiCli.Tests/ApiClientTests.cs", "action": "modified — removed needsReauth parameter from MakeAccount(), deleted NeedsReauth test" },
+      { "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs", "action": "modified — removed NeedsReauth from SeedAccount and renamed/updated NeedsReauth-asserting tests" },
+      { "path": "tests/ZapiCli.Tests/AccountCommandTests.cs", "action": "modified — renamed ReAuth test, removed NeedsReauth=true seed and assertion" },
+      { "path": "tests/ZapiCli.Tests/Auth/LoginAsyncTests.cs", "action": "modified — removed NeedsReauth from AccountEntry initializer" }
+    ],
+    "keyDecisionsMade": [
+      "ReAuthAsync simplified: removed the entire 'load+select+save' block; now only calls RefreshTokenAsync — the sole purpose of re-auth is refreshing the token",
+      "ApiClient step numbers renumbered: old Step 3 (NeedsReauth) removed; old Step 4 became new Step 3",
+      "Old binary DLL artifacts may still contain NeedsReauth string — only source (.cs) files matter; grep -r returns zero .cs matches"
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "174 passing, 0 failing",
+      "commandsWorking": [
+        "account add", "account login", "account list", "account show",
+        "account set-default", "account remove", "account re-auth",
+        "api call",
+        "api registry list", "api registry add", "api registry update",
+        "api registry show", "api registry remove",
+        "util time-ms", "util uuid", "util time-now",
+        "scope add", "scope list",
+        "trace session start", "trace session list", "trace session export",
+        "trace session close", "trace session reopen", "trace session remove",
+        "trace config set", "trace config show"
+      ]
+    }
+  },
+  {
+    "storyId": 15,
+    "title": "scope add — Zoho Incremental Authorization (Two-Step Browser Flow)",
+    "status": "Completed",
+    "completedDate": "2026-03-23",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "modified — added SCOPE_ENHANCE_DENIED and SCOPE_ENHANCE_FAILED constants" },
+      { "path": "src/ZapiCli.Core/Auth/IAuthProvider.cs", "action": "modified — added GetScopeEnhancementTokenAsync to interface" },
+      { "path": "src/ZapiCli.Core/Auth/OAuthProvider.cs", "action": "modified — implemented GetScopeEnhancementTokenAsync (POST to /scopeenhance, grant_type=update_scopes_token)" },
+      { "path": "src/ZapiCli.Core/Auth/LocalCallbackServer.cs", "action": "modified — added WaitForScopeEnhancedCallbackAsync (parses status + scope_enhanced query params)" },
+      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — AddScopesAsync signature now has int callbackPort = 8085 before CancellationToken" },
+      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — replaced AddScopesAsync body with two-step browser consent flow; internal overload with Func<int, LocalCallbackServer> serverFactory" },
+      { "path": "src/ZapiCli/Commands/ScopeCommands.cs", "action": "modified — added --port flag to ScopeAddSettings, passed settings.Port to AddScopesAsync" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs", "action": "modified — added GetScopeEnhancementTokenAsync with PresetEnhanceToken/PresetEnhanceClientId" },
+      { "path": "tests/ZapiCli.Tests/Fakes/FakeLocalCallbackServer.cs", "action": "modified — added WaitForScopeEnhancedCallbackAsync override, SetScopeEnhancedError helper" },
+      { "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs", "action": "modified — updated FakeAccountService.AddScopesAsync stub signature (added callbackPort)" },
+      { "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs", "action": "modified — rewrote scope-add success tests to use internal overload + FakeLocalCallbackServer instead of real browser flow" },
+      { "path": "tests/ZapiCli.Tests/Scopes/ScopeAddIncrementalAuthTests.cs", "action": "created" }
+    ],
+    "keyDecisionsMade": [
+      "GetScopeEnhancementTokenAsync follows the same keychain-read + HTTP pattern as RefreshTokenAsync; POST to /oauth/v2/token/scopeenhance with grant_type=update_scopes_token; returns (access_token, clientId) tuple",
+      "WaitForScopeEnhancedCallbackAsync checks status=success AND scope_enhanced=true from Zoho's redirect query params; anything else throws SCOPE_ENHANCE_DENIED",
+      "AccountService.AddScopesAsync uses internal overload pattern (Func<int, LocalCallbackServer> serverFactory) mirroring LoginAsync — allows unit tests to inject a FakeLocalCallbackServer without binding real ports",
+      "enhance_token is never stored — used inline to build the addextrascope URL only; it disappears after use",
+      "ScopeCommandTests success-path tests switched from command.ExecuteAsync() to direct _service.AddScopesAsync(internal overload) to avoid hanging on real browser flow",
+      "SCOPE_ENHANCE_DENIED and SCOPE_ENHANCE_FAILED use const (not static readonly) — this is intentional per story spec for compile-time constants only (other ErrorCodes still use static readonly)"
+    ],
+    "openQuestionsResolved": [
+      { "id": "OQ-LocalCallbackServerFactory", "resolution": "Used Func<int, LocalCallbackServer> serverFactory parameter in internal AddScopesAsync overload, mirroring the LoginAsync pattern" }
+    ],
+    "issuesEncountered": [
+      {
+        "issue": "Replacing `RefreshTokenAsync` in IAuthProvider.cs accidentally removed RefreshTokenAsync when I intended to add GetScopeEnhancementTokenAsync",
+        "resolution": "Restored RefreshTokenAsync alongside the new method in a follow-up edit"
+      },
+      {
+        "issue": "Existing ScopeCommandTests scope-add success tests hung waiting for real browser flow after AddScopesAsync was upgraded to the two-step flow",
+        "resolution": "Rewrote those tests to call the internal AddScopesAsync overload with FakeLocalCallbackServer instead of going through ScopeAddCommand.ExecuteAsync"
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "181 passing, 0 failing",
+      "commandsWorking": [
+        "account add", "account login", "account list", "account show",
+        "account set-default", "account remove", "account re-auth",
+        "api call",
+        "api registry list", "api registry add", "api registry update",
+        "api registry show", "api registry remove",
+        "util time-ms", "util uuid", "util time-now",
+        "scope add (incremental auth)", "scope list",
+        "trace session start", "trace session list", "trace session export",
+        "trace session close", "trace session reopen", "trace session remove",
+        "trace config set", "trace config show"
+      ]
+    }
   }
 ]

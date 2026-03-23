@@ -1,0 +1,45 @@
+{
+  "storyId": 14,
+  "title": "Remove NeedsReauth — Dead Code Elimination",
+  "description": "Eliminate the NeedsReauth bool flag entirely from the codebase. The flag was introduced as a mechanism to trigger a token refresh before the next API call after a scope change. It was never effective because simply appending scopes locally (without the Zoho incremental auth flow) does not change the issued refresh token. The 401 auto-retry in ApiClient already handles token expiry. Removing NeedsReauth eliminates dead code and prevents misleading output in 'account list' and 'account show'.",
+  "status": "Completed",
+  "completedDate": "2026-03-23",
+  "dependsOn": [13],
+  "prerequisiteState": "Stories 1–13 complete. AccountEntry, AccountListView, AccountShowView all have NeedsReauth property. AccountService sets NeedsReauth in multiple places. ApiClient has a NeedsReauth pre-refresh block and ClearNeedsReauthAsync helper. Project compiles and all tests pass.",
+  "goal": "After this story: NeedsReauth does not exist anywhere in the codebase. 'account list' and 'account show' no longer emit a needs_reauth field. ApiClient no longer performs a pre-refresh based on NeedsReauth. The 401 auto-retry path in ApiClient is unchanged and continues to handle token expiry correctly.",
+  "scope": [
+    "Modify src/ZapiCli.Core/Accounts/AccountEntry.cs: Remove the 'public bool NeedsReauth { get; init; }' property. No other changes.",
+    "Modify src/ZapiCli.Core/Accounts/AccountListView.cs: Remove the 'public bool NeedsReauth { get; init; }' property. No other changes.",
+    "Modify src/ZapiCli.Core/Accounts/AccountShowView.cs: Remove the 'public bool NeedsReauth { get; init; }' property. No other changes.",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — ExchangeAndFinalizeAsync: Remove 'NeedsReauth = false' from the AccountEntry initializer block.",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — ListAccountsAsync: Remove 'NeedsReauth = a.NeedsReauth' from the AccountListView projection. If it is the only member making the with-expression non-trivial, simplify accordingly.",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — ShowAccountAsync: Remove 'NeedsReauth = account.NeedsReauth' from the AccountShowView projection.",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — AddScopesAsync: Remove 'NeedsReauth = true' from the 'account with { ... }' expression. The with-expression must still set 'Scopes = updatedScopes' — only the NeedsReauth assignment is removed.",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — ReAuthAsync: Remove 'NeedsReauth = false' from the .Select() lambda. If the lambda becomes 'a => a.Name == name ? a with { } : a' with no effective change, remove the select transform entirely or simplify to direct array replacement without a with-expression.",
+    "Modify src/ZapiCli.Core/Api/ApiClient.cs: Remove the entire NeedsReauth pre-refresh block — the 'if (account.NeedsReauth) { ... }' block including the logger call, the RefreshTokenAsync call, and the ClearNeedsReauthAsync call. All three lines inside the block are deleted; the if-statement itself is also deleted.",
+    "Modify src/ZapiCli.Core/Api/ApiClient.cs: Remove the entire private ClearNeedsReauthAsync method — find the 'private async Task ClearNeedsReauthAsync(string accountName, CancellationToken ct)' method and delete it in full.",
+    "Update existing unit tests: search test files for any assertion or setup that references NeedsReauth and remove/update those lines. Tests that assert 'NeedsReauth = true' after scope changes, or 'NeedsReauth = false' after re-auth, must be deleted or rewritten to verify the behaviour that actually matters (scope list correctness, token refresh call count, etc.)."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build src/zapi-cli.sln succeeds with 0 errors and 0 warnings",
+    "grep -r 'NeedsReauth' src/ returns zero results",
+    "grep -r 'NeedsReauth' tests/ returns zero results",
+    "All previously passing tests (stories 1–13) still pass after NeedsReauth-related test updates",
+    "AccountEntry no longer has a NeedsReauth property — System.Text.Json will silently ignore 'needs_reauth' keys in existing accounts.json files (no migration required)",
+    "'account list' output does not contain a 'needs_reauth' field",
+    "'account show' output does not contain a 'needs_reauth' field",
+    "ApiClient no longer contains the NeedsReauth pre-refresh block or ClearNeedsReauthAsync method",
+    "The 401 auto-retry path in ApiClient is untouched and its existing tests pass"
+  ],
+  "contextForAgent": "Read src/ZapiCli.Core/Api/ApiClient.cs in full before editing — locate the NeedsReauth block (Step 3 comment, 'if (account.NeedsReauth)') and ClearNeedsReauthAsync. Both must be deleted; the surrounding steps (Step 2 ZohoCorp guard, Step 4 URL parsing) must remain. Read src/ZapiCli.Core/Accounts/AccountService.cs in full — NeedsReauth appears in ExchangeAndFinalizeAsync, ListAccountsAsync, ShowAccountAsync, AddScopesAsync, and ReAuthAsync; each removal is surgical (single-line delete). For AccountEntry deserialization: System.Text.Json ignores unknown JSON properties by default when deserializing records, so existing accounts.json files with 'needs_reauth' will deserialize fine — no migration script needed. For test files: run a text search for 'NeedsReauth' across the tests/ directory and handle each occurrence individually.",
+  "openItems": [],
+  "sourceReferences": [
+    "plan/feature-scope-incremental-auth-1.md",
+    "src/ZapiCli.Core/Accounts/AccountEntry.cs",
+    "src/ZapiCli.Core/Accounts/AccountListView.cs",
+    "src/ZapiCli.Core/Accounts/AccountShowView.cs",
+    "src/ZapiCli.Core/Accounts/AccountService.cs",
+    "src/ZapiCli.Core/Api/ApiClient.cs"
+  ],
+  "relevantOpenQuestions": []
+}

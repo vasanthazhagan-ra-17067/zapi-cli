@@ -98,6 +98,30 @@
       "version": "v2",
       "phase": "Phase 5 — Browser OAuth",
       "planReference": ".ai/plans/account-login-browser-flow.md"
+    },
+    {
+      "storyId": 13,
+      "title": "account add --scope (required) + Fix ExchangeAndFinalizeAsync Scope Persistence",
+      "status": "Completed",
+      "dependsOn": [12],
+      "version": "v2",
+      "phase": "Phase 6 — Incremental Auth"
+    },
+    {
+      "storyId": 14,
+      "title": "Remove NeedsReauth — Dead Code Elimination",
+      "status": "Completed",
+      "dependsOn": [13],
+      "version": "v2",
+      "phase": "Phase 6 — Incremental Auth"
+    },
+    {
+      "storyId": 15,
+      "title": "scope add — Zoho Incremental Authorization (Two-Step Browser Flow)",
+      "status": "Completed",
+      "dependsOn": [14],
+      "version": "v2",
+      "phase": "Phase 6 — Incremental Auth"
     }
   ],
   "criticalPath": [1, 2, 3, 4, 5],

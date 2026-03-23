@@ -37,4 +37,17 @@ public interface IAuthProvider
         IEnumerable<string> scopes,
         string dc,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Exchanges the stored refresh token for a short-lived scope enhancement token
+    /// via POST /oauth/v2/token/scopeenhance (grant_type=update_scopes_token).
+    /// Returns a tuple of (enhanceToken, clientId).
+    /// The enhanceToken expires in ~600s and must not be stored.
+    /// Throws <see cref="ZapiCliException"/> with <c>SCOPE_ENHANCE_FAILED</c> (exit 2) on HTTP failure
+    /// or if access_token is missing from the response.
+    /// </summary>
+    Task<(string EnhanceToken, string ClientId)> GetScopeEnhancementTokenAsync(
+        string accountName,
+        string dc,
+        CancellationToken ct = default);
 }

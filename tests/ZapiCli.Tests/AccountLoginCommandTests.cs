@@ -327,7 +327,7 @@ internal sealed class FakeAccountService : IAccountService
 
     // ── Unused stubs ──────────────────────────────────────────────────────────
     public Task<(string Name, string Dc)> AddAccountAsync(string name, string code, string redirectUri,
-        string clientId, string clientSecret, string dc, CancellationToken ct = default) =>
+        string clientId, string clientSecret, string dc, IEnumerable<string> scopes, CancellationToken ct = default) =>
         throw new NotImplementedException();
 
     public Task<IReadOnlyList<AccountListView>> ListAccountsAsync(CancellationToken ct = default) =>
@@ -346,7 +346,7 @@ internal sealed class FakeAccountService : IAccountService
         throw new NotImplementedException();
 
     public Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
-        string accountName, IEnumerable<string> scopesToAdd, CancellationToken ct = default) =>
+        string accountName, IEnumerable<string> scopesToAdd, int callbackPort = 8085, CancellationToken ct = default) =>
         throw new NotImplementedException();
 
     public Task<List<string>> GetScopesAsync(string accountName, CancellationToken ct = default) =>

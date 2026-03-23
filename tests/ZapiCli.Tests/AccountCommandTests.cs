@@ -72,7 +72,7 @@ public sealed class AccountCommandTests : IDisposable
     public async Task AccountAdd_HappyPath_PersistsAccountAndReturnsNameDc()
     {
         var service = CreateService(UserInfoFactory("alice@example.com", "Z42"));
-        var (name, dc) = await service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us");
+        var (name, dc) = await service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us", []);
 
         Assert.Equal("work", name);
         Assert.Equal("us", dc);
@@ -95,7 +95,7 @@ public sealed class AccountCommandTests : IDisposable
 
         var service = CreateService();
         var ex = await Assert.ThrowsAsync<ZapiCliException>(
-            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us"));
+            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us", []));
 
         Assert.Equal(ErrorCodes.ACCOUNT_ALREADY_EXISTS, ex.Code);
         Assert.Equal(0, _auth.StoreTokenCallCount);  // no keychain write
@@ -106,7 +106,7 @@ public sealed class AccountCommandTests : IDisposable
     {
         var service = CreateService(UserInfoFactory("attacker@zohocorp.com"));
         var ex = await Assert.ThrowsAsync<ZapiCliException>(
-            () => service.AddAccountAsync("corp", "code", "https://www.zoho.com", "cid", "csec", "us"));
+            () => service.AddAccountAsync("corp", "code", "https://www.zoho.com", "cid", "csec", "us", []));
 
         Assert.Equal(ErrorCodes.ACCOUNT_DOMAIN_BLOCKED, ex.Code);
         Assert.Equal(1, ex.ExitCode);
@@ -118,7 +118,7 @@ public sealed class AccountCommandTests : IDisposable
     {
         var service = CreateService(UserInfoNoEmailFactory());
         var ex = await Assert.ThrowsAsync<ZapiCliException>(
-            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us"));
+            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us", []));
 
         Assert.Equal(ErrorCodes.EMAIL_REQUIRED, ex.Code);
         Assert.Equal(0, _auth.StoreTokenCallCount);  // keychain write never called
@@ -129,7 +129,7 @@ public sealed class AccountCommandTests : IDisposable
     {
         var service = CreateService(UserInfoAuthFailFactory(HttpStatusCode.Unauthorized));
         var ex = await Assert.ThrowsAsync<ZapiCliException>(
-            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us"));
+            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us", []));
 
         Assert.Equal(ErrorCodes.AUTH_FAILURE, ex.Code);
         Assert.Equal(2, ex.ExitCode);
@@ -189,6 +189,7 @@ public sealed class AccountCommandTests : IDisposable
             Code = "gc",
             ClientId = "cid",
             ClientSecret = "csec",
+            Scope = "ZohoCRM.Contacts.READ",
             Dc = "eu",
         };
         var result = settings.Validate();
@@ -348,12 +349,12 @@ public sealed class AccountCommandTests : IDisposable
     // ── account re-auth ───────────────────────────────────────────────────────
 
     [Fact]
-    public async Task AccountReAuth_CallsRefreshAndClearsNeedsReauth()
+    public async Task AccountReAuth_CallsRefreshToken()
     {
         await _store.SaveAsync(new AccountsRoot
         {
             Accounts = [
-                new AccountEntry { Name = "work", Dc = "us", NeedsReauth = true },
+                new AccountEntry { Name = "work", Dc = "us" },
             ],
         });
         await _auth.StoreTokenAsync("work", "oldtok", "ref-tok", "cid", "csec");
@@ -362,10 +363,6 @@ public sealed class AccountCommandTests : IDisposable
         await service.ReAuthAsync("work");
 
         Assert.Equal(1, _auth.RefreshTokenCallCount);
-
-        var entry = await _store.FindAsync("work");
-        Assert.NotNull(entry);
-        Assert.False(entry.NeedsReauth);
     }
 
     [Fact]

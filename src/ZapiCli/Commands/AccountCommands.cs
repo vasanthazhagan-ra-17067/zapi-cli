@@ -40,6 +40,14 @@ internal static class AccountCommands
         [CommandOption("--dc <DC>")]
         public string Dc { get; init; } = "us";
 
+        /// <summary>
+        /// Comma-separated list of OAuth scopes. Must match the scopes selected when generating
+        /// the grant code in the Zoho Developer Console Self-Client
+        /// (e.g. ZohoCRM.Contacts.READ,ZohoCRM.Deals.READ).
+        /// </summary>
+        [CommandOption("--scope <SCOPE>")]
+        public string? Scope { get; init; }
+
         private static readonly HashSet<string> ValidDcs =
             ["us", "eu", "in", "au", "cn", "jp", "sa", "uk", "ca"];
 
@@ -53,6 +61,8 @@ internal static class AccountCommands
                 return ValidationResult.Error("--client-id is required.");
             if (string.IsNullOrWhiteSpace(ClientSecret))
                 return ValidationResult.Error("--client-secret is required.");
+            if (string.IsNullOrWhiteSpace(Scope))
+                return ValidationResult.Error("--scope is required. Enter the same scopes you selected when generating the grant code in the Zoho Developer Console.");
             if (!ValidDcs.Contains(Dc))
                 return ValidationResult.Error(
                     $"--dc '{Dc}' is not valid. Valid values: {string.Join(", ", ValidDcs)}.");
@@ -75,13 +85,16 @@ internal static class AccountCommands
             CommandContext context,
             AccountAddSettings settings)
         {
+            var scopes = settings.Scope!.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
             var (name, dc) = await _service.AddAccountAsync(
                 settings.Name!,
                 settings.Code!,
                 settings.RedirectUri,
                 settings.ClientId!,
                 settings.ClientSecret!,
-                settings.Dc);
+                settings.Dc,
+                scopes);
 
             _output.WriteJson(new { status = "ok", data = new { name, dc } });
             return 0;

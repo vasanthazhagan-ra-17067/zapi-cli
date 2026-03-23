@@ -7,9 +7,7 @@ namespace ZapiCli.Commands;
 
 /// <summary>
 /// The <c>scope</c> command group: add, remove, list.
-/// Modifying scopes (add or remove) sets <see cref="AccountEntry.NeedsReauth"/> = true,
-/// which triggers an automatic token refresh on the next <c>api call</c> (ADR-0002).
-/// ZohoCorpGuard fires in all three commands via <see cref="IAccountService"/>.
+/// ZohoCorpGuard fires in all scope commands via <see cref="IAccountService"/>.
 /// </summary>
 internal static class ScopeCommands
 {
@@ -22,6 +20,13 @@ internal static class ScopeCommands
         /// </summary>
         [CommandOption("--scope <SCOPE>")]
         public string? Scope { get; init; }
+
+        /// <summary>
+        /// Local port for the OAuth callback server. Must register
+        /// http://localhost:{PORT}/callback as a redirect URI in the Zoho Developer Console.
+        /// </summary>
+        [CommandOption("--port <PORT>")]
+        public int Port { get; init; } = 8085;
 
         public override ValidationResult Validate()
         {
@@ -59,9 +64,9 @@ internal static class ScopeCommands
                 .Select(s => s.Trim())
                 .Where(s => !string.IsNullOrEmpty(s));
 
-            // Delegate to service (handles ZohoCorp block, dedup, NeedsReauth, save).
+            // Delegate to service (handles ZohoCorp block, dedup, browser consent, save).
             var (name, updatedScopes) = await _accountService
-                .AddScopesAsync(accountName, incoming)
+                .AddScopesAsync(accountName, incoming, settings.Port)
                 .ConfigureAwait(false);
 
             _output.WriteJson(new

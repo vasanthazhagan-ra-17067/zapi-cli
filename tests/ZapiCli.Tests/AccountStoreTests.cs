@@ -38,7 +38,6 @@ public sealed class AccountStoreTests : IDisposable
             Zuid = "12345678",
             Scopes = ["ZohoMail.messages.READ", "ZohoCRM.modules.ALL"],
             IsDefault = true,
-            NeedsReauth = false,
         };
 
         await _store.SaveAsync(new AccountsRoot { Accounts = [entry] });
@@ -51,7 +50,6 @@ public sealed class AccountStoreTests : IDisposable
         Assert.Equal("12345678", loaded.Zuid);
         Assert.Equal(2, loaded.Scopes.Count);
         Assert.True(loaded.IsDefault);
-        Assert.False(loaded.NeedsReauth);
     }
 
     [Fact]

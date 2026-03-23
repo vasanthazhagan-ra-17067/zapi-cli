@@ -17,8 +17,7 @@ public sealed class ApiClientTests
 
     private static AccountEntry MakeAccount(
         string name = "testacct",
-        string email = "dev@zohopartner.com",
-        bool needsReauth = false)
+        string email = "dev@zohopartner.com")
         => new()
         {
             Name = name,
@@ -26,7 +25,6 @@ public sealed class ApiClientTests
             Email = email,
             Scopes = ["ZohoCliq.Channels.READ"],
             IsDefault = true,
-            NeedsReauth = needsReauth,
         };
 
     private static ApiClient MakeApiClient(
@@ -150,41 +148,6 @@ public sealed class ApiClientTests
         Assert.Equal(ErrorCodes.HOST_NOT_ALLOWED, ex.Code);
         Assert.Equal(1, ex.ExitCode);
         Assert.Equal(0, callCount); // No HTTP dispatch.
-    }
-
-    // ─── NeedsReauth pre-refresh ──────────────────────────────────────────────
-
-    [Fact]
-    public async Task CallAsync_NeedsReauthTrue_RefreshesBeforeRequest()
-    {
-        var requestsReceived = new List<HttpRequestMessage>();
-        var factory = FakeHttpMessageHandler.ToFactory(req =>
-        {
-            requestsReceived.Add(req);
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("{\"ok\":true}"),
-            };
-        });
-
-        var store = new FakeAccountStore();
-        store.AddAccount(MakeAccount(needsReauth: true));
-
-        var auth = new FakeAuthProvider();
-        auth.SetToken("testacct", "tok_initial");
-
-        var client = MakeApiClient(store, auth, factory);
-
-        await client.CallAsync(MakeRequest());
-
-        // RefreshTokenAsync should have been called before the HTTP request.
-        Assert.Equal(1, auth.RefreshTokenCallCount);
-        // NeedsReauth should be cleared in the store.
-        var updated = await store.FindAsync("testacct");
-        Assert.NotNull(updated);
-        Assert.False(updated.NeedsReauth);
-        // HTTP request should still have been sent.
-        Assert.Single(requestsReceived);
     }
 
     // ─── 401 auto-refresh + single retry ─────────────────────────────────────

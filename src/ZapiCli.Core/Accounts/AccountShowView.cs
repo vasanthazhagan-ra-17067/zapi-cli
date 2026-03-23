@@ -17,7 +17,6 @@ public sealed record AccountShowView
 
     public List<string> Scopes { get; init; } = [];
     public bool IsDefault { get; init; }
-    public bool NeedsReauth { get; init; }
 
     /// <summary>Always "***" — the real access token is never emitted in CLI output.</summary>
     public string Token { get; init; } = "***";

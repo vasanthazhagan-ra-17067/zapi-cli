@@ -1,0 +1,41 @@
+{
+  "storyId": 13,
+  "title": "account add --scope (required) + Fix ExchangeAndFinalizeAsync Scope Persistence",
+  "description": "Add a required --scope flag to 'account add', thread the scope list through IAccountService.AddAccountAsync and the private ExchangeAndFinalizeAsync helper, and persist it in AccountEntry.Scopes. Also fix LoginAsync to pass its scopes to ExchangeAndFinalizeAsync so 'account login' no longer stores an empty scope list. After this story, both 'account add' and 'account login' correctly populate AccountEntry.Scopes, making 'scope list' reflect reality and giving 'scope add' a correct baseline.",
+  "status": "Completed",
+  "completedDate": "2026-03-23",
+  "dependsOn": [12],
+  "prerequisiteState": "Stories 1–12 complete. AccountService, IAccountService, AccountEntry, ExchangeAndFinalizeAsync, LoginAsync all exist. Project compiles cleanly. All prior tests pass.",
+  "goal": "After this story: 'zapi-cli account add --name dev --code X --client-id Y --client-secret Z --scope ZohoCRM.Contacts.READ,ZohoCRM.Deals.READ' persists Scopes: ['ZohoCRM.Contacts.READ','ZohoCRM.Deals.READ'] in accounts.json. 'zapi-cli account login ... --scope ZohoCRM.Contacts.READ' likewise persists that scope. 'zapi-cli scope list' then returns a non-empty array for both account types.",
+  "scope": [
+    "Modify src/ZapiCli/Commands/AccountCommands.cs — AccountAddSettings: Add '[CommandOption(\"--scope <SCOPE>\")] public string? Scope { get; init; }' with XML doc 'Comma-separated list of OAuth scopes. Must match the scopes selected when generating the grant code in the Zoho Developer Console Self-Client (e.g. ZohoCRM.Contacts.READ,ZohoCRM.Deals.READ).' In Validate(), insert after the --client-secret validation: 'if (string.IsNullOrWhiteSpace(Scope)) return ValidationResult.Error(\"--scope is required. Enter the same scopes you selected when generating the grant code in the Zoho Developer Console.\");'",
+    "Modify src/ZapiCli/Commands/AccountCommands.cs — AccountAddCommand.ExecuteAsync: Before calling _service.AddAccountAsync, parse the scope string: 'var scopes = settings.Scope!.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);'. Update the AddAccountAsync call to pass scopes as the last positional argument before the implicit CancellationToken: '_service.AddAccountAsync(settings.Name!, settings.Code!, settings.RedirectUri, settings.ClientId!, settings.ClientSecret!, settings.Dc, scopes)'.",
+    "Modify src/ZapiCli.Core/Accounts/IAccountService.cs — AddAccountAsync: Add 'IEnumerable<string> scopes' parameter after 'string dc' and before 'CancellationToken ct = default'. Update XML doc summary to include: 'scopes: The OAuth scope strings that were selected when generating the grant code. These are persisted in AccountEntry.Scopes so that scope list and scope add have a correct baseline.'",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — AddAccountAsync: Add 'IEnumerable<string> scopes' parameter after 'string dc' and before 'CancellationToken ct = default'. Update the ExchangeAndFinalizeAsync call to: 'return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, scopes, ct).ConfigureAwait(false);'",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — ExchangeAndFinalizeAsync (private method): Add 'IEnumerable<string> scopes' parameter after 'string dc' and before 'CancellationToken ct'. In the AccountEntry initializer, change 'Scopes = []' to 'Scopes = [.. scopes]' — this is the root fix. Update the method signature comment if present.",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — LoginAsync (internal overload): Update the ExchangeAndFinalizeAsync call to pass the scopes array: 'await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, scopes, ct).ConfigureAwait(false)'.",
+    "Unit tests in tests/ZapiCli.Tests/Accounts/AccountAddScopesTests.cs (new file): Test 1 — AddAccountAsync passes scopes to ExchangeAndFinalizeAsync and AccountEntry.Scopes is populated: set up FakeHttpMessageHandler for /oauth/v2/token and /oauth/user/info; call AddAccountAsync(..., new[] { \"ZohoCRM.Contacts.READ\" }); assert saved AccountEntry.Scopes equals [\"ZohoCRM.Contacts.READ\"]. Test 2 — Multiple comma-parsed scopes stored correctly: pass [\"ZohoCRM.Contacts.READ\", \"ZohoCRM.Deals.READ\"]; assert both in Scopes. Test 3 — AccountAddSettings.Validate() fails when --scope is missing or whitespace. Test 4 — LoginAsync stores scopes: call internal LoginAsync overload with scopes[\"ZohoCliq.Channels.READ\"]; assert AccountEntry.Scopes = [\"ZohoCliq.Channels.READ\"]. Test 5 — LoginAsync with empty scopes: AccountEntry.Scopes = []."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build src/zapi-cli.sln succeeds with 0 errors and 0 warnings",
+    "All existing tests (stories 1–12) still pass — no behavioral change to AddAccountAsync other than the new required parameter",
+    "AccountAddSettings.Validate() returns an error when --scope is absent or empty",
+    "IAccountService.AddAccountAsync signature includes IEnumerable<string> scopes after dc",
+    "AccountService.AddAccountAsync passes scopes to ExchangeAndFinalizeAsync",
+    "ExchangeAndFinalizeAsync persists AccountEntry.Scopes = [.. scopes] instead of []",
+    "LoginAsync (internal overload) passes its scopes array to ExchangeAndFinalizeAsync",
+    "'zapi-cli account add ... --scope ZohoCRM.Contacts.READ' → AccountEntry.Scopes = [\"ZohoCRM.Contacts.READ\"] (verified via unit test)",
+    "'zapi-cli account login ... --scope ZohoCRM.Contacts.READ' → AccountEntry.Scopes = [\"ZohoCRM.Contacts.READ\"] (verified via unit test)",
+    "All new unit tests pass"
+  ],
+  "contextForAgent": "Read src/ZapiCli.Core/Accounts/AccountService.cs in full before editing — locate ExchangeAndFinalizeAsync, AddAccountAsync, and the internal LoginAsync overload. The ExchangeAndFinalizeAsync is a private method; the one call site in AddAccountAsync and the one in LoginAsync both need updating. The scopes parameter type is IEnumerable<string> throughout the service layer; it is materialised to a list at the AccountEntry initializer with [.. scopes]. Read src/ZapiCli/Commands/AccountCommands.cs — AccountAddSettings and AccountAddCommand are both nested inside the static AccountCommands class. The Validate() override is on AccountAddSettings; the scope parsing happens in AccountAddCommand.ExecuteAsync. Do not change the output shape of AccountAddCommand (still { status, data: { name, dc } }). For tests: reuse FakeHttpMessageHandler and InMemoryAccountStore patterns from existing test files.",
+  "openItems": [],
+  "sourceReferences": [
+    "plan/feature-scope-incremental-auth-1.md",
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli.Core/Accounts/IAccountService.cs",
+    "src/ZapiCli.Core/Accounts/AccountService.cs",
+    "src/ZapiCli.Core/Accounts/AccountEntry.cs"
+  ],
+  "relevantOpenQuestions": []
+}

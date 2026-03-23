@@ -142,6 +142,64 @@ public class LocalCallbackServer : IDisposable, IAsyncDisposable
         return (code, state);
     }
 
+    /// <summary>
+    /// Waits for the Zoho scope enhancement redirect callback.
+    /// Parses <c>?status=success&amp;scope_enhanced=true</c> from the query string.
+    /// </summary>
+    /// <param name="timeout">Maximum time to wait before throwing LOGIN_TIMEOUT.</param>
+    /// <param name="ct">Optional external cancellation token.</param>
+    /// <exception cref="ZapiCliException">
+    /// Thrown with <see cref="ErrorCodes.SCOPE_ENHANCE_DENIED"/> if <c>?error=...</c> is present
+    /// or if the status/scope_enhanced parameters do not indicate success.
+    /// Thrown with <see cref="ErrorCodes.LOGIN_TIMEOUT"/> if the timeout expires.
+    /// </exception>
+    public virtual async Task WaitForScopeEnhancedCallbackAsync(
+        TimeSpan timeout,
+        CancellationToken ct = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(timeout);
+
+        HttpListenerContext context;
+        try
+        {
+            context = await _listener!.GetContextAsync()
+                .WaitAsync(cts.Token)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new ZapiCliException(
+                "Browser authentication timed out. Run the command again.",
+                ErrorCodes.LOGIN_TIMEOUT,
+                exitCode: 1);
+        }
+
+        var query = context.Request.QueryString;
+
+        var error = query["error"];
+        if (!string.IsNullOrEmpty(error))
+        {
+            await RespondAsync(context, BuildErrorHtml(error)).ConfigureAwait(false);
+            throw new ZapiCliException(error, ErrorCodes.SCOPE_ENHANCE_DENIED, exitCode: 1);
+        }
+
+        var status = query["status"];
+        var scopeEnhanced = query["scope_enhanced"];
+
+        if (status != "success" || scopeEnhanced != "true")
+        {
+            await RespondAsync(context, BuildErrorHtml("Scope enhancement was not approved."))
+                .ConfigureAwait(false);
+            throw new ZapiCliException(
+                "Scope enhancement was not approved.",
+                ErrorCodes.SCOPE_ENHANCE_DENIED,
+                exitCode: 1);
+        }
+
+        await RespondAsync(context, BuildSuccessHtml()).ConfigureAwait(false);
+    }
+
     private static async Task RespondAsync(HttpListenerContext context, string html)
     {
         var response = context.Response;

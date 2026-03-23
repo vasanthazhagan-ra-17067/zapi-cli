@@ -12,6 +12,5 @@ public sealed record AccountListView
     public string? Zuid { get; init; }
 
     public bool IsDefault { get; init; }
-    public bool NeedsReauth { get; init; }
     public int ScopeCount { get; init; }
 }

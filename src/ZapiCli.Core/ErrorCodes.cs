@@ -48,4 +48,16 @@ public static class ErrorCodes
 
     /// <summary>Thrown by <c>api registry add</c> when the specified id already exists in the registry.</summary>
     public static readonly string REGISTRY_ENTRY_ALREADY_EXISTS = "REGISTRY_ENTRY_ALREADY_EXISTS";
+
+    /// <summary>
+    /// Thrown by <c>scope add</c> when the user rejects the scope enhancement consent,
+    /// or when the callback returns an unexpected state.
+    /// </summary>
+    public const string SCOPE_ENHANCE_DENIED = "SCOPE_ENHANCE_DENIED";
+
+    /// <summary>
+    /// Thrown by <c>scope add</c> when the POST to /oauth/v2/token/scopeenhance fails
+    /// at the HTTP level or the response is missing an access_token.
+    /// </summary>
+    public const string SCOPE_ENHANCE_FAILED = "SCOPE_ENHANCE_FAILED";
 }

@@ -146,7 +146,6 @@ public sealed class LoginAsyncTests
             Zuid = "1",
             Scopes = [],
             IsDefault = true,
-            NeedsReauth = false,
         });
 
         var auth = new FakeAuthProvider();

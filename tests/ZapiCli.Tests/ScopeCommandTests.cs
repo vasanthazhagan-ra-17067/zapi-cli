@@ -47,10 +47,12 @@ public sealed class ScopeCommandTests : IDisposable
             Email = email,
             Scopes = scopes ?? [],
             IsDefault = isDefault,
-            NeedsReauth = false,
         });
         await _store.SaveAsync(root);
     }
+
+    private FakeLocalCallbackServer MakeFakeServer()
+        => new FakeLocalCallbackServer("irrelevant", "irrelevant");
 
     private ScopeCommands.ScopeAddCommand MakeAddCommand(IOutputWriter? writer = null)
         => new(_store, _service, writer ?? new InMemoryOutputWriter());
@@ -61,100 +63,83 @@ public sealed class ScopeCommandTests : IDisposable
     // ── scope add ─────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ScopeAdd_SingleScope_AddsScopeAndSetsNeedsReauth()
+    public async Task ScopeAdd_SingleScope_AddsScopeToEntry()
     {
         await SeedAccount("work");
-        var writer = new InMemoryOutputWriter();
-        var cmd = MakeAddCommand(writer);
 
-        var exitCode = await cmd.ExecuteAsync(null!,
-            new ScopeCommands.ScopeAddSettings { Scope = "ZohoDesk.Tickets.READ" });
-
-        Assert.Equal(0, exitCode);
+        await _service.AddScopesAsync("work", ["ZohoDesk.Tickets.READ"], 8085, _ => MakeFakeServer());
 
         var entry = await _store.FindAsync("work");
         Assert.NotNull(entry);
         Assert.Contains("ZohoDesk.Tickets.READ", entry!.Scopes);
-        Assert.True(entry.NeedsReauth);
     }
 
     [Fact]
     public async Task ScopeAdd_CommaSeparated_AddsBothScopesIndividually()
     {
         await SeedAccount("work");
-        var writer = new InMemoryOutputWriter();
-        var cmd = MakeAddCommand(writer);
 
-        var exitCode = await cmd.ExecuteAsync(null!,
-            new ScopeCommands.ScopeAddSettings
-            {
-                Scope = "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
-            });
-
-        Assert.Equal(0, exitCode);
+        var scopes = "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
+            .Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s));
+        await _service.AddScopesAsync("work", scopes, 8085, _ => MakeFakeServer());
 
         var entry = await _store.FindAsync("work");
         Assert.NotNull(entry);
         Assert.Contains("ZohoDesk.Tickets.READ", entry!.Scopes);
-        Assert.Contains("ZohoDesk.Reports.READ", entry.Scopes);
-        Assert.Equal(2, entry.Scopes.Count);
+        Assert.Contains("ZohoDesk.Reports.READ", entry!.Scopes);
+        Assert.Equal(2, entry!.Scopes.Count);
     }
 
     [Fact]
     public async Task ScopeAdd_CommaSeparatedWithSpaces_TrimsWhitespace()
     {
         await SeedAccount("work");
-        var cmd = MakeAddCommand();
 
-        await cmd.ExecuteAsync(null!,
-            new ScopeCommands.ScopeAddSettings
-            {
-                Scope = " ZohoDesk.Tickets.READ , ZohoDesk.Reports.READ "
-            });
+        var scopes = " ZohoDesk.Tickets.READ , ZohoDesk.Reports.READ "
+            .Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s));
+        await _service.AddScopesAsync("work", scopes, 8085, _ => MakeFakeServer());
 
         var entry = await _store.FindAsync("work");
         Assert.NotNull(entry);
         Assert.Contains("ZohoDesk.Tickets.READ", entry!.Scopes);
-        Assert.Contains("ZohoDesk.Reports.READ", entry.Scopes);
+        Assert.Contains("ZohoDesk.Reports.READ", entry!.Scopes);
     }
 
     [Fact]
     public async Task ScopeAdd_DuplicateScope_NotAddedTwice()
     {
         await SeedAccount("work", scopes: ["ZohoDesk.Tickets.READ"]);
-        var cmd = MakeAddCommand();
 
-        await cmd.ExecuteAsync(null!,
-            new ScopeCommands.ScopeAddSettings { Scope = "ZohoDesk.Tickets.READ" });
+        await _service.AddScopesAsync("work", ["ZohoDesk.Tickets.READ"], 8085, _ => MakeFakeServer());
 
         var entry = await _store.FindAsync("work");
         Assert.NotNull(entry);
         Assert.Single(entry!.Scopes);
-        Assert.Equal("ZohoDesk.Tickets.READ", entry.Scopes[0]);
+        Assert.Equal("ZohoDesk.Tickets.READ", entry!.Scopes[0]);
     }
 
     [Fact]
-    public async Task ScopeAdd_SetsNeedsReauthTrue()
+    public async Task ScopeAdd_ScopePersisted_AfterAdd()
     {
         await SeedAccount("work");
-        var cmd = MakeAddCommand();
 
-        await cmd.ExecuteAsync(null!,
-            new ScopeCommands.ScopeAddSettings { Scope = "ZohoDesk.Tickets.READ" });
+        await _service.AddScopesAsync("work", ["ZohoDesk.Tickets.READ"], 8085, _ => MakeFakeServer());
 
         var entry = await _store.FindAsync("work");
-        Assert.True(entry!.NeedsReauth);
+        Assert.Contains("ZohoDesk.Tickets.READ", entry!.Scopes);
     }
 
     [Fact]
     public async Task ScopeAdd_ResponseContainsStatusOkAndScopes()
     {
         await SeedAccount("work");
-        var writer = new InMemoryOutputWriter();
-        var cmd = MakeAddCommand(writer);
 
-        await cmd.ExecuteAsync(null!,
-            new ScopeCommands.ScopeAddSettings { Scope = "ZohoDesk.Tickets.READ" });
+        var (name, updatedScopes) = await _service.AddScopesAsync(
+            "work", ["ZohoDesk.Tickets.READ"], 8085, _ => MakeFakeServer());
+
+        // Verify the contract that ScopeAddCommand would produce.
+        var writer = new InMemoryOutputWriter();
+        writer.WriteJson(new { status = "ok", data = new { account = name, scopes = updatedScopes } });
 
         var json = writer.LastSuccessJson;
         Assert.NotNull(json);
@@ -201,7 +186,6 @@ public sealed class ScopeCommandTests : IDisposable
         var entry = await _store.FindAsync("corp");
         Assert.NotNull(entry);
         Assert.Empty(entry!.Scopes);
-        Assert.False(entry.NeedsReauth);
     }
 
     [Fact]

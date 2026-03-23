@@ -40,6 +40,7 @@ public sealed class AccountService : IAccountService
         string clientId,
         string clientSecret,
         string dc,
+        IEnumerable<string> scopes,
         CancellationToken ct = default)
     {
         // Uniqueness check — abort early before any network call.
@@ -50,7 +51,7 @@ public sealed class AccountService : IAccountService
                 ErrorCodes.ACCOUNT_ALREADY_EXISTS,
                 exitCode: 1);
 
-        return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, ct)
+        return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, scopes, ct)
             .ConfigureAwait(false);
     }
 
@@ -115,7 +116,7 @@ public sealed class AccountService : IAccountService
                 exitCode: 1);
 
         // Step 9: Exchange code + finalize (same as AddAccountAsync).
-        return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, ct)
+        return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, scopes, ct)
             .ConfigureAwait(false);
     }
 
@@ -134,6 +135,7 @@ public sealed class AccountService : IAccountService
         string clientId,
         string clientSecret,
         string dc,
+        IEnumerable<string> scopes,
         CancellationToken ct)
     {
         // Step 1: Resolve DC base URL — validates dc value.
@@ -275,9 +277,8 @@ public sealed class AccountService : IAccountService
                 Dc = dc,
                 Email = email,
                 Zuid = zuid,
-                Scopes = [],
+                Scopes = [.. scopes],
                 IsDefault = isDefault,
-                NeedsReauth = false,
             };
 
             var updatedRoot = new AccountsRoot
@@ -305,7 +306,6 @@ public sealed class AccountService : IAccountService
                 Email = a.Email,
                 Zuid = a.Zuid,
                 IsDefault = a.IsDefault,
-                NeedsReauth = a.NeedsReauth,
                 ScopeCount = a.Scopes.Count,
             })
             .ToList();
@@ -332,7 +332,6 @@ public sealed class AccountService : IAccountService
             Zuid = account.Zuid,
             Scopes = account.Scopes,
             IsDefault = account.IsDefault,
-            NeedsReauth = account.NeedsReauth,
             Token = "***",
         };
     }
@@ -431,25 +430,29 @@ public sealed class AccountService : IAccountService
 
         await _authProvider.RefreshTokenAsync(name, account.Scopes, account.Dc, ct)
             .ConfigureAwait(false);
-
-        // Clear the NeedsReauth flag now that refresh succeeded.
-        var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
-        var updatedAccounts = root.Accounts
-            .Select(a => a.Name == name ? a with { NeedsReauth = false } : a)
-            .ToList();
-
-        await _accountStore.SaveAsync(
-                new AccountsRoot { Accounts = updatedAccounts }, ct)
-            .ConfigureAwait(false);
     }
 
     // ─── AddScopesAsync ───────────────────────────────────────────────────────
 
-    public async Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
+    public Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
         string accountName,
         IEnumerable<string> scopesToAdd,
+        int callbackPort = 8085,
+        CancellationToken ct = default) =>
+        AddScopesAsync(accountName, scopesToAdd, callbackPort, port => new LocalCallbackServer(port), ct);
+
+    /// <summary>
+    /// Internal overload that accepts a <paramref name="serverFactory"/> — used by tests to inject
+    /// a fake callback server without binding an HttpListener.
+    /// </summary>
+    internal async Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
+        string accountName,
+        IEnumerable<string> scopesToAdd,
+        int callbackPort,
+        Func<int, LocalCallbackServer> serverFactory,
         CancellationToken ct = default)
     {
+        // Step 1: Load account.
         var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
         var account = root.Accounts.FirstOrDefault(a => a.Name == accountName);
         if (account is null)
@@ -458,22 +461,55 @@ public sealed class AccountService : IAccountService
                 ErrorCodes.ACCOUNT_NOT_FOUND,
                 exitCode: 1);
 
+        // Step 2: ZohoCorp block.
         ZohoCorpGuard.AssertNotZohoCorp(account.Email);
 
+        // Step 3: Build deduped updated scope list.
+        var scopesList = scopesToAdd.ToList();
         var updatedScopes = account.Scopes.ToList();
-        foreach (var s in scopesToAdd)
+        foreach (var s in scopesList)
         {
             if (!updatedScopes.Contains(s, StringComparer.Ordinal))
                 updatedScopes.Add(s);
         }
 
-        var updatedAccount = account with { Scopes = updatedScopes, NeedsReauth = true };
+        // Step 4: Obtain scope enhancement token.
+        var (enhanceToken, clientId) = await _authProvider
+            .GetScopeEnhancementTokenAsync(accountName, account.Dc, ct)
+            .ConfigureAwait(false);
+
+        // Step 5–12: Browser consent flow.
+        await using var server = serverFactory(callbackPort);
+        var redirectUri = $"http://localhost:{server.Port}/callback";
+        var baseUrl = DcResolver.GetAccountsBaseUrl(account.Dc);
+
+        var addExtraScopeUrl =
+            $"{baseUrl}/oauth/v2/token/addextrascope" +
+            $"?client_id={Uri.EscapeDataString(clientId)}" +
+            $"&response_type=update_scopes" +
+            $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+            $"&scope={Uri.EscapeDataString(string.Join(",", scopesList))}" +
+            $"&enhance_token={Uri.EscapeDataString(enhanceToken)}" +
+            $"&logout=true";
+
+        Console.Error.WriteLine($"Redirect URI (must be registered in Zoho Developer Console): {redirectUri}");
+        _browserFlow.OpenBrowser(addExtraScopeUrl);
+        Console.Error.WriteLine("Waiting for browser scope consent... (timeout: 120s)");
+
+        await server.WaitForScopeEnhancedCallbackAsync(TimeSpan.FromSeconds(120), ct)
+            .ConfigureAwait(false);
+
+        // Step 13: Persist updated scopes.
+        var updatedAccount = account with { Scopes = updatedScopes };
         var updatedAccounts = root.Accounts
             .Select(a => a.Name == accountName ? updatedAccount : a)
             .ToList();
-
         await _accountStore.SaveAsync(
             new AccountsRoot { Accounts = updatedAccounts }, ct).ConfigureAwait(false);
+
+        // Step 14: Refresh access token so the new scope is reflected immediately.
+        await _authProvider.RefreshTokenAsync(accountName, updatedScopes, account.Dc, ct)
+            .ConfigureAwait(false);
 
         return (updatedAccount.Name, updatedScopes);
     }

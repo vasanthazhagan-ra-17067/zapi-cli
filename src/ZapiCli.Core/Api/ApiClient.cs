@@ -56,15 +56,7 @@ public sealed class ApiClient
         // Step 2: ZohoCorp domain block (ADR-0003) — checked before any HTTP dispatch.
         ZohoCorpGuard.AssertNotZohoCorp(account.Email);
 
-        // Step 3: NeedsReauth pre-refresh — refresh BEFORE the request, not in response to 401.
-        if (account.NeedsReauth)
-        {
-            _logger.LogInformation("Account '{AccountName}' has NeedsReauth=true — refreshing token.", request.AccountName);
-            await _authProvider.RefreshTokenAsync(request.AccountName, account.Scopes, account.Dc, ct).ConfigureAwait(false);
-            await ClearNeedsReauthAsync(request.AccountName, ct).ConfigureAwait(false);
-        }
-
-        // Step 4: Parse and validate URL — SSRF check (ADR-0004).
+        // Step 3: Parse and validate URL — SSRF check (ADR-0004).
         Uri uri;
         try
         {
@@ -176,19 +168,6 @@ public sealed class ApiClient
     internal static void ValidateHost(Uri uri) => HostValidator.ValidateHost(uri);
 
     // ─── Private helpers ─────────────────────────────────────────────────────
-
-    private async Task ClearNeedsReauthAsync(string accountName, CancellationToken ct)
-    {
-        var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
-        var idx = root.Accounts.FindIndex(a =>
-            a.Name.Equals(accountName, StringComparison.Ordinal));
-
-        if (idx >= 0)
-        {
-            root.Accounts[idx] = root.Accounts[idx] with { NeedsReauth = false };
-            await _accountStore.SaveAsync(root, ct).ConfigureAwait(false);
-        }
-    }
 
     private static async Task<HttpResponseMessage> SendAsync(
         HttpClient httpClient,
