@@ -220,6 +220,15 @@ Also update `docs/HELP.md` with every user-facing change introduced by this stor
 
 Do not alter HELP.md sections that are unrelated to this story. Read the existing HELP.md before writing to ensure you match its formatting and style exactly.
 
+#### Hand off to the Docs Maintainer
+
+After `docs/HELP.md` is updated, **directly invoke the `zapi-cli Maintainer` agent** (`.github/agents/zapi-cli-maintainer.agent.md`) to propagate the changes into the skill and analysis agent artefacts:
+
+- Pass the instruction: `"Sync changes introduced by story <N> — <story title>"`.
+- The maintainer will read the updated `HELP.md`, diff it against its own memory, and update `.github/skills/zapi-cli/SKILL.md` and `.github/agents/http-api-analysis.agent.md` accordingly.
+- Wait for the maintainer to complete and confirm its Phase 6 report before proceeding to your own Phase 6.
+- If the maintainer reports no deltas (the story introduced no user-facing CLI changes), note that in your own report.
+
 ---
 
 ### Phase 6: REPORT
@@ -259,6 +268,8 @@ After updating memory, report to the user:
 11. **No URL construction.** `api call` always receives a full URL from the caller. The CLI never constructs URLs by concatenating base URL + path. This is ADR-0006 — non-negotiable.
 
 12. **Keep HELP.md current.** Every user-facing change — new commands, new flags, changed output shapes, new error codes — must be reflected in `docs/HELP.md` before the story is marked complete. HELP.md is the user-facing contract; if it is stale, the tool is effectively undocumented.
+
+13. **Always hand off to the Maintainer.** After updating `docs/HELP.md`, invoke the `zapi-cli Maintainer` agent before closing the story. SKILL.md and `http-api-analysis.agent.md` are downstream consumers of HELP.md — if they are stale, agents that depend on them will use wrong commands, flags, or output shapes.
 
 ---
 
