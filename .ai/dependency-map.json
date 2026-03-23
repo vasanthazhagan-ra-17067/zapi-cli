@@ -67,7 +67,7 @@
     {
       "storyId": 9,
       "title": "API Registry (api registry list/add/show/remove)",
-      "status": "Not Started",
+      "status": "Completed",
       "dependsOn": [5],
       "version": "v2",
       "phase": "Phase 4 — v2 Features"

@@ -58,6 +58,10 @@ internal static class Program
             client.Timeout = TimeSpan.FromSeconds(30));
         services.AddSingleton<ApiClient>();
 
+        // API registry: local store of named endpoint entries for agent discovery.
+        services.AddSingleton<IApiRegistry>(sp =>
+            new ApiRegistry(configDir, sp.GetRequiredService<ILogger<ApiRegistry>>()));
+
         // Trace system: ITraceConfigStore → ITraceSession → ITraceWriter → TraceExporter.
         services.AddSingleton<ITraceConfigStore>(sp =>
             new TraceConfigStore(configDir, sp.GetRequiredService<ILogger<TraceConfigStore>>()));
@@ -134,6 +138,20 @@ internal static class Program
             {
                 api.AddCommand<ApiCommands.ApiCallCommand>("call")
                     .WithDescription("Invoke a Zoho API endpoint and print the raw response.");
+
+                api.AddBranch("registry", registry =>
+                {
+                    registry.AddCommand<ApiRegistryCommands.ApiRegistryListCommand>("list")
+                        .WithDescription("List all entries in the local API registry.");
+                    registry.AddCommand<ApiRegistryCommands.ApiRegistryAddCommand>("add")
+                        .WithDescription("Add a new named API endpoint to the local registry.");
+                    registry.AddCommand<ApiRegistryCommands.ApiRegistryUpdateCommand>("update")
+                        .WithDescription("Update fields of an existing registry entry.");
+                    registry.AddCommand<ApiRegistryCommands.ApiRegistryShowCommand>("show")
+                        .WithDescription("Show a single registry entry by id.");
+                    registry.AddCommand<ApiRegistryCommands.ApiRegistryRemoveCommand>("remove")
+                        .WithDescription("Remove an entry from the local API registry.");
+                });
             });
 
             config.AddBranch("util", util =>

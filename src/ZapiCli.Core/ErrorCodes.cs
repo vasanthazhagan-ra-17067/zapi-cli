@@ -42,4 +42,10 @@ public static class ErrorCodes
 
     /// <summary>Used by the global exception handler for unhandled non-ZapiCliException errors.</summary>
     public static readonly string INTERNAL_ERROR = "INTERNAL_ERROR";
+
+    /// <summary>Thrown when an api registry operation targets an id that does not exist.</summary>
+    public static readonly string REGISTRY_ENTRY_NOT_FOUND = "REGISTRY_ENTRY_NOT_FOUND";
+
+    /// <summary>Thrown by <c>api registry add</c> when the specified id already exists in the registry.</summary>
+    public static readonly string REGISTRY_ENTRY_ALREADY_EXISTS = "REGISTRY_ENTRY_ALREADY_EXISTS";
 }

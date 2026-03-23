@@ -21,6 +21,11 @@ Ships as a single self-contained binary — no runtime, no dependencies, no inst
    - [account remove](#account-remove)
    - [account re-auth](#account-re-auth)
    - [api call](#api-call)
+   - [api registry list](#api-registry-list)
+   - [api registry add](#api-registry-add)
+   - [api registry update](#api-registry-update)
+   - [api registry show](#api-registry-show)
+   - [api registry remove](#api-registry-remove)
    - [util time-ms](#util-time-ms)
    - [util uuid](#util-uuid)
    - [util time-now](#util-time-now)
@@ -752,6 +757,192 @@ The `data` field contains the raw Zoho API response body parsed as JSON:
 
 ---
 
+### api registry list
+
+List all entries in the local API registry. No account required.
+
+```
+USAGE:
+    zapi-cli api registry list [OPTIONS]
+
+OPTIONS:
+    --account, -a <ACCOUNT>    Use a specific account (not required for registry commands).
+    --help                     Show help.
+```
+
+#### Example output (stdout)
+
+```json
+[
+  {
+    "id": "cliq-channels",
+    "url": "https://cliq.zoho.com/api/v2/channels",
+    "method": "GET",
+    "purpose": "List all Cliq channels"
+  }
+]
+```
+
+Returns an empty array `[]` if no entries have been registered.
+
+---
+
+### api registry add
+
+Add a new named API endpoint to the local registry. No account required. The `--url` is validated against the host allowlist (ADR-0004).
+
+```
+USAGE:
+    zapi-cli api registry add [OPTIONS]
+
+OPTIONS:
+    --id <ID>                  Unique identifier for this registry entry (required).
+    --url <URL>                Full endpoint URL (required). Must be a Zoho domain.
+    --method <METHOD>          HTTP method: GET, POST, PUT, PATCH, DELETE (required).
+    --purpose <PURPOSE>        Human-readable description of what this endpoint does (required).
+    --help                     Show help.
+```
+
+#### Example
+
+```bash
+zapi-cli api registry add \
+  --id cliq-channels \
+  --url https://cliq.zoho.com/api/v2/channels \
+  --method GET \
+  --purpose "List all Cliq channels"
+```
+
+#### Example output (stdout)
+
+```json
+{ "status": "ok", "data": { "id": "cliq-channels" } }
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `REGISTRY_ENTRY_ALREADY_EXISTS` | An entry with the same `--id` already exists. | Use `api registry update --id <ID>` to modify it or choose a different id. |
+| `HOST_NOT_ALLOWED` | The `--url` host is not on the Zoho allowlist. | Use a URL under `zoho.com`, `zohoapis.com`, etc. |
+| `INVALID_ARGS` | A required flag is missing or `--method` is invalid. | All four flags are required. Method must be one of `GET POST PUT PATCH DELETE`. |
+
+---
+
+### api registry update
+
+Update one or more fields of an existing registry entry. Only the supplied flags are changed; omitted flags retain their existing values.
+
+```
+USAGE:
+    zapi-cli api registry update [OPTIONS]
+
+OPTIONS:
+    --id <ID>                  Id of the entry to update (required).
+    --url <URL>                New full endpoint URL (optional).
+    --method <METHOD>          New HTTP method (optional). GET, POST, PUT, PATCH, DELETE.
+    --purpose <PURPOSE>        New human-readable description (optional).
+    --help                     Show help.
+```
+
+At least one of `--url`, `--method`, or `--purpose` must be provided.
+
+#### Example
+
+```bash
+# Update only the purpose
+zapi-cli api registry update --id cliq-channels --purpose "Fetch all Cliq channels"
+```
+
+#### Example output (stdout)
+
+```json
+{ "status": "ok", "data": { "id": "cliq-channels" } }
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `REGISTRY_ENTRY_NOT_FOUND` | No entry with the given `--id` exists. | Run `api registry list` to see all ids. |
+| `HOST_NOT_ALLOWED` | The new `--url` host is not on the Zoho allowlist. | Use a URL under `zoho.com`, `zohoapis.com`, etc. |
+| `INVALID_ARGS` | No updatable field was provided, or `--method` value is invalid. | Provide at least one of `--url`, `--method`, or `--purpose`. |
+
+---
+
+### api registry show
+
+Show a single registry entry by its id.
+
+```
+USAGE:
+    zapi-cli api registry show [OPTIONS]
+
+OPTIONS:
+    --id <ID>                  Id of the entry to show (required).
+    --help                     Show help.
+```
+
+#### Example
+
+```bash
+zapi-cli api registry show --id cliq-channels
+```
+
+#### Example output (stdout)
+
+```json
+{
+  "id": "cliq-channels",
+  "url": "https://cliq.zoho.com/api/v2/channels",
+  "method": "GET",
+  "purpose": "List all Cliq channels"
+}
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `REGISTRY_ENTRY_NOT_FOUND` | No entry with the given `--id` exists. | Run `api registry list` to see all registered ids. |
+| `INVALID_ARGS` | `--id` was not provided. | `--id` is required. |
+
+---
+
+### api registry remove
+
+Remove an entry from the local API registry by its id.
+
+```
+USAGE:
+    zapi-cli api registry remove [OPTIONS]
+
+OPTIONS:
+    --id <ID>                  Id of the entry to remove (required).
+    --help                     Show help.
+```
+
+#### Example
+
+```bash
+zapi-cli api registry remove --id cliq-channels
+```
+
+#### Example output (stdout)
+
+```json
+{ "status": "ok", "data": { "id": "cliq-channels" } }
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `REGISTRY_ENTRY_NOT_FOUND` | No entry with the given `--id` exists. | Run `api registry list` to see all registered ids. |
+| `INVALID_ARGS` | `--id` was not provided. | `--id` is required. |
+
+---
+
 ### scope add
 
 Add one or more OAuth scopes to an existing account. Sets `needs_reauth` to `true`, triggering an automatic token refresh on the next `api call` for that account.
@@ -1450,6 +1641,8 @@ All error responses are emitted on **stderr** as:
 | `SESSION_NOT_FOUND` | 1 | The specified session `--id` or `--name` does not exist in the sessions index. | Run `trace session list` to enumerate valid sessions. |
 | `SESSION_AMBIGUOUS` | 1 | Multiple sessions share the specified `--name`; cannot resolve to a unique session. | Use `--id` with the specific `unique_id` from `trace session list`. |
 | `EXPORT_PATH_NOT_SET` | 1 | `trace session start` had no `--export-path` and no default is configured. | Run `trace config set --default-export-path <PATH>` or pass `--export-path` explicitly. |
+| `REGISTRY_ENTRY_NOT_FOUND` | 1 | The specified `--id` does not match any entry in the local API registry. | Run `api registry list` to enumerate valid ids. |
+| `REGISTRY_ENTRY_ALREADY_EXISTS` | 1 | `api registry add` was called with an `--id` that already exists in the registry. | Use `api registry update --id <ID>` to modify the existing entry, or choose a different id. |
 
 ---
 

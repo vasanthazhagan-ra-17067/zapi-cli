@@ -472,5 +472,60 @@
         "trace config set", "trace config show"
       ]
     }
+  },
+  {
+    "storyId": 9,
+    "title": "API Registry (api registry list/add/update/show/remove)",
+    "status": "Completed",
+    "completedDate": "2026-03-23",
+    "filesCreatedOrModified": [
+      { "path": "src/ZapiCli.Core/Api/HostValidator.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Api/ApiRegistryEntry.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Api/ApiRegistryRoot.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Api/IApiRegistry.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/Api/ApiRegistry.cs", "action": "created" },
+      { "path": "src/ZapiCli/Commands/ApiRegistryCommands.cs", "action": "created" },
+      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "modified — added REGISTRY_ENTRY_NOT_FOUND, REGISTRY_ENTRY_ALREADY_EXISTS" },
+      { "path": "src/ZapiCli.Core/Api/ApiClient.cs", "action": "modified — ValidateHost now delegates to HostValidator.ValidateHost; AllowedHostSuffixes removed from ApiClient" },
+      { "path": "src/ZapiCli/Program.cs", "action": "modified — added IApiRegistry singleton, api registry branch with 5 commands" },
+      { "path": "tests/ZapiCli.Tests/ApiRegistryTests.cs", "action": "created" },
+      { "path": "docs/HELP.md", "action": "modified — added api registry list/add/update/show/remove sections, ToC entries, error codes" }
+    ],
+    "keyDecisionsMade": [
+      "HostValidator extracted as public static class in ZapiCli.Core.Api — reused by ApiClient (via thin forwarding wrapper) and api registry add/update commands in ZapiCli layer.",
+      "ApiClient.ValidateHost kept as internal static thin wrapper that calls HostValidator.ValidateHost — existing tests calling ApiClient.ValidateHost continue to pass without modification.",
+      "Host allowlist check in api registry add/update placed in ExecuteAsync (not Validate()) so exception carries HOST_NOT_ALLOWED code rather than INVALID_ARGS via CommandRuntimeException.",
+      "ApiRegistryUpdateSettings uses <URL> <METHOD> <PURPOSE> angle-bracket syntax (not square brackets) — Spectre [VALUE] optional syntax requires IFlagValue; string? with <VALUE> is the correct Spectre pattern for optional-but-valued flags.",
+      "ApiRegistry.Apis list is mutable List<T> with init setter — object initializer sets the list reference, but Add/RemoveAt/index assignment work fine on the list contents.",
+      "registry.json stored at <configDir>/registry.json — same level as accounts.json, NOT in a subdirectory.",
+      "0600 file permissions applied via File.SetUnixFileMode on macOS/Linux, FileSecurity ACL on Windows — same pattern as AccountStore."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "Program.cs had duplicate 'using ZapiCli.Core.Api' directive after the multi-replace addition.",
+        "resolution": "Removed the duplicate using directive."
+      },
+      {
+        "issue": "ApiRegistryUpdateSettings used Spectre [URL] square bracket value syntax which requires IFlagValue — caused runtime error 'option url has optional value but does not implement IFlagValue'.",
+        "resolution": "Changed to <URL> <METHOD> <PURPOSE> angle bracket syntax — options are optional (user may omit them) but when provided must have a value."
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "169 passing, 0 failing",
+      "commandsWorking": [
+        "account add", "account login", "account list", "account show",
+        "account set-default", "account remove", "account re-auth",
+        "api call",
+        "api registry list", "api registry add", "api registry update",
+        "api registry show", "api registry remove",
+        "util time-ms", "util uuid", "util time-now",
+        "scope add", "scope list",
+        "trace session start", "trace session list", "trace session export",
+        "trace session close", "trace session reopen", "trace session remove",
+        "trace config set", "trace config show"
+      ]
+    }
   }
 ]

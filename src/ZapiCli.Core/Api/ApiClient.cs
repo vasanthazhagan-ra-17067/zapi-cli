@@ -16,18 +16,6 @@ namespace ZapiCli.Core.Api;
 /// </summary>
 public sealed class ApiClient
 {
-    // ─── Sealed compile-time allowlist (ADR-0004) ────────────────────────────
-    // Not read from config; not overridable at runtime.
-    private static readonly string[] AllowedHostSuffixes =
-    [
-        "zoho.com",
-        "zoho.eu",
-        "zoho.in",
-        "zoho.com.au",
-        "zohoapis.com",
-        "zohoapis.in",
-    ];
-
     private const string HttpClientName = "zapi-api";
 
     private readonly IAuthProvider _authProvider;
@@ -183,25 +171,9 @@ public sealed class ApiClient
 
     /// <summary>
     /// Validates that <paramref name="uri"/>'s host ends with one of the allowed Zoho domain
-    /// suffixes using proper boundary matching (prevents 'evilzoho.com' from matching 'zoho.com').
+    /// suffixes. Delegates to <see cref="HostValidator.ValidateHost"/>.
     /// </summary>
-    internal static void ValidateHost(Uri uri)
-    {
-        var host = uri.Host;
-        foreach (var suffix in AllowedHostSuffixes)
-        {
-            if (host.Equals(suffix, StringComparison.OrdinalIgnoreCase) ||
-                host.EndsWith("." + suffix, StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-        }
-
-        throw new ZapiCliException(
-            "Target host is not in the allowed Zoho domain list.",
-            ErrorCodes.HOST_NOT_ALLOWED,
-            exitCode: 1);
-    }
+    internal static void ValidateHost(Uri uri) => HostValidator.ValidateHost(uri);
 
     // ─── Private helpers ─────────────────────────────────────────────────────
 
