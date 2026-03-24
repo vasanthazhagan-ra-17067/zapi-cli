@@ -204,8 +204,8 @@ All tokens (access token + refresh token) are stored exclusively in the OS keych
 ### Token refresh
 
 Access tokens are automatically refreshed when:
-- The stored token has expired and `needs_reauth` is set.
 - A `401 Unauthorized` response is received from Zoho.
+- A manual `account re-auth` is run.
 
 ---
 
@@ -441,15 +441,13 @@ zapi-cli account list
         "name": "myaccount",
         "email": "user@example.com",
         "dc": "us",
-        "is_default": true,
-        "needs_reauth": false
+        "is_default": true
       },
       {
         "name": "eu-staging",
         "email": "user@example.com",
         "dc": "eu",
-        "is_default": false,
-        "needs_reauth": false
+        "is_default": false
       }
     ]
   }
@@ -464,7 +462,6 @@ zapi-cli account list
 | `email` | string | Zoho account email address |
 | `dc` | string | Datacenter code |
 | `is_default` | boolean | Whether this is the default account |
-| `needs_reauth` | boolean | Whether the token needs to be refreshed via `re-auth` |
 
 ---
 
@@ -496,7 +493,6 @@ zapi-cli account show --name myaccount
     "email": "user@example.com",
     "dc": "us",
     "is_default": true,
-    "needs_reauth": false,
     "access_token": "***",
     "client_id": "1000.EXAMPLE_CLIENT_ID"
   }
@@ -608,7 +604,7 @@ OPTIONS:
     --name <NAME>    Account alias to re-authenticate (uses default if omitted)
 ```
 
-Use this command when `needs_reauth: true` is shown in `account list` or `account show`, or when an `api call` returns a `NEEDS_REAUTH` error code.
+Use this command when an `api call` returns a `NEEDS_REAUTH` error code, or when a token refresh is needed after adding new scopes.
 
 Re-auth uses the stored refresh token to silently obtain a new access token without opening a browser.
 
@@ -624,8 +620,7 @@ zapi-cli account re-auth --name myaccount
 {
   "status": "ok",
   "data": {
-    "name": "myaccount",
-    "needs_reauth": false
+    "name": "myaccount"
   }
 }
 ```
@@ -660,7 +655,7 @@ OPTIONS:
 
 **Authentication is automatic.** zapi-cli injects `Authorization: Zoho-oauthtoken <token>` on every request. You do not need to pass auth headers manually.
 
-**Token refresh is automatic.** If `needs_reauth` is set for the account, or if a `401` response is received, the token is refreshed transparently before the request is retried.
+**Token refresh is automatic.** If a `401` response is received, the token is refreshed transparently before the request is retried.
 
 **Host allowlist:** Only the following host suffixes are permitted. Any other URL is rejected with `HOST_NOT_ALLOWED`:
 - `zoho.com`
@@ -946,7 +941,7 @@ zapi-cli api registry remove --id cliq-channels
 
 ### scope add
 
-Add one or more OAuth scopes to an existing account. Sets `needs_reauth` to `true`, triggering an automatic token refresh on the next `api call` for that account.
+Add one or more OAuth scopes to an existing account. After adding scopes, run `account re-auth` to obtain a new access token that includes the updated scopes.
 
 ```
 USAGE:
@@ -981,7 +976,7 @@ zapi-cli scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
 }
 ```
 
-> **Note:** After `scope add` sets `needs_reauth: true`, the next `api call` for this account automatically triggers a silent token refresh using the stored `client_id` and `client_secret`.
+> **Note:** After `scope add`, run `account re-auth --name <ACCOUNT>` to obtain a new access token that includes the updated scopes. The new token is stored silently using the stored `client_id` and `client_secret`.
 
 #### Common errors
 
@@ -1582,11 +1577,6 @@ ACCOUNT_STATUS=$(zapi-cli account show --name myaccount 2>/dev/null)
 if [ $? -ne 0 ]; then
   echo "Account not found or error. Aborting." >&2
   exit 1
-fi
-
-NEEDS_REAUTH=$(echo "$ACCOUNT_STATUS" | jq -r '.data.needs_reauth')
-if [ "$NEEDS_REAUTH" = "true" ]; then
-  zapi-cli account re-auth --name myaccount
 fi
 
 # 2. Make the API call

@@ -1,5 +1,5 @@
 {
-  "lastSyncedHelpMd": "2026-03-23",
+  "lastSyncedHelpMd": "2026-03-24",
   "syncedItems": [
     {
       "type": "new-command",
@@ -120,6 +120,18 @@
       "subject": "Datacenters reference",
       "syncedDate": "2026-03-23",
       "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "changed-output",
+      "subject": "account re-auth",
+      "syncedDate": "2026-03-24",
+      "artefactsModified": ["SKILL.md"]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "needs_reauth field removal from account outputs",
+      "syncedDate": "2026-03-24",
+      "artefactsModified": ["SKILL.md", "http-api-analysis.agent.md"]
     }
   ],
   "sessionLog": [
@@ -157,6 +169,20 @@
       "subject": "linux-arm64, linux-x64, osx-arm64, osx-x64, win-x64",
       "artefactsModified": [],
       "summary": "Overwrote all 5 existing platform binaries in tools/ to match updated binaries in build/. All checksums verified matching after copy."
+    },
+    {
+      "date": "2026-03-24",
+      "deltaType": "changed-output",
+      "subject": "account re-auth",
+      "artefactsModified": ["SKILL.md"],
+      "summary": "account re-auth output no longer includes needs_reauth field; updated operations table row in SKILL.md to remove the needs_reauth mention."
+    },
+    {
+      "date": "2026-03-24",
+      "deltaType": "changed-behaviour",
+      "subject": "needs_reauth field removal from account list/show outputs",
+      "artefactsModified": ["SKILL.md", "http-api-analysis.agent.md"],
+      "summary": "needs_reauth removed as a data field from all account outputs; updated SKILL.md account show ops table row, Accounts section bash block, Agent Behaviour Step 1 (removed step 3, renumbered 4-7 to 3-6), Edge Cases table row; http-api-analysis.agent.md needs_reauth check bullet also removed."
     }
   ],
   "syncedBinaries": [

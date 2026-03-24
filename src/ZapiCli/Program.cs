@@ -167,7 +167,7 @@ internal static class Program
             config.AddBranch("scope", scope =>
             {
                 scope.AddCommand<ScopeCommands.ScopeAddCommand>("add")
-                    .WithDescription("Add one or more scopes to an account (sets needs_reauth=true).");
+                    .WithDescription("Add one or more scopes to an account.");
                 scope.AddCommand<ScopeCommands.ScopeListCommand>("list")
                     .WithDescription("List the scopes configured for an account.");
             });

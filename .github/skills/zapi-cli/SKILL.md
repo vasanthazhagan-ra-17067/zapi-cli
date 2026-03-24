@@ -65,10 +65,10 @@ All requests are made via the `zapi-cli` binary. The following commands are avai
 | `account list` | **Always call first** to verify which accounts are present and healthy for the session. |
 | `account add` | Register a new Zoho account using an OAuth Self-Client grant code (non-interactive setup). |
 | `account login` | Authenticate a new account via browser-based OAuth login (interactive setup). |
-| `account show --name <NAME>` | Check a specific account's `needs_reauth` status before making calls. |
+| `account show --name <NAME>` | Inspect a specific account's details (email, datacenter, masked token, client ID). |
 | `account set-default --name <NAME>` | Set the account to be used when `--account` is not specified on individual commands. |
 | `account remove --name <NAME>` | Remove an account and revoke its OAuth token from the Zoho servers. |
-| `account re-auth --name <NAME>` | Re-authenticate an account whose refresh token has expired. Call this when exit code is `2` or `needs_reauth` is `true`. |
+| `account re-auth --name <NAME>` | Re-authenticate an account using its stored refresh token. Call this when exit code is `2` or after adding new scopes via `scope add`. |
 | `api call --url <URL> -X <METHOD>` | Fire an HTTP request against a Zoho endpoint. The OAuth token is injected automatically. |
 | `api registry add / list / show / update / remove` | Manage the local registry of named API endpoints for reuse across sessions. |
 | `trace session start` | Begin recording all `api call` requests/responses to a structured JSON file. |
@@ -154,16 +154,6 @@ Verify accounts before starting any session:
 $CLI account list
 ```
 
-Check health of the specific account to use:
-
-```bash
-STATUS=$($CLI account show --name <ACCOUNT_NAME>)
-NEEDS_REAUTH=$(echo "$STATUS" | jq -r '.data.needs_reauth')
-if [ "$NEEDS_REAUTH" = "true" ]; then
-  $CLI account re-auth --name <ACCOUNT_NAME>
-fi
-```
-
 **Account selection rules:**
 - Default to using the primary account unless the API being analysed requires multi-user interaction.
 - For APIs that require two participants (e.g. messaging, channel membership), use a primary account as the initiator and a secondary account as the receiver.
@@ -193,15 +183,14 @@ Every piece of data the agent interacts with must be created fresh at the start 
 
 1. Detect the platform and set `$CLI` to the correct binary path. Run `chmod +x "$CLI"`.
 2. Call `$CLI account list` to confirm which accounts are available and healthy for this session.
-3. For each account to be used, check `needs_reauth` and call `account re-auth` if needed.
-4. Ensure the output directories exist: `docs/api-analysis/`. Create them if they do not exist. If the output files already exist, append to them rather than overwriting.
-5. Start a trace session so all API calls during analysis are automatically recorded:
+3. Ensure the output directories exist: `docs/api-analysis/`. Create them if they do not exist. If the output files already exist, append to them rather than overwriting.
+4. Start a trace session so all API calls during analysis are automatically recorded:
    ```bash
    SESSION=$($CLI trace session start --name "api-analysis-$(date +%s)" --export-path /tmp/traces/)
    SESSION_ID=$(echo "$SESSION" | jq -r '.data.unique_id')
    ```
-6. **Identify prerequisite APIs using the resources catalog first.** Before making any prerequisite call (e.g. creating a chat before testing a message API), consult `resources/catalog.md` to find the relevant spec file by description, then read that YAML file for the exact URL, HTTP method, and required parameters to use. If the catalog does not contain a suitable entry, that API has not been catalogued yet.
-7. **Create all test entities needed for this session before executing any API under analysis.** At minimum, create a dedicated group chat (and channel, if channel APIs are being tested). Use `$CLI api call` to make the prerequisite creation calls, using the YAML spec from `resources/` to get the exact request shape.
+5. **Identify prerequisite APIs using the resources catalog first.** Before making any prerequisite call (e.g. creating a chat before testing a message API), consult `resources/catalog.md` to find the relevant spec file by description, then read that YAML file for the exact URL, HTTP method, and required parameters to use. If the catalog does not contain a suitable entry, that API has not been catalogued yet.
+6. **Create all test entities needed for this session before executing any API under analysis.** At minimum, create a dedicated group chat (and channel, if channel APIs are being tested). Use `$CLI api call` to make the prerequisite creation calls, using the YAML spec from `resources/` to get the exact request shape.
 
 ### Step 2 — Understand the APIs to Analyse
 
@@ -557,7 +546,7 @@ $CLI api registry update --id "<id>" --purpose "Updated description"
 | An API was already registered via `api registry add` in a previous session | Call `api registry show --id <ID>` to retrieve the existing definition, validate the URL matches, and skip re-registration. |
 | Rate limit hit (HTTP 429 inside `API_ERROR`) | Wait 2 seconds and retry once. If still failing, record as failure with reason "Rate limited". |
 | Placeholder value is ambiguous (e.g. `{channelId}` vs `{chid}`) | Infer from the product's API conventions and note the assumption in the catalog. |
-| `needs_reauth` is `true` mid-session | Call `$CLI account re-auth --name <ACCOUNT>` and retry immediately. If re-auth fails with `AUTH_FAILURE`, record all remaining APIs as blocked and stop. |
+| Exit code `2` received mid-session | Call `$CLI account re-auth --name <ACCOUNT>` and retry immediately. If re-auth fails with `AUTH_FAILURE`, record all remaining APIs as blocked and stop. |
 | A `resources/` YAML spec exists but has wrong field names or types | Note the discrepancy during analysis, complete the session, then include it in the Step 7 update permission prompt before making any changes. |
 | A new API was analysed that has no entry in `resources/catalog.md` | Create the YAML file and add the catalog row directly in Step 7 — no permission needed for new files. |
 
