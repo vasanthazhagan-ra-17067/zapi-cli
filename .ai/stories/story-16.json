@@ -1,0 +1,34 @@
+{
+  "storyId": 16,
+  "title": "OAuthConstants + Constants Reference Dev-Doc",
+  "description": "Create a central OAuthConstants.cs file in ZapiCli.Core holding all app-wide OAuth constants (RequiredProfileScope, DefaultCallbackPort). Replace every inline magic value in the codebase with references to these constants. Create the dev-doc tech_spec/docs/constants-reference.md that acts as the authoritative index of all constants files and their purpose.",
+  "status": "Completed",
+  "completedDate": "2026-03-25",
+  "dependsOn": [15],
+  "prerequisiteState": "Stories 1–15 complete. Project compiles and all tests pass. The string 'AaaServer.profile.READ' and the integer 8085 appear as magic literals in AccountService.cs, AccountCommands.cs, ScopeCommands.cs, LocalCallbackServer.cs, and OAuthBrowserFlow.cs.",
+  "goal": "After this story: every use of 'AaaServer.profile.READ' and 8085 as a callback port is replaced by OAuthConstants.RequiredProfileScope and OAuthConstants.DefaultCallbackPort. A developer adding a new app-wide constant knows exactly where it goes and where to document it.",
+  "scope": [
+    "Create src/ZapiCli.Core/OAuthConstants.cs: public static class OAuthConstants { public const string RequiredProfileScope = \"AaaServer.profile.READ\"; public const int DefaultCallbackPort = 8085; }. Namespace: ZapiCli.Core.",
+    "Search the entire src/ tree for literal '8085' (port) and 'AaaServer.profile.READ'. Replace every occurrence with OAuthConstants.DefaultCallbackPort or OAuthConstants.RequiredProfileScope. Files expected to change: src/ZapiCli/Commands/AccountCommands.cs (AccountMobileLoginSettings.Port default), src/ZapiCli/Commands/ScopeCommands.cs (ScopeAddSettings.Port default), src/ZapiCli.Core/Accounts/AccountService.cs (MobileLoginAsync and AddScopesAsync callbackPort defaults), src/ZapiCli.Core/Auth/LocalCallbackServer.cs (error message referencing port), and any other files containing these magic values.",
+    "Create tech_spec/docs/constants-reference.md with the following content: a header explaining the convention (all app-wide constants live in named constants files in ZapiCli.Core; they must be documented here), and a table with columns Symbol | File | Value | Purpose. Seed the table with: OAuthConstants.RequiredProfileScope | src/ZapiCli.Core/OAuthConstants.cs | AaaServer.profile.READ | Zoho profile scope always injected into every login to guarantee email and ZUID retrieval; OAuthConstants.DefaultCallbackPort | src/ZapiCli.Core/OAuthConstants.cs | 8085 | Fixed local OAuth callback port — register http://localhost:8085/callback in the Zoho Developer Console; ErrorCodes.* (all symbols) | src/ZapiCli.Core/ErrorCodes.cs | various | Machine-readable error code vocabulary for the JSON error envelope (ADR-0008). Add a section 'Adding a new constant' with the rule: create or update a constants file in ZapiCli.Core, add a row to this table.",
+    "Unit tests: Add a xUnit test in tests/ZapiCli.Tests/ verifying OAuthConstants.RequiredProfileScope equals 'AaaServer.profile.READ' and OAuthConstants.DefaultCallbackPort equals 8085 (guards against accidental value mutation)."
+  ],
+  "acceptanceCriteria": [
+    "src/ZapiCli.Core/OAuthConstants.cs exists with RequiredProfileScope and DefaultCallbackPort as public const members",
+    "No inline string literal 'AaaServer.profile.READ' exists anywhere in src/ (grep must return zero results)",
+    "No inline integer literal 8085 exists in src/ as a port default (grep must return zero results for ', 8085' and '= 8085' in non-constant code)",
+    "tech_spec/docs/constants-reference.md exists with the full table and 'Adding a new constant' instructions",
+    "dotnet build src/zapi-cli.sln succeeds with 0 errors and 0 warnings",
+    "All existing tests pass",
+    "New OAuthConstants value-guard tests pass"
+  ],
+  "contextForAgent": "This is a pure extraction/refactoring story with zero behavioral change. The safest approach: (1) create OAuthConstants.cs first, (2) do a global search-and-replace for the literal values, (3) build to confirm zero errors. The DefaultCallbackPort constant will be referenced in port default declarations ([CommandOption] int Port = OAuthConstants.DefaultCallbackPort) — note that C# requires const expressions for default parameter values and attribute arguments. Since OAuthConstants.DefaultCallbackPort is a const int, it is legal to use as a default value. For [CommandOption] property initializers that set Port = 8085, change to Port = OAuthConstants.DefaultCallbackPort.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli.Core/Accounts/AccountService.cs",
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli/Commands/ScopeCommands.cs",
+    "src/ZapiCli.Core/Auth/LocalCallbackServer.cs"
+  ],
+  "relevantOpenQuestions": []
+}

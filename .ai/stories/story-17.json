@@ -1,0 +1,50 @@
+{
+  "storyId": 17,
+  "title": "Unified CliSettings — Absorb TraceConfig + Add ScopeFile + AppDataDir",
+  "description": "Merge the separate trace-config.json into cli-settings.json by adding TraceDefaultExportPath to CliSettings. Add two new config keys: ScopeFile (path to a newline/comma-delimited OAuth scope list file) and AppDataDir (path to an app-owned data directory for accounts.json). Delete ITraceConfigStore and TraceConfigStore. Update all consumers. Add config set scope-file, config set app-dir commands.",
+  "status": "Completed",
+  "completedDate": "2026-03-25",
+  "dependsOn": [16],
+  "prerequisiteState": "Stories 1–16 complete. ITraceConfigStore and TraceConfigStore exist as separate files. CliSettings has only EnvFile. TraceSession reads DefaultExportPath from ITraceConfigStore. Program.cs registers both ICliSettingsStore and ITraceConfigStore.",
+  "goal": "After this story: cli-settings.json is the single settings file. config show outputs env_file, scope_file, app_data_dir, and trace_default_export_path. trace config set writes to CliSettings. The separate trace-config.json file is no longer created.",
+  "scope": [
+    "Modify src/ZapiCli.Core/ICliSettingsStore.cs — extend CliSettings record with three new properties: [JsonPropertyName(\"scopeFile\")] public string? ScopeFile { get; init; }, [JsonPropertyName(\"appDataDir\")] public string? AppDataDir { get; init; }, [JsonPropertyName(\"traceDefaultExportPath\")] public string? TraceDefaultExportPath { get; init; }.",
+    "Modify src/ZapiCli.Core/CliSettingsStore.cs — add static sync method TryReadPersistedAppDataDir(string configDir): same pattern as TryReadPersistedEnvFile, reads AppDataDir from cli-settings.json. Returns null if not set or file absent.",
+    "Delete src/ZapiCli.Core/Trace/ITraceConfigStore.cs. Delete src/ZapiCli.Core/Trace/TraceConfigStore.cs.",
+    "Modify src/ZapiCli.Core/Trace/TraceSession.cs — replace ITraceConfigStore constructor dependency with ICliSettingsStore. Update all usages of TraceConfig.DefaultExportPath to read CliSettings.TraceDefaultExportPath via _settingsStore.LoadAsync(ct).TraceDefaultExportPath.",
+    "Modify src/ZapiCli/Commands/TraceCommands.cs — TraceConfigSetCommand: change DI dependency from ITraceConfigStore to ICliSettingsStore. In ExecuteAsync: load existing CliSettings, create updated = existing with { TraceDefaultExportPath = absPath }, call store.SaveAsync(updated). Output: { status: ok, data: { trace_default_export_path: absPath } }.",
+    "Modify src/ZapiCli/Commands/ConfigCommands.cs — (1) Add ConfigSetScopeFileCommand: command 'config set scope-file <PATH>'. Validate() does NOT check file existence (deferred to login time). ExecuteAsync: load settings, save with ScopeFile = absPath. Output: { status: ok, data: { scope_file: absPath } }. (2) Add ConfigSetAppDirCommand: command 'config set app-dir <PATH>'. Validate() creates the directory if it does not exist (Directory.CreateDirectory). ExecuteAsync: load settings, save with AppDataDir = absPath. Output: { status: ok, data: { app_data_dir: absPath } }. (3) Update ConfigShowCommand.ExecuteAsync to output all four fields: env_file, scope_file, app_data_dir, trace_default_export_path.",
+    "Modify src/ZapiCli/Program.cs — (1) Remove ITraceConfigStore and TraceConfigStore DI registration. (2) Pass ICliSettingsStore to TraceSession DI registration. (3) Add pre-startup call: var appDataDir = CliSettingsStore.TryReadPersistedAppDataDir(earlyConfigDir). (4) Pass appDataDir to AccountStore constructor (see story-18 for AccountStore changes — for now just plumb the parameter). (5) Register new commands: config.AddBranch(\"config\", cfg => { cfg.AddBranch(\"set\", set => { set.AddCommand<ConfigSetEnvFileCommand>(\"env-file\"); set.AddCommand<ConfigSetScopeFileCommand>(\"scope-file\"); set.AddCommand<ConfigSetAppDirCommand>(\"app-dir\"); set.AddCommand<TraceConfigSetCommand>(\"trace-export-path\"); }); cfg.AddCommand<ConfigShowCommand>(\"show\"); }).",
+    "Unit tests: (1) CliSettings serializes/deserializes all four new fields correctly with SnakeCaseLower JSON. (2) TraceSession reads DefaultExportPath from CliSettings.TraceDefaultExportPath. (3) ConfigSetScopeFileCommand saves ScopeFile path without checking file existence. (4) ConfigSetAppDirCommand creates missing directory and saves AppDataDir. (5) ConfigShowCommand output includes all four fields."
+  ],
+  "acceptanceCriteria": [
+    "ITraceConfigStore.cs and TraceConfigStore.cs are deleted from src/",
+    "CliSettings record has ScopeFile, AppDataDir, TraceDefaultExportPath properties",
+    "CliSettingsStore has TryReadPersistedAppDataDir static method",
+    "TraceSession constructor accepts ICliSettingsStore, not ITraceConfigStore",
+    "config show outputs env_file, scope_file, app_data_dir, trace_default_export_path",
+    "config set scope-file <path> saves path without existence check",
+    "config set app-dir <path> creates directory and saves path",
+    "trace config set <path> writes TraceDefaultExportPath to CliSettings (not a separate file)",
+    "dotnet build succeeds 0 errors 0 warnings",
+    "All tests pass"
+  ],
+  "contextForAgent": "The existing trace config set command is registered under 'trace config set' in Program.cs. After this story it still lives under the same surface ('trace config set') but its implementation reads/writes CliSettings instead of TraceConfig. The command name does NOT change — only the backing store changes. For the scope-file validation: Validate() is intentionally minimal — do not add File.Exists() check. The login command (story-21) owns the runtime validation. TryReadPersistedAppDataDir follows the exact pattern of TryReadPersistedEnvFile: open cli-settings.json, deserialize, return AppDataDir field, return null on any exception. This value is used by AccountStore in story-18.",
+  "openItems": [
+    {
+      "item": "trace-config.json migration for existing users",
+      "defaultAssumption": "No migration needed. Existing trace-config.json files on disk are silently ignored after this story. Users must re-run 'trace config set' to reconfigure the export path. This is acceptable because this is a developer tool and the setting is trivially reconfigured."
+    }
+  ],
+  "sourceReferences": [
+    "src/ZapiCli.Core/ICliSettingsStore.cs",
+    "src/ZapiCli.Core/CliSettingsStore.cs",
+    "src/ZapiCli.Core/Trace/ITraceConfigStore.cs",
+    "src/ZapiCli.Core/Trace/TraceConfigStore.cs",
+    "src/ZapiCli.Core/Trace/TraceSession.cs",
+    "src/ZapiCli/Commands/ConfigCommands.cs",
+    "src/ZapiCli/Commands/TraceCommands.cs",
+    "src/ZapiCli/Program.cs"
+  ],
+  "relevantOpenQuestions": []
+}

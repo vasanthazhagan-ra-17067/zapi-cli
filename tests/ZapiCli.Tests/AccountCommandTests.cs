@@ -66,136 +66,6 @@ public sealed class AccountCommandTests : IDisposable
             NullLogger<AccountService>.Instance,
             new FakeOAuthBrowserFlow());
 
-    // ── account add ───────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task AccountAdd_HappyPath_PersistsAccountAndReturnsNameDc()
-    {
-        var service = CreateService(UserInfoFactory("alice@example.com", "Z42"));
-        var (name, dc) = await service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us", []);
-
-        Assert.Equal("work", name);
-        Assert.Equal("us", dc);
-
-        var entry = await _store.FindAsync("work");
-        Assert.NotNull(entry);
-        Assert.Equal("alice@example.com", entry.Email);
-        Assert.Equal("Z42", entry.Zuid);
-        Assert.True(entry.IsDefault);  // first account → default
-        Assert.Equal(1, _auth.StoreTokenCallCount);
-    }
-
-    [Fact]
-    public async Task AccountAdd_DuplicateName_ThrowsAccountAlreadyExists()
-    {
-        await _store.SaveAsync(new AccountsRoot
-        {
-            Accounts = [new AccountEntry { Name = "work", Dc = "us" }],
-        });
-
-        var service = CreateService();
-        var ex = await Assert.ThrowsAsync<ZapiCliException>(
-            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us", []));
-
-        Assert.Equal(ErrorCodes.ACCOUNT_ALREADY_EXISTS, ex.Code);
-        Assert.Equal(0, _auth.StoreTokenCallCount);  // no keychain write
-    }
-
-    [Fact]
-    public async Task AccountAdd_ZohoCorpEmail_ThrowsDomainBlockedBeforeKeychainWrite()
-    {
-        var service = CreateService(UserInfoFactory("attacker@zohocorp.com"));
-        var ex = await Assert.ThrowsAsync<ZapiCliException>(
-            () => service.AddAccountAsync("corp", "code", "https://www.zoho.com", "cid", "csec", "us", []));
-
-        Assert.Equal(ErrorCodes.ACCOUNT_DOMAIN_BLOCKED, ex.Code);
-        Assert.Equal(1, ex.ExitCode);
-        Assert.Equal(0, _auth.StoreTokenCallCount);  // keychain write never called
-    }
-
-    [Fact]
-    public async Task AccountAdd_MissingEmailInUserInfo_ThrowsEmailRequired()
-    {
-        var service = CreateService(UserInfoNoEmailFactory());
-        var ex = await Assert.ThrowsAsync<ZapiCliException>(
-            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us", []));
-
-        Assert.Equal(ErrorCodes.EMAIL_REQUIRED, ex.Code);
-        Assert.Equal(0, _auth.StoreTokenCallCount);  // keychain write never called
-    }
-
-    [Fact]
-    public async Task AccountAdd_HttpAuthFailure_ThrowsAuthFailure()
-    {
-        var service = CreateService(UserInfoAuthFailFactory(HttpStatusCode.Unauthorized));
-        var ex = await Assert.ThrowsAsync<ZapiCliException>(
-            () => service.AddAccountAsync("work", "code", "https://www.zoho.com", "cid", "csec", "us", []));
-
-        Assert.Equal(ErrorCodes.AUTH_FAILURE, ex.Code);
-        Assert.Equal(2, ex.ExitCode);
-        Assert.Equal(0, _auth.StoreTokenCallCount);
-    }
-
-    // ── AccountAddSettings.Validate() ─────────────────────────────────────────
-
-    [Fact]
-    public void AccountAddSettings_MissingToken_ValidationFails()
-    {
-        var settings = new AccountCommands.AccountAddSettings
-        {
-            Name = "work",
-            // Code intentionally omitted (null)
-            ClientId = "cid",
-            ClientSecret = "csec",
-        };
-        var result = settings.Validate();
-        Assert.False(result.Successful);
-    }
-
-    [Fact]
-    public void AccountAddSettings_MissingName_ValidationFails()
-    {
-        var settings = new AccountCommands.AccountAddSettings
-        {
-            Code = "gc",
-            ClientId = "cid",
-            ClientSecret = "csec",
-        };
-        var result = settings.Validate();
-        Assert.False(result.Successful);
-    }
-
-    [Fact]
-    public void AccountAddSettings_InvalidDc_ValidationFails()
-    {
-        var settings = new AccountCommands.AccountAddSettings
-        {
-            Name = "work",
-            Code = "gc",
-            ClientId = "cid",
-            ClientSecret = "csec",
-            Dc = "xx",  // not a valid DC
-        };
-        var result = settings.Validate();
-        Assert.False(result.Successful);
-    }
-
-    [Fact]
-    public void AccountAddSettings_AllValid_ValidationSucceeds()
-    {
-        var settings = new AccountCommands.AccountAddSettings
-        {
-            Name = "work",
-            Code = "gc",
-            ClientId = "cid",
-            ClientSecret = "csec",
-            Scope = "ZohoCRM.Contacts.READ",
-            Dc = "eu",
-        };
-        var result = settings.Validate();
-        Assert.True(result.Successful);
-    }
-
     // ── account list ─────────────────────────────────────────────────────────
 
     [Fact]
@@ -224,7 +94,7 @@ public sealed class AccountCommandTests : IDisposable
     // ── account show ─────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task AccountShow_TokenAlwaysMasked()
+    public async Task AccountShow_NoTokenField_InOutput()
     {
         await _store.SaveAsync(new AccountsRoot
         {
@@ -234,7 +104,13 @@ public sealed class AccountCommandTests : IDisposable
         var service = CreateService();
         var view = await service.ShowAccountAsync("work");
 
-        Assert.Equal("***", view.Token);
+        // The view must not expose any token/credential field (ADR-0008).
+        var props = typeof(ZapiCli.Core.Accounts.AccountShowView)
+            .GetProperties()
+            .Select(p => p.Name)
+            .ToList();
+        Assert.DoesNotContain("Token", props);
+        Assert.Equal("work", view.Name);
     }
 
     [Fact]

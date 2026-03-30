@@ -2,23 +2,22 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
-using Spectre.Console.Cli;
-using ZapiCli.Commands;
 using ZapiCli.Core;
 using ZapiCli.Core.Accounts;
+using ZapiCli.Core.Auth;
 using ZapiCli.Tests.Fakes;
 
 namespace ZapiCli.Tests.Accounts;
 
 /// <summary>
-/// Tests for Story 13: --scope flag wired through AddAccountAsync and LoginAsync
-/// into AccountEntry.Scopes.
+/// Tests verifying that scopes are persisted through the MobileLoginAsync flow into AccountEntry.Scopes.
 /// </summary>
 public sealed class AccountAddScopesTests : IDisposable
 {
     private readonly string _tmpDir;
     private readonly AccountStore _store;
     private readonly FakeAuthProvider _auth = new();
+    private readonly FakeRsaKeyPairProvider _rsaProvider = new();
 
     public AccountAddScopesTests()
     {
@@ -30,23 +29,33 @@ public sealed class AccountAddScopesTests : IDisposable
     public void Dispose()
     {
         try { Directory.Delete(_tmpDir, recursive: true); } catch { /* best-effort */ }
+        _rsaProvider.Dispose();
     }
 
     // ── helpers ────────────────────────────────────────────────────────────────
 
-    private const string FakeTokenJson =
-        "{\"access_token\":\"test-access\",\"refresh_token\":\"test-refresh\",\"token_type\":\"Bearer\",\"expires_in\":3600000}";
-
-    private static IHttpClientFactory UserInfoFactory(string email = "user@example.com")
+    private IHttpClientFactory UserInfoFactory(string email = "user@example.com")
     {
         var userInfoJson = $"{{\"Email\":\"{email}\",\"ZUID\":\"Z001\"}}";
         return FakeHttpMessageHandler.ToFactory(req =>
-            req.Method == HttpMethod.Post
+            req.RequestUri!.AbsolutePath.Contains("token")
                 ? new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(FakeTokenJson, Encoding.UTF8, "application/json") }
+                    { Content = new StringContent(
+                        $"{{\"access_token\":\"test-access\",\"refresh_token\":\"test-refresh\"," +
+                        "\"dc_locations\":{\"us\":\"accounts.zoho.com\"}}",
+                        Encoding.UTF8, "application/json") }
                 : new HttpResponseMessage(HttpStatusCode.OK)
                     { Content = new StringContent(userInfoJson, Encoding.UTF8, "application/json") });
     }
+
+    private FakeMobileCallbackServer MakeFakeServer() =>
+        new FakeMobileCallbackServer(new MobileCallbackResult(
+            Code: "grant-code",
+            State: "fake-state-token",
+            GtHash: "irrelevant-hash",
+            GtSec: _rsaProvider.EncryptAsServer("fake-client-secret"),
+            AccountsServer: "https://accounts.zoho.com",
+            Location: "us"));
 
     private AccountService CreateService(IHttpClientFactory? httpFactory = null)
         => new AccountService(
@@ -54,113 +63,49 @@ public sealed class AccountAddScopesTests : IDisposable
             _auth,
             httpFactory ?? UserInfoFactory(),
             NullLogger<AccountService>.Instance,
-            new FakeOAuthBrowserFlow());
+            new FakeOAuthBrowserFlow("fake-state-token"));
 
-    // ── Test 1: Single scope persisted ────────────────────────────────────────
+    // ── Test 1: Single scope persisted via MobileLoginAsync ───────────────────
 
     [Fact]
-    public async Task AddAccountAsync_SingleScope_IsPersistedInAccountEntry()
+    public async Task MobileLoginAsync_SingleScope_IsPersistedInAccountEntry()
     {
         var service = CreateService();
 
-        await service.AddAccountAsync(
-            "work", "code", "https://www.zoho.com", "cid", "csec", "us",
-            new[] { "ZohoCRM.Contacts.READ" });
-
-        var entry = await _store.FindAsync("work");
-        Assert.NotNull(entry);
-        Assert.Equal(new[] { "ZohoCRM.Contacts.READ" }, entry!.Scopes);
-    }
-
-    // ── Test 2: Multiple comma-parsed scopes stored correctly ─────────────────
-
-    [Fact]
-    public async Task AddAccountAsync_MultipleScopes_AllPersistedInAccountEntry()
-    {
-        var service = CreateService();
-
-        await service.AddAccountAsync(
-            "work", "code", "https://www.zoho.com", "cid", "csec", "us",
-            new[] { "ZohoCRM.Contacts.READ", "ZohoCRM.Deals.READ" });
+        await service.MobileLoginAsync(
+            "work", "cid", ["ZohoCRM.Contacts.READ"],
+            dc: "us",
+            callbackPort: 54321,
+            clientSecret: null,
+            rsaProvider: _rsaProvider,
+            ct: default,
+            serverFactory: MakeFakeServer);
 
         var entry = await _store.FindAsync("work");
         Assert.NotNull(entry);
         Assert.Contains("ZohoCRM.Contacts.READ", entry!.Scopes);
-        Assert.Contains("ZohoCRM.Deals.READ", entry!.Scopes);
-        Assert.Equal(2, entry.Scopes.Count);
     }
 
-    // ── Test 3: AccountAddSettings.Validate() fails when --scope is missing ───
+    // ── Test 2: Multiple scopes persisted via MobileLoginAsync ────────────────
 
     [Fact]
-    public void AccountAddSettings_MissingScope_ValidationFails()
-    {
-        var settings = new AccountCommands.AccountAddSettings
-        {
-            Name = "work",
-            Code = "gc",
-            ClientId = "cid",
-            ClientSecret = "csec",
-            // Scope intentionally omitted
-        };
-        var result = settings.Validate();
-        Assert.False(result.Successful);
-        Assert.Contains("scope", result.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void AccountAddSettings_WhitespaceScope_ValidationFails()
-    {
-        var settings = new AccountCommands.AccountAddSettings
-        {
-            Name = "work",
-            Code = "gc",
-            ClientId = "cid",
-            ClientSecret = "csec",
-            Scope = "   ",
-        };
-        var result = settings.Validate();
-        Assert.False(result.Successful);
-        Assert.Contains("scope", result.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    // ── Test 4: LoginAsync stores scopes ──────────────────────────────────────
-
-    [Fact]
-    public async Task LoginAsync_SingleScope_IsPersistedInAccountEntry()
+    public async Task MobileLoginAsync_MultipleScopes_AllPersistedInAccountEntry()
     {
         var service = CreateService();
 
-        var fakeServer = new FakeLocalCallbackServer(code: "login-code", state: "fake-state-token");
-        await service.LoginAsync(
-            "work", "cid", "csec",
-            new[] { "ZohoCliq.Channels.READ" },
-            "us",
-            callbackPort: 8085,
-            serverFactory: () => fakeServer);
+        await service.MobileLoginAsync(
+            "work2", "cid", ["ZohoCRM.Contacts.READ", "ZohoCRM.Deals.READ"],
+            dc: "us",
+            callbackPort: 54321,
+            clientSecret: null,
+            rsaProvider: _rsaProvider,
+            ct: default,
+            serverFactory: MakeFakeServer);
 
-        var entry = await _store.FindAsync("work");
+        var entry = await _store.FindAsync("work2");
         Assert.NotNull(entry);
-        Assert.Equal(new[] { "ZohoCliq.Channels.READ" }, entry!.Scopes);
-    }
-
-    // ── Test 5: LoginAsync with empty scopes stores empty list ────────────────
-
-    [Fact]
-    public async Task LoginAsync_EmptyScopes_StoresEmptyScopeList()
-    {
-        var service = CreateService();
-
-        var fakeServer = new FakeLocalCallbackServer(code: "login-code", state: "fake-state-token");
-        await service.LoginAsync(
-            "work", "cid", "csec",
-            Array.Empty<string>(),
-            "us",
-            callbackPort: 8085,
-            serverFactory: () => fakeServer);
-
-        var entry = await _store.FindAsync("work");
-        Assert.NotNull(entry);
-        Assert.Empty(entry!.Scopes);
+        Assert.Contains("ZohoCRM.Contacts.READ", entry!.Scopes);
+        Assert.Contains("ZohoCRM.Deals.READ", entry.Scopes);
     }
 }
+

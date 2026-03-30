@@ -1,0 +1,38 @@
+{
+  "storyId": 23,
+  "title": "Remove Token Field from account show and account list Output",
+  "description": "Remove the Token property from AccountShowView entirely. It currently appears as '***' in 'account show' output and serves no informational purpose — it creates a false impression of a token exposure surface. Confirm AccountListView has no token field. Update all output examples in tests and documentation.",
+  "status": "Completed",
+  "dependsOn": [
+    22
+  ],
+  "prerequisiteState": "Stories 1–22 complete. AccountShowView has a Token property with value '***' that appears in 'account show' output. AccountListView has no token field.",
+  "goal": "After this story: 'account show' and 'account list' output contains no token or credential fields whatsoever.",
+  "scope": [
+    "Modify src/ZapiCli.Core/Accounts/AccountShowView.cs — delete the Token property (public string Token { get; init; } = \"***\";) entirely from the record.",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — in ShowAccountAsync, remove Token = \"***\" from the AccountShowView initializer. The returned object must have no token field.",
+    "Verify src/ZapiCli.Core/Accounts/AccountListView.cs has no Token property — read the file and confirm. No code change needed if absent.",
+    "Update any unit tests that assert on a Token field or '***' in the output for account show — remove those assertions.",
+    "Update docs/HELP.md — in the 'account show' Example output section, remove the 'access_token: \"***\"' line from the JSON example. In any 'account list' example, confirm no token field appears.",
+    "Confirm no other test or command references the Token field on AccountShowView or AccountListView after removal (grep for '.Token' and 'Token =' in tests/)."
+  ],
+  "acceptanceCriteria": [
+    "AccountShowView has no Token property",
+    "AccountService.ShowAccountAsync does not set Token = '***'",
+    "AccountListView has no Token property (confirmed, no change needed)",
+    "'account show' command output contains no 'token' or 'access_token' JSON keys",
+    "docs/HELP.md account show example output has no token field",
+    "dotnet build succeeds 0 errors 0 warnings",
+    "All tests pass"
+  ],
+  "contextForAgent": "This is a small, isolated change. The ADR-0008 output contract explicitly states that credentials are never emitted to stdout. The '***' token was a defensive placeholder from an earlier design — it is safe to remove entirely. No migration or backward compatibility concern: this is a developer CLI and the output contract is not externally versioned.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli.Core/Accounts/AccountShowView.cs",
+    "src/ZapiCli.Core/Accounts/AccountListView.cs",
+    "src/ZapiCli.Core/Accounts/AccountService.cs",
+    "docs/HELP.md"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-03-26"
+}

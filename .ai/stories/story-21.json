@@ -1,0 +1,58 @@
+{
+  "storyId": 21,
+  "title": "Remove account add + New account login (Mobile OAuth, DC from callback location)",
+  "description": "Delete account add and the old browser-only account login. Rename mobile-login to become the new account login. Simplify the new login: remove --port (fixed 8085), remove --client-id/--client-secret/--dc/--file flags. Credentials come from environment variables only (loaded via configured env-file). DC is auto-detected from the location parameter in the OAuth callback. Name is optional (defaults to email). Scope validation is deferred to ExecuteAsync.",
+  "status": "Completed",
+  "completedDate": "2025-01-27",
+  "dependsOn": [20],
+  "prerequisiteState": "Stories 1–20 complete. AccountCommands has AccountAddCommand, AccountLoginCommand (old browser flow), AccountMobileLoginCommand. AccountService has AddAccountAsync, LoginAsync, MobileLoginAsync. OAuthConstants.DefaultCallbackPort = 8085 and OAuthConstants.RequiredProfileScope = AaaServer.profile.READ exist (story 16).",
+  "goal": "After this story: 'zapi-cli account login' is the ONLY account creation command. It uses the Zoho Mobile OAuth flow. --name is optional. DC is detected from callback. Credentials come from ZOHO_CLIENT_ID/ZOHO_CLIENT_SECRET env vars. The fixed callback port is OAuthConstants.DefaultCallbackPort. account add, old account login, account mobile-login are gone from the command surface.",
+  "scope": [
+    "Delete AccountAddSettings, AccountAddCommand from src/ZapiCli/Commands/AccountCommands.cs. Delete AccountLoginSettings and AccountLoginCommand (the OLD browser-flow version). Delete AccountMobileLoginSettings and AccountMobileLoginCommand (to be replaced by new simplified version).",
+    "Delete src/ZapiCli/Commands/LoginConfig.cs.",
+    "Remove 'account add' and 'account mobile-login' registrations from src/ZapiCli/Program.cs. Keep 'account login' registration but point it at the new command class created in this story.",
+    "Remove AddAccountAsync and LoginAsync from src/ZapiCli.Core/Accounts/IAccountService.cs. Update IAccountService XML docs.",
+    "Remove AddAccountAsync and LoginAsync method bodies from src/ZapiCli.Core/Accounts/AccountService.cs.",
+    "Modify MobileLoginAsync in src/ZapiCli.Core/Accounts/AccountService.cs — make it the new canonical login: (a) Remove the dc parameter from the public signature (IAccountService + AccountService). DC is now always derived from the callback's location parameter. (b) Change the name parameter to string? (nullable — if null, name is derived from email after login). (c) Remove the int callbackPort parameter from the public MobileLoginAsync signature in IAccountService — it is now always OAuthConstants.DefaultCallbackPort. Internal/testable overloads may still accept a port. (d) Auth URL base is hardcoded to 'https://accounts.zoho.com' (global entry point) — remove DcResolver call for the auth URL. Use DcResolver only for the token exchange base URL after dc is resolved from callback. (e) After callback: effectiveDc = result.Location?.ToLowerInvariant() ?? 'us'. Pass effectiveDc to ExchangeAndFinalizeAsync. (f) In ExchangeAndFinalizeAsync: when name parameter is null, derive account name from email: sanitize by replacing '@' with '_' and '.' with '_', then strip trailing/leading underscores (e.g. 'user@example.com' becomes 'user_example_com'). Uniqueness check runs AFTER email is known. (g) Before building the auth URL, inject OAuthConstants.RequiredProfileScope: var finalScopes = scopes.Append(OAuthConstants.RequiredProfileScope).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(); use finalScopes for auth URL and for persistence.",
+    "Add new error codes to src/ZapiCli.Core/ErrorCodes.cs: ENV_FILE_NOT_CONFIGURED ('ZOHO_CLIENT_ID is not set. Configure an env-file via zapi-cli config set env-file <path>.'); SCOPE_FILE_NOT_CONFIGURED ('No scopes provided. Pass --scope or configure a scope file via zapi-cli config set scope-file <path>.').",
+    "Create new AccountLoginSettings in src/ZapiCli/Commands/AccountCommands.cs: [CommandOption(\"--name\")] string? Name (optional); [CommandOption(\"--scope <SCOPE>\")] string? Scope (optional, comma-separated, additive to scope-file). Validate(): only check Name for illegal characters if it is non-null. Do NOT validate ZOHO_CLIENT_ID or scope here — defer to ExecuteAsync.",
+    "Create new AccountLoginCommand in src/ZapiCli/Commands/AccountCommands.cs — constructor injects IAccountService, IOutputWriter, ICliSettingsStore. ExecuteAsync: (1) Read ZOHO_CLIENT_ID = Environment.GetEnvironmentVariable('ZOHO_CLIENT_ID'). If null or whitespace: throw ZapiCliException(ENV_FILE_NOT_CONFIGURED, exitCode: 1). (2) Load CliSettings = await _settingsStore.LoadAsync(ct). (3) Build scope list — start with Scope flag (split on comma). If CliSettings.ScopeFile is non-null: if File.Exists(CliSettings.ScopeFile) is false — throw ZapiCliException($'Scope file not found: {CliSettings.ScopeFile}. Update with zapi-cli config set scope-file <path>.', IO_ERROR, exitCode: 1). Read all lines, split on comma, trim, exclude blank lines and lines starting with '#'. Union with flag scopes (deduplicated case-insensitively). (4) If final scope list is empty: throw ZapiCliException(SCOPE_FILE_NOT_CONFIGURED, exitCode: 1). (5) Read ZOHO_CLIENT_SECRET = Environment.GetEnvironmentVariable('ZOHO_CLIENT_SECRET') (may be null — ClientSecret is optional for RSA-capable apps). (6) Call await _service.MobileLoginAsync(settings.Name, ZOHO_CLIENT_ID, scopes.ToArray(), clientSecret: ZOHO_CLIENT_SECRET, ct: ct). (7) Output: { status: ok, data: { name: result.Name, dc: result.Dc } }.",
+    "Register AccountLoginCommand as 'account login' in Program.cs. Remove 'account add' and 'account mobile-login' entries entirely.",
+    "Update IAccountService.MobileLoginAsync signature: remove dc parameter, make name nullable (string?), remove callbackPort parameter from public interface.",
+    "Unit tests for new AccountLoginCommand.ExecuteAsync: (1) Missing ZOHO_CLIENT_ID env var → ENV_FILE_NOT_CONFIGURED (exit 1) before any service call. (2) ZOHO_CLIENT_ID set, no --scope and no scope-file configured → SCOPE_FILE_NOT_CONFIGURED (exit 1). (3) ZOHO_CLIENT_ID set, scope-file configured but file does not exist at runtime → IO_ERROR (exit 1). (4) ZOHO_CLIENT_ID set, --scope provided → calls MobileLoginAsync with correct scopes. (5) ZOHO_CLIENT_ID set, scope-file with valid content → scopes loaded from file. (6) Both --scope and scope-file → scopes merged and deduplicated. Unit tests for AccountService.MobileLoginAsync: (7) Auth URL uses 'https://accounts.zoho.com/oauth/v2/mobile/auth' base always. (8) location='eu' in callback → effectiveDc='eu'. (9) location absent in callback → effectiveDc='us'. (10) name=null after callback with email 'user@example.com' → account name becomes 'user_example_com'. (11) OAuthConstants.RequiredProfileScope is always in finalScopes even if not passed by caller. (12) Duplicate AaaServer.profile.READ in caller-provided scopes → deduplicated to one entry."
+  ],
+  "acceptanceCriteria": [
+    "account add and account mobile-login commands removed from Program.cs and AccountCommands.cs",
+    "LoginConfig.cs deleted",
+    "AddAccountAsync and LoginAsync removed from IAccountService and AccountService",
+    "account login exists as the single account creation command",
+    "AccountLoginSettings has only --name (optional) and --scope (optional, additive)",
+    "ENV_FILE_NOT_CONFIGURED thrown in ExecuteAsync when ZOHO_CLIENT_ID is not set",
+    "SCOPE_FILE_NOT_CONFIGURED thrown in ExecuteAsync when no scopes from any source",
+    "IO_ERROR thrown when scope-file path is configured but file is missing at login time",
+    "Auth URL always starts with https://accounts.zoho.com",
+    "DC derived from callback location parameter, defaults to 'us' if absent",
+    "OAuthConstants.RequiredProfileScope always included, deduplicated",
+    "Name derived from email when --name not provided",
+    "dotnet build succeeds 0 errors 0 warnings",
+    "All tests pass"
+  ],
+  "contextForAgent": "The internal testable overload of MobileLoginAsync (for unit tests using fake callback servers) still accepts callbackPort and server factory as before — only the PUBLIC interface on IAccountService loses these parameters. ExchangeAndFinalizeAsync may need to return (name, dc) pair so MobileLoginAsync can assign the email-derived name. Currently ExchangeAndFinalizeAsync takes a name string and uses it directly — to support nullable name, the email must be parsed inside ExchangeAndFinalizeAsync and returned back. Review ExchangeAndFinalizeAsync carefully before modifying. The scope-file line format: each line is one scope OR multiple comma-separated scopes on one line. Lines where the trimmed content starts with '#' are comments and skipped. Blank lines after trim are skipped. The resulting scope strings should be trimmed of whitespace individually.",
+  "openItems": [
+    {
+      "item": "ExchangeAndFinalizeAsync return type for email-derived name",
+      "defaultAssumption": "Change ExchangeAndFinalizeAsync to accept string? name. When name is null after parsing email from user-info response, derive name = email.Replace('@', '_').Replace('.', '_'). Uniqueness check runs here. Return (resolvedName, resolvedDc)."
+    }
+  ],
+  "sourceReferences": [
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli/Commands/LoginConfig.cs",
+    "src/ZapiCli.Core/Accounts/AccountService.cs",
+    "src/ZapiCli.Core/Accounts/IAccountService.cs",
+    "src/ZapiCli.Core/Auth/OAuthBrowserFlow.cs",
+    "src/ZapiCli.Core/OAuthConstants.cs",
+    "src/ZapiCli.Core/ErrorCodes.cs",
+    "src/ZapiCli/Program.cs"
+  ],
+  "relevantOpenQuestions": []
+}

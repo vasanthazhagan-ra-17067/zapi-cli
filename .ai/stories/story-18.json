@@ -1,0 +1,34 @@
+{
+  "storyId": 18,
+  "title": "AccountStore: AppDataDir Support + FindByEmail + FindByZuid",
+  "description": "Update AccountStore to accept an optional app data directory (from CliSettings.AppDataDir) so that accounts.json can live in a user-configured app-owned directory separate from the default config dir. Also add FindByEmailAsync and FindByZuidAsync lookup methods to IAccountStore to support multi-identifier account resolution.",
+  "status": "Completed",
+  "completedDate": "2026-03-25",
+  "dependsOn": [17],
+  "prerequisiteState": "Stories 1–17 complete. AccountStore constructor accepts (string configDir, ILogger<AccountStore> logger) and always writes accounts.json next to cli-settings.json. CliSettingsStore.TryReadPersistedAppDataDir exists. IAccountStore has FindAsync and GetDefaultAsync only.",
+  "goal": "After this story: AccountStore can write accounts.json to a configurable app-owned directory. IAccountStore exposes FindByEmailAsync and FindByZuidAsync. Program.cs reads AppDataDir at startup and passes it to AccountStore.",
+  "scope": [
+    "Modify src/ZapiCli.Core/Accounts/IAccountStore.cs — add two new method signatures: Task<AccountEntry?> FindByEmailAsync(string email, CancellationToken ct = default); Task<AccountEntry?> FindByZuidAsync(string zuidstring, CancellationToken ct = default). Add XML docs: FindByEmailAsync returns the first account whose Email matches case-insensitively; returns null if not found. FindByZuidAsync returns the first account whose Zuid matches exactly (string ordinal); returns null if not found.",
+    "Modify src/ZapiCli.Core/Accounts/AccountStore.cs — (1) Update constructor signature to: public AccountStore(string configDir, ILogger<AccountStore> logger, string? appDataDir = null). The data directory for accounts.json is: appDataDir ?? configDir. All other behaviour (ApplyPermissions, etc.) unchanged. (2) Implement FindByEmailAsync: load accounts, return first where a.Email is not null and a.Email.Equals(email, StringComparison.OrdinalIgnoreCase), else null. (3) Implement FindByZuidAsync: load accounts, return first where a.Zuid is not null and a.Zuid.Equals(zuidstring, StringComparison.Ordinal), else null.",
+    "Modify src/ZapiCli/Program.cs — in the AccountStore DI registration, read appDataDir from CliSettingsStore.TryReadPersistedAppDataDir(earlyConfigDir) and pass it: services.AddSingleton<IAccountStore>(sp => new AccountStore(configDir, sp.GetRequiredService<ILogger<AccountStore>>(), appDataDir));",
+    "Unit tests in tests/ZapiCli.Tests/Accounts/AccountStoreTests.cs (add to existing or create): (1) When appDataDir is null, accounts.json is written to configDir. (2) When appDataDir is set, accounts.json is written to appDataDir, not configDir. (3) FindByEmailAsync: match is case-insensitive (USER@DOMAIN.COM matches user@domain.com). (4) FindByEmailAsync: returns null when no account has that email. (5) FindByZuidAsync: match is exact/ordinal (does not match partial prefix). (6) FindByZuidAsync: returns null when no account has that ZUID."
+  ],
+  "acceptanceCriteria": [
+    "IAccountStore has FindByEmailAsync and FindByZuidAsync method signatures",
+    "AccountStore constructor has optional appDataDir parameter",
+    "When appDataDir is provided, accounts.json is created in appDataDir, not configDir",
+    "FindByEmailAsync is case-insensitive on the email field",
+    "FindByZuidAsync is exact-match (StringComparison.Ordinal) on the Zuid field",
+    "Program.cs reads TryReadPersistedAppDataDir and passes result to AccountStore",
+    "dotnet build succeeds 0 errors 0 warnings",
+    "All tests pass including new AccountStore tests"
+  ],
+  "contextForAgent": "The appDataDir parameter defaults to null so that existing tests that construct AccountStore with (configDir, logger) compile without change. The 'app container' concept: on macOS this would be something like ~/Library/Application Support/zapi-cli/data/ (user-configured). The CLI does not impose any OS-specific default — it uses configDir unless the user explicitly ran 'config set app-dir'. AccountEntry.Zuid is [JsonPropertyName(\"zuidstring\")] on disk — the C# property name is Zuid. FindByZuidAsync receives a zuidstring value and matches against a.Zuid.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli.Core/Accounts/IAccountStore.cs",
+    "src/ZapiCli.Core/Accounts/AccountStore.cs",
+    "src/ZapiCli/Program.cs"
+  ],
+  "relevantOpenQuestions": []
+}

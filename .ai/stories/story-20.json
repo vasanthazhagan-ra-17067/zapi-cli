@@ -1,0 +1,45 @@
+{
+  "storyId": 20,
+  "title": "account rename Command",
+  "description": "Add an 'account rename' command that renames an existing account by any identifier (--name, --email, --zuidstring). The rename updates: AccountEntry.Name in accounts.json, the keychain credential entry key, and the accounts.json IsDefault flag if applicable. Validate that the new name does not collide with an existing account.",
+  "status": "Completed",
+  "dependsOn": [
+    19
+  ],
+  "prerequisiteState": "Stories 1–19 complete. ResolveAccountAsync exists. IAuthProvider has GetTokenAsync, StoreTokenAsync, RefreshTokenAsync, ClearTokenAsync. No rename operation exists anywhere.",
+  "goal": "After this story: 'zapi-cli account rename --name old --new-name new' renames the account in all storage locations (accounts.json + keychain). The account is accessible by the new name immediately. The old keychain key is cleaned up.",
+  "scope": [
+    "Add new error code to src/ZapiCli.Core/ErrorCodes.cs: public static readonly string ACCOUNT_RENAME_FAILED = \"ACCOUNT_RENAME_FAILED\"; with XML doc 'Thrown when the keychain credential rename operation fails (e.g., write succeeded but delete of old key failed).'",
+    "Add RenameTokenAsync(string oldName, string newName, CancellationToken ct = default) to src/ZapiCli.Core/Auth/IAuthProvider.cs. XML doc: 'Reads the credential bundle stored under oldName, writes it under newName, then deletes the oldName entry. If the write fails, throws ZapiCliException with KEYCHAIN_ERROR. If the delete fails after a successful write, throws with ACCOUNT_RENAME_FAILED (partial failure — the new key exists but the old key remains; the account is accessible by newName).'",
+    "Implement RenameTokenAsync in src/ZapiCli.Core/Auth/OAuthProvider.cs: (1) var json = await _keychain.GetAsync(MakeKey(oldName), ct); if null throw KEYCHAIN_ERROR ('No credentials found for account {oldName}'). (2) await _keychain.SetAsync(MakeKey(newName), json, ct); catch and throw KEYCHAIN_ERROR. (3) await _keychain.DeleteAsync(MakeKey(oldName), ct); catch exceptions and throw ACCOUNT_RENAME_FAILED with message 'Credentials written for {newName} but failed to remove old key {oldName}. Manually remove the old keychain entry if needed.'",
+    "Add RenameAccountAsync(string? name, string? email, string? zuidstring, string newName, CancellationToken ct = default) to src/ZapiCli.Core/Accounts/IAccountService.cs. XML doc: 'Renames an account identified by any one of name/email/zuidstring to newName. Updates accounts.json and the keychain key. Throws INVALID_ARGS if none or multiple identifiers provided. Throws ACCOUNT_NOT_FOUND if no match. Throws ACCOUNT_ALREADY_EXISTS if newName is already taken. Throws KEYCHAIN_ERROR or ACCOUNT_RENAME_FAILED on keychain failure.'",
+    "Implement RenameAccountAsync in src/ZapiCli.Core/Accounts/AccountService.cs: (1) Validate newName: if null/whitespace throw INVALID_ARGS; if contains /\\:*? throw INVALID_ARGS ('--new-name must not contain / \\ : * ? characters.'). (2) ResolveAccountAsync to get existing entry (oldEntry). (3) Load AccountsRoot; check newName not already taken: if any existing account has Name == newName (StringComparison.Ordinal) throw ACCOUNT_ALREADY_EXISTS. (4) await _authProvider.RenameTokenAsync(oldEntry.Name, newName, ct). (5) Build updatedAccounts: replace oldEntry with oldEntry with { Name = newName } in the list. (6) await _accountStore.SaveAsync(new AccountsRoot { Accounts = updatedAccounts }, ct). (7) Return (oldEntry.Name, newName).",
+    "Add AccountRenameSettings and AccountRenameCommand to src/ZapiCli/Commands/AccountCommands.cs: Settings: [CommandOption(\"--name\")] string? Name, [CommandOption(\"--email\")] string? Email, [CommandOption(\"--zuidstring\")] string? ZuidString, [CommandOption(\"--new-name <NEW_NAME>\")] string? NewName. Validate(): exactly one source identifier; NewName is required; NewName must not contain /\\:*? characters. ExecuteAsync: call _service.RenameAccountAsync(settings.Name, settings.Email, settings.ZuidString, settings.NewName!, ct). Output: { status: ok, data: { old_name: '...', new_name: '...' } }.",
+    "Register in src/ZapiCli/Program.cs: account.AddCommand<AccountRenameCommand>(\"rename\").WithDescription(\"Rename an account and update its keychain entry.\");",
+    "Unit tests in tests/ZapiCli.Tests/Accounts/AccountRenameTests.cs: (1) Rename by name — accounts.json updated, RenameTokenAsync called with correct old/new keys. (2) Rename by email — ResolveAccountAsync routes to FindByEmailAsync. (3) Rename to an existing name — throws ACCOUNT_ALREADY_EXISTS. (4) Rename with no source identifier — throws INVALID_ARGS. (5) Rename with multiple source identifiers — throws DUPLICATE_IDENTIFIER. (6) Rename with invalid characters in new-name — throws INVALID_ARGS. (7) Keychain write success but delete failure — throws ACCOUNT_RENAME_FAILED; accounts.json is already updated (tolerate partial keychain state)."
+  ],
+  "acceptanceCriteria": [
+    "ErrorCodes.ACCOUNT_RENAME_FAILED exists",
+    "IAuthProvider.RenameTokenAsync is declared and implemented in OAuthProvider",
+    "IAccountService.RenameAccountAsync is declared and implemented",
+    "account rename command registered in Program.cs",
+    "AccountRenameSettings accepts --name, --email, --zuidstring (exactly one required), --new-name (required)",
+    "Rename updates accounts.json and the keychain entry atomically-best-effort",
+    "ACCOUNT_ALREADY_EXISTS thrown when new-name collides",
+    "dotnet build succeeds 0 errors 0 warnings",
+    "All tests pass including new rename tests"
+  ],
+  "contextForAgent": "The keychain key format is 'zapi-cli:<accountName>:oauth'. MakeKey(name) in OAuthProvider returns $'zapi-cli:{name}:oauth'. RenameTokenAsync must call MakeKey on both oldName and newName. The partial failure scenario (write succeeded, delete failed) should not roll back the accounts.json write — the account is accessible by newName and the old keychain entry is orphaned but harmless. The error message for ACCOUNT_RENAME_FAILED must explicitly tell the user what happened so they can manually clean up the old keychain entry if desired.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli.Core/Auth/IAuthProvider.cs",
+    "src/ZapiCli.Core/Auth/OAuthProvider.cs",
+    "src/ZapiCli.Core/Accounts/IAccountService.cs",
+    "src/ZapiCli.Core/Accounts/AccountService.cs",
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli/Program.cs",
+    "src/ZapiCli.Core/ErrorCodes.cs"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2025-07-24"
+}

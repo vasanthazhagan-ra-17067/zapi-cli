@@ -4,8 +4,7 @@ namespace ZapiCli.Core.Accounts;
 
 /// <summary>
 /// Projection used by <c>account show</c>. Exposes all account fields.
-/// The <see cref="Token"/> property is unconditionally set to <c>"***"</c> — real credentials
-/// are never included in output (ADR-0008).
+/// Credentials are never included in output (ADR-0008).
 /// </summary>
 public sealed record AccountShowView
 {
@@ -17,7 +16,4 @@ public sealed record AccountShowView
 
     public List<string> Scopes { get; init; } = [];
     public bool IsDefault { get; init; }
-
-    /// <summary>Always "***" — the real access token is never emitted in CLI output.</summary>
-    public string Token { get; init; } = "***";
 }

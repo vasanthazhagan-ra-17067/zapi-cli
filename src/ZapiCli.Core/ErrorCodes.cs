@@ -56,8 +56,45 @@ public static class ErrorCodes
     public const string SCOPE_ENHANCE_DENIED = "SCOPE_ENHANCE_DENIED";
 
     /// <summary>
-    /// Thrown by <c>scope add</c> when the POST to /oauth/v2/token/scopeenhance fails
-    /// at the HTTP level or the response is missing an access_token.
+    /// Thrown when the keychain credential rename operation fails
+    /// (e.g., write succeeded but delete of old key failed).
     /// </summary>
-    public const string SCOPE_ENHANCE_FAILED = "SCOPE_ENHANCE_FAILED";
+    public static readonly string ACCOUNT_RENAME_FAILED = "ACCOUNT_RENAME_FAILED";
+
+    /// <summary>
+    /// Thrown when the keychain credential rename operation fails
+    /// (e.g., write succeeded but delete of old key failed).
+    /// </summary>
+    public static readonly string SCOPE_ENHANCE_FAILED = "SCOPE_ENHANCE_FAILED";
+
+    /// <summary>
+    /// Thrown by the Zoho Mobile OAuth flow when the token exchange response does not contain
+    /// a <c>dc_locations</c> object. Zoho requires this field for Data Center Location routing;
+    /// its absence indicates a mobile app configuration error or an unsupported token type.
+    /// </summary>
+    public static readonly string DCL_MISSING = "DCL_MISSING";
+
+    /// <summary>
+    /// Thrown by the Zoho Mobile OAuth flow when RSA decryption of the <c>gt_sec</c> parameter
+    /// (the encrypted <c>client_secret</c> from the OAuth redirect) fails.
+    /// </summary>
+    public static readonly string RSA_DECRYPT_FAILURE = "RSA_DECRYPT_FAILURE";
+
+    /// <summary>
+    /// Thrown when more than one of --name, --email, --zuidstring is provided to a command
+    /// that accepts exactly one account identifier.
+    /// </summary>
+    public static readonly string DUPLICATE_IDENTIFIER = "DUPLICATE_IDENTIFIER";
+
+    /// <summary>
+    /// Thrown by <c>account login</c> when <c>ZOHO_CLIENT_ID</c> is not set in the environment.
+    /// Configure an env-file via <c>zapi-cli config set env-file &lt;path&gt;</c>.
+    /// </summary>
+    public static readonly string ENV_FILE_NOT_CONFIGURED = "ENV_FILE_NOT_CONFIGURED";
+
+    /// <summary>
+    /// Thrown by <c>account login</c> when no scopes are provided via --scope or a configured scope-file.
+    /// Configure a scope file via <c>zapi-cli config set scope-file &lt;path&gt;</c>.
+    /// </summary>
+    public static readonly string SCOPE_FILE_NOT_CONFIGURED = "SCOPE_FILE_NOT_CONFIGURED";
 }

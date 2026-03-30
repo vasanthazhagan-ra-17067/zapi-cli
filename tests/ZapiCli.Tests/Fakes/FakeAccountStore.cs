@@ -39,4 +39,19 @@ public sealed class FakeAccountStore : IAccountStore
                 ErrorCodes.NO_DEFAULT_ACCOUNT);
         return Task.FromResult(account);
     }
+
+    public Task<AccountEntry?> FindByEmailAsync(string email, CancellationToken ct = default)
+        => Task.FromResult(
+            _accounts.FirstOrDefault(a =>
+                a.Email is not null &&
+                a.Email.Equals(email, StringComparison.OrdinalIgnoreCase)));
+
+    public Task<AccountEntry?> FindByZuidAsync(string zuidstring, CancellationToken ct = default)
+        => Task.FromResult(
+            _accounts.FirstOrDefault(a =>
+                a.Zuid is not null &&
+                a.Zuid.Equals(zuidstring, StringComparison.Ordinal)));
+
+    public Task<bool> MigrateToDirectoryAsync(string newDataDir, CancellationToken ct = default)
+        => Task.FromResult(false);
 }

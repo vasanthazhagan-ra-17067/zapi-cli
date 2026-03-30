@@ -16,13 +16,13 @@ public sealed class TraceSession : ITraceSession
         new(@"^[a-zA-Z0-9_.\\-]{1,64}$", RegexOptions.Compiled);
 
     private readonly string _sessionsFilePath;
-    private readonly ITraceConfigStore _traceConfigStore;
+    private readonly ICliSettingsStore _settingsStore;
     private readonly ILogger<TraceSession> _logger;
 
-    public TraceSession(string configDir, ITraceConfigStore traceConfigStore, ILogger<TraceSession> logger)
+    public TraceSession(string configDir, ICliSettingsStore settingsStore, ILogger<TraceSession> logger)
     {
         _sessionsFilePath = Path.Combine(configDir, "traces", "sessions.json");
-        _traceConfigStore = traceConfigStore;
+        _settingsStore = settingsStore;
         _logger = logger;
     }
 
@@ -146,10 +146,10 @@ public sealed class TraceSession : ITraceSession
             return Path.Combine(requestedExportPath, fileName);
         }
 
-        // No --export-path supplied: read default from trace-config.json.
-        var config = await _traceConfigStore.LoadAsync(ct).ConfigureAwait(false);
-        if (config.DefaultExportPath != null)
-            return Path.Combine(config.DefaultExportPath, fileName);
+        // No --export-path supplied: read default from CliSettings.TraceDefaultExportPath.
+        var settings = await _settingsStore.LoadAsync(ct).ConfigureAwait(false);
+        if (settings.TraceDefaultExportPath != null)
+            return Path.Combine(settings.TraceDefaultExportPath, fileName);
 
         throw new ZapiCliException(
             "No export path specified. Set a default with 'trace config set --default-export-path' or use --export-path.",

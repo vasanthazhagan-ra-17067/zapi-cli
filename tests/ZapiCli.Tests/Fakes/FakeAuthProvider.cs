@@ -74,4 +74,24 @@ public sealed class FakeAuthProvider : IAuthProvider
         GetScopeEnhancementTokenCallCount++;
         return Task.FromResult((PresetEnhanceToken, PresetEnhanceClientId));
     }
+
+    public int RenameTokenCallCount { get; private set; }
+    public string? LastRenameOldName { get; private set; }
+    public string? LastRenameNewName { get; private set; }
+    public Exception? RenameTokenException { get; set; }
+
+    public Task RenameTokenAsync(string oldName, string newName, CancellationToken ct = default)
+    {
+        RenameTokenCallCount++;
+        LastRenameOldName = oldName;
+        LastRenameNewName = newName;
+        if (RenameTokenException is not null)
+            throw RenameTokenException;
+        if (_tokens.TryGetValue(oldName, out var token))
+        {
+            _tokens[newName] = token;
+            _tokens.Remove(oldName);
+        }
+        return Task.CompletedTask;
+    }
 }

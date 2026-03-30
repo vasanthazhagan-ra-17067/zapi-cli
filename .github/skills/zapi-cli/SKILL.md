@@ -63,12 +63,12 @@ All requests are made via the `zapi-cli` binary. The following commands are avai
 | Command | When to use |
 |---------|-------------|
 | `account list` | **Always call first** to verify which accounts are present and healthy for the session. |
-| `account add` | Register a new Zoho account using an OAuth Self-Client grant code (non-interactive setup). |
-| `account login` | Authenticate a new account via browser-based OAuth login (interactive setup). |
-| `account show --name <NAME>` | Inspect a specific account's details (email, datacenter, masked token, client ID). |
-| `account set-default --name <NAME>` | Set the account to be used when `--account` is not specified on individual commands. |
-| `account remove --name <NAME>` | Remove an account and revoke its OAuth token from the Zoho servers. |
-| `account re-auth --name <NAME>` | Re-authenticate an account using its stored refresh token. Call this when exit code is `2` or after adding new scopes via `scope add`. |
+| `account login` | Authenticate a new account via the Mobile OAuth 2.0 browser flow. `ZOHO_CLIENT_ID` must be set via env-file; scopes come from `--scope` flag or configured scope-file; DC is auto-detected from the callback. |
+| `account show [--name\|--email\|--zuidstring]` | Inspect a specific account's details (email, datacenter, scopes, ZUID). Exactly one identifier required. |
+| `account set-default [--name\|--email\|--zuidstring]` | Set the account to be used when `--account` is not specified on individual commands. |
+| `account remove [--name\|--email\|--zuidstring]` | Remove an account and revoke its OAuth token from the Zoho servers. |
+| `account re-auth [--name\|--email\|--zuidstring]` | Re-authenticate an account using its stored refresh token. Call this when exit code is `2` or after adding new scopes via `scope add`. |
+| `account rename [--name\|--email\|--zuidstring] --new-name <NEW>` | Rename an account alias; the keychain entry is also updated to the new name. |
 | `api call --url <URL> -X <METHOD>` | Fire an HTTP request against a Zoho endpoint. The OAuth token is injected automatically. |
 | `api registry add / list / show / update / remove` | Manage the local registry of named API endpoints for reuse across sessions. |
 | `trace session start` | Begin recording all `api call` requests/responses to a structured JSON file. |
@@ -79,11 +79,52 @@ All requests are made via the `zapi-cli` binary. The following commands are avai
 | `trace session remove` | Remove a session from the sessions index (trace file is preserved). |
 | `trace config set --default-export-path <PATH>` | Persist the default export path for trace sessions. |
 | `trace config show` | Display the current trace configuration. |
-| `scope add --scope <SCOPE>` | Add an OAuth scope to an account and flag it for silent re-auth on the next `api call`. |
+| `scope add --scope <SCOPE> [--port <PORT>]` | Add an OAuth scope to an account via incremental OAuth flow (callback on `--port`, default 8085). |
 | `scope list` | List all OAuth scopes configured for an account. |
+| `config set env-file <PATH>` | Persist the `.env` file path loaded at every startup (stores `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`). |
+| `config set scope-file <PATH>` | Persist a scope file path automatically read when `account login` resolves scopes. See [Configuration File Formats](#configuration-file-formats) for required format (scopes unquoted, one per line or comma-separated, `#` comments supported). |
+| `config set app-dir <PATH>` | Persist a custom app data directory where `accounts.json` is stored (created if absent). Automatically migrates `accounts.json` from the previous location if the file does not already exist in the new directory. Response includes `migrated: true/false`. |
+| `config show` | Show the current persisted CLI configuration (env_file, scope_file, app_data_dir, trace_default_export_path). |
 | `util time-ms` | Get current Unix milliseconds — useful for time-range query parameters. |
 | `util uuid` | Generate a UUID v4 — useful for idempotency keys. |
 | `util time-now` | Get current India Standard Time (IST) as a formatted timestamp. |
+
+---
+
+## Configuration File Formats
+
+### Scope File (`config set scope-file`)
+
+The scope file contains OAuth scopes to request during `account login`. Format requirements:
+
+- **Scopes must NOT have quotes** — invalid: `"ZohoCliq.Chats.READ"`; valid: `ZohoCliq.Chats.READ`
+- **One scope per line OR comma-separated on a single line**
+- Lines starting with `#` are treated as comments and ignored
+- Empty lines are skipped
+- Whitespace around scopes and commas is trimmed automatically
+
+**Valid Examples:**
+
+Comma-separated (single line):
+```
+ZohoCliq.Chats.READ, ZohoCliq.Messages.READ, ZohoCliq.Channels.CREATE
+```
+
+One per line:
+```
+ZohoCliq.Chats.READ
+ZohoCliq.Messages.READ
+ZohoCliq.Channels.CREATE
+```
+
+Mixed with comments:
+```
+# Cliq scopes
+ZohoCliq.Chats.READ, ZohoCliq.Messages.READ
+
+# Channel scope
+ZohoCliq.Channels.CREATE
+```
 
 ---
 
@@ -128,7 +169,7 @@ These flags are accepted by all subcommands:
 
 ## Datacenters
 
-The `--dc` flag is accepted by `account add` and `account login`. Use the value matching the datacenter where your Zoho organization was registered.
+`account login` auto-detects the datacenter from the `location` parameter returned in the OAuth callback. You do not need to specify a datacenter manually. The detected value is stored with the account and used for all subsequent API calls.
 
 | Value | Region | Accounts base URL |
 |---|---|---|
@@ -141,8 +182,6 @@ The `--dc` flag is accepted by `account add` and `account login`. Use the value 
 | `sa` | Saudi Arabia | `https://accounts.zoho.sa` |
 | `uk` | United Kingdom | `https://accounts.zoho.uk` |
 | `ca` | Canada | `https://accounts.zohocloud.ca` |
-
-**Default:** `us`
 
 ---
 
@@ -589,3 +628,7 @@ The CLI only accepts URLs from these Zoho hosts. Any other host returns `HOST_NO
 | `SESSION_NOT_FOUND` | 1 | Run `trace session list` to see valid session IDs. |
 | `SESSION_AMBIGUOUS` | 1 | Use `--id` instead of `--name` to target a specific session. |
 | `EXPORT_PATH_NOT_SET` | 1 | Run `trace config set --default-export-path <PATH>`. |
+| `ENV_FILE_NOT_CONFIGURED` | 1 | Run `config set env-file <path>` and ensure `ZOHO_CLIENT_ID` is set in the file, or export the variable. |
+| `SCOPE_FILE_NOT_CONFIGURED` | 1 | Pass `--scope <SCOPES>` to `account login` or run `config set scope-file <path>`. |
+| `DUPLICATE_IDENTIFIER` | 1 | More than one account matched the given email or ZUID — use `--name` to identify the account unambiguously. |
+| `ACCOUNT_RENAME_FAILED` | 1 | accounts.json was updated but keychain rename failed — manually remove and re-add the account if inconsistent. |

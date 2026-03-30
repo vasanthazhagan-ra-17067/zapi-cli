@@ -1,0 +1,40 @@
+{
+  "storyId": 24,
+  "title": "Update docs/zoho-mobile-app-setup.md for New Login Surface",
+  "description": "Rewrite the zoho-mobile-app-setup.md guide to match the new 'account login' command surface: port is fixed at 8085 (no --port flag), credentials come from env-file (no --client-id/--client-secret flags), scope comes from --scope or scope-file (no --dc flag). Remove Option B and Option C for credential configuration. Add scope-file setup step.",
+  "status": "Completed",
+  "dependsOn": [
+    23
+  ],
+  "prerequisiteState": "Stories 1–23 complete. docs/zoho-mobile-app-setup.md still references --port, --client-id, --client-secret, --dc flags and Option B/C inline credential passing.",
+  "goal": "After this story: zoho-mobile-app-setup.md is fully consistent with the new account login command. A developer reading it for the first time has all the information needed to run 'zapi-cli account login' successfully.",
+  "scope": [
+    "Update Step 1 (Create a Mobile Application): no changes needed to the core instructions. However, update the redirect URI guidance — remove any mention of custom ports. State explicitly: 'The callback port is fixed at 8085. Register http://localhost:8085/callback as the redirect URI. No other port is supported.'",
+    "Update Step 4 (Verify the Redirect URI): remove the paragraph that says 'If you use a custom port via --port, register http://localhost:{PORT}/callback instead, or add both.' Replace with a note that exactly one redirect URI is required: http://localhost:8085/callback.",
+    "Update Step 3 (Configure Your Environment): remove Option B (Per-invocation override with --env-file) and Option C (inline flags or shell exports) entirely. Keep only Option A (persist the path via 'zapi-cli config set env-file'). Remove the '--env-file /path/to/staging.env' example. Remove the 'export ZOHO_CLIENT_ID=...' shell export examples.",
+    "Add a new Step 3b (Configure Your Scope File) after Step 3: explain that you can optionally create a text file listing OAuth scopes (one per line or comma-separated), then run 'zapi-cli config set scope-file /path/to/scopes.txt' to configure it. Alternatively, pass --scope during login. Note that AaaServer.profile.READ is always included automatically — you do not need to add it to your scope list.",
+    "Update Step 5 (Run account mobile-login): rename section to 'Step 5 — Run account login'. Replace the command example with: 'zapi-cli account login' (no flags required if scope-file and env-file are configured). Add an alternative showing --scope flag: 'zapi-cli account login --scope \"ZohoMail.messages.READ,ZohoCliq.Channels.READ\"'. Remove --dc, --client-id, --client-secret, --port, --name from all examples. Update Example output to show the output without a dc argument since DC is now auto-detected.",
+    "Update the Troubleshooting table: remove the row about --port mismatch. Keep rows for invalid redirect URI (always 8085), Invalid Client, oauth_app_blocked, LOGIN_TIMEOUT, Mobile OAuth callback missing parameters. Add a new row: 'ENV_FILE_NOT_CONFIGURED | ZOHO_CLIENT_ID is not set when running account login | Run zapi-cli config set env-file /path/.env and ensure ZOHO_CLIENT_ID is set in the file.' Add: 'SCOPE_FILE_NOT_CONFIGURED | No scopes provided | Pass --scope or run zapi-cli config set scope-file /path/scopes.txt.'",
+    "Remove the 'Option B' and 'Option C' sections from Step 3 entirely (the h3 headers and all their content). Keep 'Option A — Persist the path once (recommended)' and rename it to simply 'Configure env-file (required)'.",
+    "Keep the Notes section at the bottom. Remove the note about CI/CD injecting env vars 'as plain environment files' (that was about Option C). Keep the git-ignore note and the client secret sensitivity note."
+  ],
+  "acceptanceCriteria": [
+    "No reference to --port flag anywhere in the document",
+    "No reference to --client-id or --client-secret flags in any command example",
+    "No reference to --dc flag in the account login command example",
+    "No reference to --env-file as a per-invocation CLI flag",
+    "Port 8085 stated as fixed with no alternatives",
+    "Option B and Option C removed from credential configuration",
+    "Step 3b (scope-file setup) exists",
+    "Section renamed from 'account mobile-login' to 'account login' throughout",
+    "Troubleshooting table has ENV_FILE_NOT_CONFIGURED and SCOPE_FILE_NOT_CONFIGURED rows",
+    "AaaServer.profile.READ noted as automatically included"
+  ],
+  "contextForAgent": "This is a documentation-only story. Read the full current content of docs/zoho-mobile-app-setup.md before making any changes. Make surgical edits — do not rewrite sections that are still accurate. The Mobile Application type, Step 1, Step 2 (copy credentials), and most of the Developer Console screenshots guidance remain valid.",
+  "openItems": [],
+  "sourceReferences": [
+    "docs/zoho-mobile-app-setup.md"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-03-26"
+}

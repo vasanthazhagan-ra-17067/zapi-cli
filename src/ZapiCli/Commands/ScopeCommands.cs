@@ -26,7 +26,7 @@ internal static class ScopeCommands
         /// http://localhost:{PORT}/callback as a redirect URI in the Zoho Developer Console.
         /// </summary>
         [CommandOption("--port <PORT>")]
-        public int Port { get; init; } = 8085;
+        public int Port { get; init; } = OAuthConstants.DefaultCallbackPort;
 
         public override ValidationResult Validate()
         {
@@ -55,8 +55,29 @@ internal static class ScopeCommands
         public override async Task<int> ExecuteAsync(CommandContext context, ScopeAddSettings settings)
         {
             // Resolve account name — explicit flag or configured default.
-            var accountName = settings.Account
-                ?? (await _accountStore.GetDefaultAsync().ConfigureAwait(false)).Name;
+            string accountName;
+            if (settings.Account is not null)
+            {
+                var acct = await _accountStore.FindAsync(settings.Account).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"Account '{settings.Account}' not found.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
+            }
+            else if (settings.AccountEmail is not null)
+            {
+                var acct = await _accountStore.FindByEmailAsync(settings.AccountEmail).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"No account found with email '{settings.AccountEmail}'.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
+            }
+            else if (settings.AccountZuidString is not null)
+            {
+                var acct = await _accountStore.FindByZuidAsync(settings.AccountZuidString).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"No account found with ZUID '{settings.AccountZuidString}'.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
+            }
+            else
+            {
+                accountName = (await _accountStore.GetDefaultAsync().ConfigureAwait(false)).Name;
+            }
 
             // Parse comma-separated scope string.
             var incoming = settings.Scope!
@@ -100,8 +121,29 @@ internal static class ScopeCommands
 
         public override async Task<int> ExecuteAsync(CommandContext context, ScopeListSettings settings)
         {
-            var accountName = settings.Account
-                ?? (await _accountStore.GetDefaultAsync().ConfigureAwait(false)).Name;
+            string accountName;
+            if (settings.Account is not null)
+            {
+                var acct = await _accountStore.FindAsync(settings.Account).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"Account '{settings.Account}' not found.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
+            }
+            else if (settings.AccountEmail is not null)
+            {
+                var acct = await _accountStore.FindByEmailAsync(settings.AccountEmail).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"No account found with email '{settings.AccountEmail}'.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
+            }
+            else if (settings.AccountZuidString is not null)
+            {
+                var acct = await _accountStore.FindByZuidAsync(settings.AccountZuidString).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"No account found with ZUID '{settings.AccountZuidString}'.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
+            }
+            else
+            {
+                accountName = (await _accountStore.GetDefaultAsync().ConfigureAwait(false)).Name;
+            }
 
             var scopes = await _accountService
                 .GetScopesAsync(accountName)

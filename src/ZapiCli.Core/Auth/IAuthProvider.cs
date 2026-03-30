@@ -28,6 +28,15 @@ public interface IAuthProvider
     Task ClearTokenAsync(string accountName, CancellationToken ct = default);
 
     /// <summary>
+    /// Reads the credential bundle stored under <paramref name="oldName"/>, writes it under
+    /// <paramref name="newName"/>, then deletes the <paramref name="oldName"/> entry.
+    /// If the write fails, throws <see cref="ZapiCliException"/> with <c>KEYCHAIN_ERROR</c>.
+    /// If the delete fails after a successful write, throws with <c>ACCOUNT_RENAME_FAILED</c>
+    /// (partial failure — the new key exists but the old key remains).
+    /// </summary>
+    Task RenameTokenAsync(string oldName, string newName, CancellationToken ct = default);
+
+    /// <summary>
     /// Refreshes the access token using stored client_id + client_secret via the Zoho token endpoint.
     /// Persists the new access_token to the keychain and returns it.
     /// Throws <see cref="ZapiCliException"/> with <c>AUTH_FAILURE</c> (exit 2) on failure.

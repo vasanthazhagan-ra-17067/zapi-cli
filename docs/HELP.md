@@ -13,13 +13,13 @@ Ships as a single self-contained binary — no runtime, no dependencies, no inst
 3. [Authentication Overview](#authentication-overview)
 4. [Datacenters](#datacenters)
 5. [Command Reference](#command-reference)
-   - [account add](#account-add)
    - [account login](#account-login)
    - [account list](#account-list)
    - [account show](#account-show)
    - [account set-default](#account-set-default)
    - [account remove](#account-remove)
    - [account re-auth](#account-re-auth)
+   - [account rename](#account-rename)
    - [api call](#api-call)
    - [api registry list](#api-registry-list)
    - [api registry add](#api-registry-add)
@@ -39,6 +39,10 @@ Ships as a single self-contained binary — no runtime, no dependencies, no inst
    - [trace session remove](#trace-session-remove)
    - [trace config set](#trace-config-set)
    - [trace config show](#trace-config-show)
+   - [config set env-file](#config-set-env-file)
+   - [config set scope-file](#config-set-scope-file)
+   - [config set app-dir](#config-set-app-dir)
+   - [config show](#config-show)
 6. [Global Flags](#global-flags)
 7. [Scripting & AI Agent Usage](#scripting--ai-agent-usage)
 8. [Error Handling Reference](#error-handling-reference)
@@ -98,19 +102,14 @@ COMMANDS:
 
 ### First-time setup
 
-Before making any API calls you need to add at least one account. See [Authentication Overview](#authentication-overview) for choosing the right method.
+Before making any API calls you need to add at least one account. See [Authentication Overview](#authentication-overview) for setup prerequisites.
 
 ```bash
-# Option A — Browser login (recommended for interactive setup)
-zapi-cli account login --file templates/account-login.json
+# Set up credentials via env-file (one-time)
+zapi-cli config set env-file /path/to/.env
 
-# Option B — Self-Client grant code (recommended for CI/CD)
-zapi-cli account add \
-  --name myaccount \
-  --code <GRANT_CODE> \
-  --client-id 1000.EXAMPLE_CLIENT_ID \
-  --client-secret <CLIENT_SECRET> \
-  --dc us
+# Add an account via Mobile OAuth browser flow
+zapi-cli account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
 ```
 
 Once an account is added, set it as the default so you don't need to pass `--account` on every invocation:
@@ -155,46 +154,26 @@ Printed to **stderr**:
 
 ## Authentication Overview
 
-zapi-cli supports two OAuth methods. Both use Zoho's standard OAuth 2.0 Authorization Code flow. The difference is in how the grant code is obtained.
+zapi-cli uses the **Zoho Mobile OAuth 2.0 flow** (`/oauth/v2/mobile/auth`). This requires a **Mobile Application** (or Desktop Application) client registered in the Zoho Developer Console — not a Self-Client or Server-based client.
 
-### Method 1 — Self-Client (recommended for automation)
+For full setup instructions including how to create the Mobile Application client and register the redirect URI, see [docs/zoho-mobile-app-setup.md](zoho-mobile-app-setup.md).
 
-Use `account add` when you:
-- Are setting up a CI/CD pipeline or headless server.
-- Are scripting account registration non-interactively.
-- Already have a grant code from the Zoho Developer Console.
+### Prerequisites
 
-**How to get a grant code:**
-1. Go to [https://api-console.zoho.com](https://api-console.zoho.com).
-2. Open your application and switch to the **Self-Client** tab.
-3. Select the OAuth scopes you need and generate a One-Time Code.
-4. Copy the code — it expires in 10 minutes.
+1. A Mobile Application client registered at [https://api-console.zoho.com](https://api-console.zoho.com).
+2. The redirect URI `http://localhost:8085/callback` registered in the client's settings.
+3. `ZOHO_CLIENT_ID` set in your environment (or via a configured env-file — see [`config set env-file`](#config-set-env-file)).
+4. `ZOHO_CLIENT_SECRET` set in your environment (optional for RSA-capable clients, required otherwise).
 
 ```bash
-zapi-cli account add \
-  --name myaccount \
-  --code <GRANT_CODE> \
-  --client-id 1000.EXAMPLE_CLIENT_ID \
-  --client-secret <CLIENT_SECRET> \
-  --dc us
-```
+# Set up credentials via env-file (one-time setup)
+zapi-cli config set env-file /path/to/.env
 
-### Method 2 — Browser Login (recommended for interactive use)
+# Optional: configure a scope file so you don't need --scope on every login
+zapi-cli config set scope-file /path/to/scopes.txt
 
-Use `account login` when you:
-- Are setting up an account on a developer workstation for the first time.
-- Want a guided browser-based OAuth flow.
-- Do not want to manually copy grant codes.
-
-> ⚠️ **Warning:** Before running `account login`, you **must** register the redirect URI `http://localhost:8085/callback` in your Zoho Developer Console. See [account login](#account-login) for full setup instructions.
-
-```bash
-zapi-cli account login \
-  --name myaccount \
-  --client-id 1000.EXAMPLE_CLIENT_ID \
-  --client-secret <CLIENT_SECRET> \
-  --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE" \
-  --dc us
+# Add an account — opens browser, DC auto-detected from callback
+zapi-cli account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
 ```
 
 ### Token storage
@@ -211,7 +190,9 @@ Access tokens are automatically refreshed when:
 
 ## Datacenters
 
-The `--dc` flag is accepted by `account add` and `account login`. Use the value matching the datacenter where your Zoho organization was registered.
+`account login` automatically detects the datacenter from the `location` parameter returned in the OAuth callback. You do not need to specify a datacenter manually.
+
+The detected datacenter is stored with the account and used for all subsequent API calls. The following datacenter values may be detected:
 
 | Value | Region | Accounts base URL |
 |---|---|---|
@@ -225,190 +206,101 @@ The `--dc` flag is accepted by `account add` and `account login`. Use the value 
 | `uk` | United Kingdom | `https://accounts.zoho.uk` |
 | `ca` | Canada | `https://accounts.zohocloud.ca` |
 
-**Default:** `us`
-
 ---
 
 ## Command Reference
 
-### account add
-
-Add a new Zoho account using an OAuth Self-Client grant code.
-
-```
-USAGE:
-    zapi-cli account add [OPTIONS]
-
-OPTIONS:
-    --name <NAME>                      Account alias (unique identifier)
-    --code <CODE>                      OAuth grant code from Zoho Developer Console Self-Client
-    --client-id <CLIENT_ID>            OAuth client ID
-    --client-secret <CLIENT_SECRET>    OAuth client secret
-    --redirect-uri <REDIRECT_URI>      Redirect URI (default: https://www.zoho.com)
-    --dc <DC>                          Datacenter (default: us)
-```
-
-**All flags are required** except `--redirect-uri` (defaults to `https://www.zoho.com`) and `--dc` (defaults to `us`). The `--redirect-uri` value must match what is registered in your Zoho Developer Console app exactly.
-
-**Grant code expiry:** The code generated from the Self-Client tab is valid for **10 minutes**. Run `account add` promptly after copying the code.
-
-#### Example
-
-```bash
-zapi-cli account add \
-  --name myaccount \
-  --code 1000.abc123def456 \
-  --client-id 1000.EXAMPLE_CLIENT_ID \
-  --client-secret abc123xyz789 \
-  --dc us
-```
-
-#### Example output (stdout)
-
-```json
-{
-  "status": "ok",
-  "data": {
-    "name": "myaccount",
-    "email": "user@example.com",
-    "dc": "us",
-    "is_default": false
-  }
-}
-```
-
-#### Common errors
-
-| Error code | Cause | Resolution |
-|---|---|---|
-| `ACCOUNT_ALREADY_EXISTS` | An account named `myaccount` already exists. | Choose a different `--name` or remove the existing account first. |
-| `AUTH_FAILURE` | Grant code was invalid, expired, or already used. | Generate a new grant code from the Self-Client tab and retry within 10 minutes. |
-| `ACCOUNT_DOMAIN_BLOCKED` | The authenticated email is `@zohocorp.*`. | zapi-cli blocks Zoho employee accounts by design. Use a customer account. |
-| `EMAIL_REQUIRED` | Zoho did not return an email in the token response. | Ensure your OAuth scopes include user-profile access. |
-
----
-
 ### account login
 
-Authenticate a new account via a browser-based OAuth redirect flow.
+Authenticate a new account using the Zoho Mobile OAuth 2.0 flow. Opens a browser window where you sign in, then completes token exchange automatically. DC is auto-detected from the callback. No flags are required — all credentials come from environment variables.
+
+For full setup instructions (creating the Mobile Application client, registering the redirect URI, and configuring credentials via env-file) see [docs/zoho-mobile-app-setup.md](zoho-mobile-app-setup.md).
 
 ```
 USAGE:
     zapi-cli account login [OPTIONS]
 
 OPTIONS:
-    --file <FILE>                      Path to a JSON config file
-    --name <NAME>                      Account alias
-    --client-id <CLIENT_ID>            OAuth client ID
-    --client-secret <CLIENT_SECRET>    OAuth client secret
-    --scope <SCOPE>                    Comma-separated OAuth scopes
-    --dc <DC>                          Datacenter (default: us)
-    --port <PORT>                      Local callback port (default: 8085)
+    --name <NAME>      Account alias (optional; derived from email if omitted)
+    --scope <SCOPE>    Additional comma-separated OAuth scopes (additive to scope-file)
+
+ENVIRONMENT VARIABLES (resolved from env-file if configured):
+    ZOHO_CLIENT_ID       Zoho client ID (required)
+    ZOHO_CLIENT_SECRET   Zoho client secret (optional for RSA-capable Mobile clients)
 ```
 
-Flags provided on the command line override corresponding fields in the `--file` config. For example, `--file login.json --name staging` uses all values from the file but replaces the `name` field with `"staging"`.
+**Credential resolution:** Set `ZOHO_CLIENT_ID` and optionally `ZOHO_CLIENT_SECRET` in your environment or in a `.env` file configured with `zapi-cli config set env-file <path>`.
+
+**Scope resolution:** Scopes are merged from two sources (deduplicated case-insensitively):
+1. `--scope` flag: comma-separated scopes inline.
+2. Configured scope-file (set via `zapi-cli config set scope-file <path>`): one scope per line or comma-separated; lines starting with `#` are treated as comments.
+
+At least one scope must be resolved from one of these sources, or `SCOPE_FILE_NOT_CONFIGURED` is thrown. `AaaServer.profile.READ` is always injected automatically.
+
+**Account name:** If `--name` is omitted, the name is derived from the authenticated email address by replacing `@` and `.` with `_` (e.g. `user@example.com` → `user_example_com`).
 
 ---
 
 > ⚠️ **Required Setup — Redirect URI Registration**
 >
-> The redirect URI `http://localhost:8085/callback` **must be registered** in your Zoho Developer Console application **before** running this command. If it is not registered, Zoho will return an "Invalid Redirect Uri" error and the login will fail.
->
-> **Steps to register the redirect URI:**
-> 1. Go to [https://api-console.zoho.com](https://api-console.zoho.com).
-> 2. Open the application you are using (e.g., your Self-Client app).
-> 3. Navigate to the **Settings** or **Redirect URIs** section.
-> 4. Add `http://localhost:8085/callback` to the list of allowed redirect URIs.
-> 5. Save the changes.
->
-> If you use a custom port via `--port 9090`, register `http://localhost:9090/callback` instead.
+> The redirect URI `http://localhost:8085/callback` **must be registered** in your Zoho Developer Console application before running this command. See [docs/zoho-mobile-app-setup.md](zoho-mobile-app-setup.md) for step-by-step instructions.
 
 ---
 
 #### How the flow works
 
-1. zapi-cli starts a local HTTP server listening on `http://localhost:{PORT}/callback`.
-2. It generates a random CSRF state token.
-3. It builds the Zoho OAuth authorization URL with your `client-id`, `scope`, datacenter, and state token.
-4. It prints the authorization URL to **stderr** and opens your system browser to that URL.
-5. You authenticate in the browser. Zoho redirects back to `http://localhost:{PORT}/callback?code=...&state=...`.
-6. zapi-cli validates the state token (CSRF check), then exchanges the code for access + refresh tokens.
-7. It fetches your user info (email, ZUID) to validate the account identity.
-8. Credentials are stored in the OS keychain and the account is persisted.
-9. The local HTTP server is shut down.
+1. zapi-cli reads `ZOHO_CLIENT_ID` from the environment (loaded from env-file if configured).
+2. It generates an RSA key pair. The public key (`ss_id`) is embedded in the auth URL.
+3. It starts a local HTTP server on `http://localhost:8085/callback`.
+4. It builds the Zoho Mobile OAuth URL (`/oauth/v2/mobile/auth`) using `https://accounts.zoho.com` as the global entry point.
+5. It opens the browser to that URL. You authenticate interactively.
+6. Zoho redirects to the callback with `code`, `state` (CSRF), `gt_sec` (RSA-encrypted client secret), and `location` (detected datacenter).
+7. zapi-cli validates the CSRF state, decrypts `gt_sec` with the RSA private key to recover `client_secret`.
+8. It posts to the Zoho accounts server indicated by the callback to exchange the code for tokens.
+9. It fetches user info (email, ZUID) to derive the account name (if `--name` was omitted).
+10. Credentials are stored in the OS keychain and the account is persisted.
 
 The flow times out after **120 seconds** if no callback is received.
 
-#### JSON config file template
-
-A template is provided at `templates/account-login.json`:
-
-```json
-{
-  "name": "",
-  "client-id": "",
-  "client-secret": "",
-  "scope": ["ZohoAPI.Resource.READ"],
-  "dc": "us"
-}
-```
-
-Fill in the values and run:
+#### Example (scope from flag)
 
 ```bash
-zapi-cli account login --file templates/account-login.json
+zapi-cli account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
 ```
 
-#### Example (inline flags)
+#### Example (named account, scope from configured scope-file)
 
 ```bash
-zapi-cli account login \
-  --name myaccount \
-  --client-id 1000.EXAMPLE_CLIENT_ID \
-  --client-secret abc123xyz789 \
-  --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE" \
-  --dc us \
-  --port 8085
-```
-
-#### Example (file with name override)
-
-```bash
-zapi-cli account login --file login.json --name staging
+zapi-cli account login --name work
 ```
 
 #### Example output (stdout)
 
 ```json
-{
-  "status": "ok",
-  "data": {
-    "name": "myaccount",
-    "email": "user@example.com",
-    "dc": "us",
-    "is_default": false
-  }
-}
+{"status":"ok","data":{"name":"user_example_com","dc":"us"}}
 ```
 
 #### Stderr during flow
 
-While the browser window is open, informational lines are printed to stderr (not stdout):
+While the browser is open, informational lines are printed to stderr:
 ```
-Authorization URL: https://accounts.zoho.com/oauth/v2/auth?...
-Waiting for browser callback on http://localhost:8085/callback ...
+Redirect URI (must be registered in Zoho Developer Console): http://localhost:8085/callback
+Waiting for browser authentication... (timeout: 120s)
 ```
 
-These are for human visibility only. AI agents and scripts should ignore stderr during this command and check stdout + exit code after completion.
+AI agents and scripts should ignore stderr during this command and check stdout + exit code after completion.
 
 #### Common errors
 
 | Error code | Cause | Resolution |
 |---|---|---|
+| `ENV_FILE_NOT_CONFIGURED` | `ZOHO_CLIENT_ID` is not set in the environment or configured env-file. | Run `zapi-cli config set env-file <path>` (pointing to a file with `ZOHO_CLIENT_ID=...`) or export the variable. |
+| `SCOPE_FILE_NOT_CONFIGURED` | No scopes were resolved from `--scope` or the configured scope-file. | Pass `--scope <SCOPES>` or run `zapi-cli config set scope-file <path>`. |
+| `IO_ERROR` | The configured scope-file path does not exist at runtime. | Update with `zapi-cli config set scope-file <path>`. |
 | `LOGIN_TIMEOUT` | Browser callback not received within 120 seconds. | Ensure the browser opened and you completed sign-in. Re-run the command. |
-| `STATE_MISMATCH` | The `state` parameter in the callback did not match. Possible CSRF. | This indicates a tampered or replayed callback. Re-run to generate a fresh state token. |
-| `AUTH_FAILURE` | Token exchange with Zoho failed. | Check that `client-id`, `client-secret`, and `redirect-uri` are correct. |
-| `ACCOUNT_ALREADY_EXISTS` | An account with this name already exists. | Remove the existing account or use a different `--name`. |
+| `STATE_MISMATCH` | The `state` parameter in the callback did not match. Possible CSRF. | Re-run to generate a fresh state token. |
+| `AUTH_FAILURE` | Token exchange with Zoho failed. | Verify `ZOHO_CLIENT_ID`, that the redirect URI is registered, and that your Zoho credentials are correct. |
+| `ACCOUNT_ALREADY_EXISTS` | An account with the resolved name already exists. | Remove the existing account or pass `--name <different-name>`. |
 | `ACCOUNT_DOMAIN_BLOCKED` | Authenticated as a `@zohocorp.*` account. | Use a customer Zoho account. |
 
 ---
@@ -467,15 +359,20 @@ zapi-cli account list
 
 ### account show
 
-Show full details for a single account. The access token is always masked.
+Show full details for a single account. Credentials are never included in output (ADR-0008).
 
 ```
 USAGE:
     zapi-cli account show [OPTIONS]
 
 OPTIONS:
-    --name <NAME>    Account alias to show (uses default account if omitted)
+    --name <NAME>              Account alias
+    --email <EMAIL>            Identify account by email address
+    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
+
 ```
+
+Exactly one of `--name`, `--email`, or `--zuidstring` is required. Use `--name` with the default account if no identifier is passed will use the default account (if set).
 
 #### Example
 
@@ -487,26 +384,25 @@ zapi-cli account show --name myaccount
 
 ```json
 {
-  "status": "ok",
-  "data": {
-    "name": "myaccount",
-    "email": "user@example.com",
-    "dc": "us",
-    "is_default": true,
-    "access_token": "***",
-    "client_id": "1000.EXAMPLE_CLIENT_ID"
-  }
+  "name": "myaccount",
+  "dc": "us",
+  "email": "user@example.com",
+  "is_default": true,
+  "scopes": ["ZohoFiles.files.READ"],
+  "zuid": null
 }
 ```
 
-> **Note:** The `access_token` field is always shown as `"***"` regardless of context. This is a hard guarantee — the real token value is never emitted to stdout.
+> **Note:** No credential fields (`access_token`, `client_id`, `client_secret`) are ever emitted in `account show` output (ADR-0008).
 
 #### Common errors
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `ACCOUNT_NOT_FOUND` | No account with that name exists. | Run `account list` to see available accounts. |
-| `NO_DEFAULT_ACCOUNT` | `--name` was omitted and no default is set. | Run `account set-default` or pass `--name` explicitly. |
+| `ACCOUNT_NOT_FOUND` | No account with that name/email/zuidstring exists. | Run `account list` to see available accounts. |
+| `NO_DEFAULT_ACCOUNT` | No identifier was provided and no default is set. | Run `account set-default` or pass `--name`/`--email`/`--zuidstring`. |
+| `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
+| `INVALID_ARGS` | More than one of `--name`, `--email`, `--zuidstring` was provided. | Pass exactly one identifier. |
 
 ---
 
@@ -519,8 +415,12 @@ USAGE:
     zapi-cli account set-default [OPTIONS]
 
 OPTIONS:
-    --name <NAME>    Account alias to make the default
+    --name <NAME>              Account alias
+    --email <EMAIL>            Identify account by email address
+    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
 ```
+
+Exactly one of `--name`, `--email`, or `--zuidstring` is required.
 
 #### Example
 
@@ -545,7 +445,8 @@ zapi-cli account set-default --name myaccount
 | Error code | Cause | Resolution |
 |---|---|---|
 | `ACCOUNT_NOT_FOUND` | The named account does not exist. | Run `account list` to verify the account name. |
-| `INVALID_ARGS` | `--name` was not provided. | Pass `--name <ACCOUNT>`. |
+| `INVALID_ARGS` | None or more than one of `--name`, `--email`, `--zuidstring` was provided. | Pass exactly one identifier. |
+| `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
 
 ---
 
@@ -558,8 +459,12 @@ USAGE:
     zapi-cli account remove [OPTIONS]
 
 OPTIONS:
-    --name <NAME>    Account alias to remove
+    --name <NAME>              Account alias
+    --email <EMAIL>            Identify account by email address
+    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
 ```
+
+Exactly one of `--name`, `--email`, or `--zuidstring` is required.
 
 This command attempts a server-side token revocation call to Zoho (best-effort — the account is removed locally even if revocation fails). The access token and refresh token are deleted from the OS keychain.
 
@@ -587,7 +492,9 @@ zapi-cli account remove --name myaccount
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `ACCOUNT_NOT_FOUND` | No account with that name exists. | Run `account list` to verify. |
+| `ACCOUNT_NOT_FOUND` | No account with that name/email/zuidstring exists. | Run `account list` to verify. |
+| `INVALID_ARGS` | None or more than one identifier was provided. | Pass exactly one of `--name`, `--email`, `--zuidstring`. |
+| `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
 | `KEYCHAIN_ERROR` | Failed to delete credentials from the OS keychain. | Check keychain permissions and retry. |
 
 ---
@@ -601,8 +508,12 @@ USAGE:
     zapi-cli account re-auth [OPTIONS]
 
 OPTIONS:
-    --name <NAME>    Account alias to re-authenticate (uses default if omitted)
+    --name <NAME>              Account alias
+    --email <EMAIL>            Identify account by email address
+    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
 ```
+
+Exactly one of `--name`, `--email`, or `--zuidstring` is required.
 
 Use this command when an `api call` returns a `NEEDS_REAUTH` error code, or when a token refresh is needed after adding new scopes.
 
@@ -630,8 +541,64 @@ zapi-cli account re-auth --name myaccount
 | Error code | Cause | Resolution |
 |---|---|---|
 | `ACCOUNT_NOT_FOUND` | The named account does not exist. | Run `account list` to verify. |
-| `AUTH_FAILURE` | Token refresh failed — refresh token may be expired or revoked. | Run `account remove` then re-add the account via `account add` or `account login`. |
+| `INVALID_ARGS` | None or more than one identifier was provided. | Pass exactly one of `--name`, `--email`, `--zuidstring`. |
+| `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
+| `AUTH_FAILURE` | Token refresh failed — refresh token may be expired or revoked. | Run `account remove` then re-add the account via `account login`. |
 | `KEYCHAIN_ERROR` | Could not read credentials from the OS keychain. | Check keychain permissions. |
+
+---
+
+### account rename
+
+Rename an existing account to a new alias. The account's keychain entry is also updated to the new name.
+
+```
+USAGE:
+    zapi-cli account rename [OPTIONS]
+
+OPTIONS:
+    --name <NAME>              Current account alias
+    --email <EMAIL>            Identify account by email address
+    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
+    --new-name <NEW_NAME>      New account alias (required)
+```
+
+Exactly one of `--name`, `--email`, or `--zuidstring` is required to identify the account to rename. `--new-name` is always required.
+
+The new name must not contain `/`, `\`, `:`, `*`, or `?` characters.
+
+#### Example
+
+```bash
+# Rename by current name
+zapi-cli account rename --name work --new-name work-eu
+
+# Rename by email
+zapi-cli account rename --email user@example.com --new-name personal
+```
+
+#### Example output
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "old_name": "work",
+    "new_name": "work-eu"
+  }
+}
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `ACCOUNT_NOT_FOUND` | No account matched the identifier. | Run `account list` to verify. |
+| `ACCOUNT_ALREADY_EXISTS` | An account with `--new-name` already exists. | Choose a different name or remove the conflicting account. |
+| `INVALID_ARGS` | `--new-name` was omitted, contains invalid characters, or zero/multiple source identifiers were provided. | Provide exactly one source identifier and a valid `--new-name`. |
+| `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
+| `KEYCHAIN_ERROR` | Failed to rename credentials in the OS keychain. | Check keychain permissions. |
+| `ACCOUNT_RENAME_FAILED` | Rename completed for accounts.json but keychain update failed. | The account is saved under the new name in accounts.json; manually update or remove and re-add. |
 
 ---
 
@@ -747,7 +714,7 @@ The `data` field contains the raw Zoho API response body parsed as JSON:
 | `INVALID_ARGS` | `--url` or `--method` was not provided. | Both flags are required. |
 | `API_ERROR` | Zoho returned a non-2xx HTTP response. | Check the `data` field in stderr for the Zoho error details. |
 | `NEEDS_REAUTH` | The stored token needs refreshing. | Run `account re-auth --name <ACCOUNT>` then retry. |
-| `AUTH_FAILURE` | Token refresh failed during automatic retry. | Re-add the account via `account add` or `account login`. |
+| `AUTH_FAILURE` | Token refresh failed during automatic retry. | Re-add the account via `account login`. |
 | `ACCOUNT_NOT_FOUND` | The account specified with `--account` does not exist. | Run `account list` to verify. |
 | `NO_DEFAULT_ACCOUNT` | No account specified and no default set. | Run `account set-default --name <ACCOUNT>`. |
 
@@ -950,6 +917,7 @@ USAGE:
 OPTIONS:
     --scope <SCOPE>          OAuth scope(s) to add, comma-separated (required)
     -a, --account <ACCOUNT>  Account alias (uses default account if omitted)
+    --port <PORT>            Local callback port for incremental OAuth flow (default: 8085)
 ```
 
 Scopes are deduplicated — adding a scope that already exists is a no-op for that scope.
@@ -1479,6 +1447,169 @@ zapi-cli trace config show
 
 ---
 
+### config set env-file
+
+Persist the absolute path to a `.env` file that is automatically loaded at every CLI startup. Run this once — the path is stored in `cli-settings.json` in the platform config directory. Once set, all commands (including `account login`) will pick up `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`, and any other variables from that file without needing to export them or pass flags.
+
+OS environment variables always take precedence over values in the `.env` file.
+
+For a guide on creating and populating the `.env` file see [docs/zoho-mobile-app-setup.md](zoho-mobile-app-setup.md#step-3--configure-your-environment).
+
+```
+USAGE:
+    zapi-cli config set env-file <PATH>
+
+ARGUMENTS:
+    <PATH>    Absolute or relative path to a .env file (must exist)
+```
+
+#### Example
+
+```bash
+zapi-cli config set env-file /home/user/projects/zapi-cli/.env
+```
+
+#### Example output (stdout)
+
+```json
+{"status":"ok","data":{"env_file":"/home/user/projects/zapi-cli/.env"}}
+```
+
+The path is resolved to an absolute path before being stored.
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `INVALID_ARGS` | The file at `<PATH>` does not exist. | Create the file first (e.g., `cp .env.example .env`). |
+
+---
+
+### config set scope-file
+
+Persist the absolute path to a scope file that is automatically read when `account login` resolves scopes. Run this once — the path is stored in `cli-settings.json`. Each line (or comma-separated entry) in the file is treated as an OAuth scope. Lines starting with `#` are treated as comments.
+
+`AaaServer.profile.READ` is always included automatically — you do not need to add it to your scope file.
+
+```
+USAGE:
+    zapi-cli config set scope-file <PATH>
+
+ARGUMENTS:
+    <PATH>    Absolute or relative path to a scope file (file need not exist at configuration time)
+```
+
+#### Example command
+
+```bash
+zapi-cli config set scope-file /home/user/projects/zapi-cli/scopes.txt
+```
+
+#### Example output (stdout)
+
+```json
+{"status":"ok","data":{"scope_file":"/home/user/projects/zapi-cli/scopes.txt"}}
+```
+
+#### Scope file format
+
+The file contents can be in any of these formats (scopes must **not** have quotes):
+
+**Format 1: Comma-separated on one line**
+```
+ZohoCliq.Chats.READ, ZohoCliq.Messages.READ, ZohoCliq.Channels.CREATE, ZohoCliq.Designations.ALL
+```
+
+**Format 2: One scope per line**
+```
+ZohoCliq.Chats.READ
+ZohoCliq.Messages.READ
+ZohoCliq.Channels.CREATE
+ZohoCliq.Designations.ALL
+```
+
+**Format 3: Mixed with comments**
+```
+# Cliq communication scopes
+ZohoCliq.Chats.READ, ZohoCliq.Messages.READ
+
+# Channel and designation scopes
+ZohoCliq.Channels.CREATE
+ZohoCliq.Designations.ALL
+```
+
+The path is resolved to an absolute path before being stored. The file does not need to exist at configuration time — it is read when `account login` runs.
+
+---
+
+### config set app-dir
+
+Persist a custom application data directory where `accounts.json` is stored. By default, the platform config directory is used. Use this to store account data in a project-specific location.
+
+The directory is created if it does not already exist.
+
+If an `accounts.json` file exists in the current app data directory and is absent in the new directory, it is automatically copied to the new location. The original file is preserved. If `accounts.json` already exists in the new directory, no migration occurs and the existing file is kept.
+
+The `migrated` field in the response indicates whether a file copy was performed.
+
+```
+USAGE:
+    zapi-cli config set app-dir <PATH>
+
+ARGUMENTS:
+    <PATH>    Absolute or relative path to the desired app data directory
+```
+
+#### Example
+
+```bash
+zapi-cli config set app-dir /home/user/projects/myproject/.zapi-cli
+```
+
+#### Example output (stdout, with migration)
+
+```json
+{"status":"ok","data":{"app_data_dir":"/home/user/projects/myproject/.zapi-cli","migrated":true}}
+```
+
+#### Example output (stdout, no migration)
+
+```json
+{"status":"ok","data":{"app_data_dir":"/home/user/projects/myproject/.zapi-cli","migrated":false}}
+```
+
+---
+
+### config show
+
+Show the current persisted CLI configuration.
+
+```
+USAGE:
+    zapi-cli config show [OPTIONS]
+```
+
+#### Example
+
+```bash
+zapi-cli config show
+```
+
+#### Example output
+
+```json
+{
+  "env_file": "/home/user/projects/zapi-cli/.env",
+  "scope_file": "/home/user/projects/zapi-cli/scopes.txt",
+  "app_data_dir": null,
+  "trace_default_export_path": null
+}
+```
+
+> **Note:** Output is plain JSON — no `{"status":"ok","data":...}` wrapper. Fields are `null` if not configured.
+
+---
+
 ## Global Flags
 
 These flags are accepted by all subcommands:
@@ -1616,6 +1747,8 @@ All error responses are emitted on **stderr** as:
 |---|---|---|---|
 | `ACCOUNT_NOT_FOUND` | 1 | The named account does not exist in local storage. | Run `account list` to enumerate valid account names. |
 | `ACCOUNT_ALREADY_EXISTS` | 1 | An account with that `--name` already exists. | Choose a different name or remove the existing account first with `account remove`. |
+| `DUPLICATE_IDENTIFIER` | 1 | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
+| `ACCOUNT_RENAME_FAILED` | 1 | The keychain entry could not be renamed after accounts.json was updated. | The account is saved under the new name; manually remove and re-add if the keychain is inconsistent. |
 | `NO_DEFAULT_ACCOUNT` | 1 | No `--account` flag was provided and no default account has been set. | Run `account set-default --name <ACCOUNT>` or pass `--account` explicitly. |
 | `AUTH_FAILURE` | 2 | OAuth token exchange or refresh request failed. | Verify `client-id`, `client-secret`, and the grant code. Re-add the account if the issue persists. |
 | `NEEDS_REAUTH` | 2 | The account's refresh token has expired or been revoked and needs re-authentication. | Run `account re-auth --name <ACCOUNT>`. If that fails with `AUTH_FAILURE`, re-add the account. |
@@ -1628,6 +1761,8 @@ All error responses are emitted on **stderr** as:
 | `HOST_NOT_ALLOWED` | 1 | The `--url` hostname is not on the Zoho domain allowlist. | Only URLs under `zoho.com`, `zoho.eu`, `zoho.in`, `zoho.com.au`, `zohoapis.com`, and `zohoapis.in` are accepted. |
 | `STATE_MISMATCH` | 1 | The OAuth callback `state` parameter did not match the generated CSRF token. | Indicates a possible CSRF attack or a stale/replayed callback. Discard and re-run `account login`. |
 | `LOGIN_TIMEOUT` | 1 | The browser-based OAuth callback was not received within 120 seconds. | Ensure the browser opened and you completed the sign-in before the timeout. Re-run `account login`. |
+| `ENV_FILE_NOT_CONFIGURED` | 1 | `ZOHO_CLIENT_ID` is not set in the environment or configured env-file. | Run `zapi-cli config set env-file <path>` or export `ZOHO_CLIENT_ID`. |
+| `SCOPE_FILE_NOT_CONFIGURED` | 1 | No scopes resolved from `--scope` or the configured scope-file. | Pass `--scope <SCOPES>` or run `zapi-cli config set scope-file <path>`. |
 | `INTERNAL_ERROR` | 1 | An unhandled internal exception occurred. | File a bug report with the full stderr output. |
 | `SESSION_NOT_FOUND` | 1 | The specified session `--id` or `--name` does not exist in the sessions index. | Run `trace session list` to enumerate valid sessions. |
 | `SESSION_AMBIGUOUS` | 1 | Multiple sessions share the specified `--name`; cannot resolve to a unique session. | Use `--id` with the specific `unique_id` from `trace session list`. |
@@ -1641,7 +1776,7 @@ All error responses are emitted on **stderr** as:
 
 ### Account domain block
 
-All `@zohocorp.*` email addresses are hard-blocked at every entry point — including `account add`, `account login`, and `account re-auth`. This is a compile-time policy that cannot be overridden at runtime.
+All `@zohocorp.*` email addresses are hard-blocked at every entry point — including `account login` and `account re-auth`. This is a compile-time policy that cannot be overridden at runtime.
 
 ### Token storage
 
@@ -1654,7 +1789,7 @@ Tokens are **never written to disk in plaintext** and are **never printed to std
 
 ### Token masking
 
-The `account show` command always outputs the access token as `"***"`. This cannot be disabled. Even internal debug modes do not log raw tokens.
+The `account show` command never emits credential fields (`access_token`, `client_id`, `client_secret`) in its output. This is a hard guarantee — real token values are never printed to stdout or stderr under any circumstances.
 
 ### Host allowlist
 
@@ -1675,7 +1810,7 @@ The `account login` browser flow generates a cryptographically random state toke
 
 ### No secret logging
 
-The tool never writes OAuth secrets, access tokens, or refresh tokens to stdout, stderr, log files, or environment variables. The `--client-secret` flag value is consumed in-process and discarded.
+The tool never writes OAuth secrets, access tokens, or refresh tokens to stdout, stderr, log files, or environment variables.
 
 ---
 

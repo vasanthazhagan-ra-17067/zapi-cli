@@ -16,6 +16,15 @@ internal static class Program
 {
     public static int Main(string[] args)
     {
+        // Resolve env-file from persisted setting only (no --env-file flag, no CWD fallback).
+        var earlyConfigDir = EncryptedFileKeychainProvider.GetDefaultConfigDir();
+        var persistedEnvFile = CliSettingsStore.TryReadPersistedEnvFile(earlyConfigDir);
+        if (persistedEnvFile != null)
+            LoadDotEnv(persistedEnvFile);
+
+        // Pre-read app-data-dir before DI is built (story-18 AccountStore will use this).
+        var appDataDir = CliSettingsStore.TryReadPersistedAppDataDir(earlyConfigDir);
+
         // Handle --version before dispatching to Spectre — CommandApp has no root command.
         if (args is ["--version"])
         {
@@ -32,22 +41,25 @@ internal static class Program
         services.AddSingleton<IOutputWriter, JsonOutputWriter>();
 
         // Keychain: select best available provider for this platform.
-        var configDir = EncryptedFileKeychainProvider.GetDefaultConfigDir();
+        var configDir = earlyConfigDir;
         services.AddSingleton<IKeychainProvider>(_ =>
             KeychainProviderFactory.Create(configDir));
 
         // HTTP client factory for outbound requests (used by OAuthProvider, ApiClient).
         services.AddHttpClient();
 
-        // Account store: persists accounts.json to the platform config directory.
+        // Account store: persists accounts.json to appDataDir (if configured) or the platform config directory.
         services.AddSingleton<IAccountStore>(sp =>
-            new AccountStore(configDir, sp.GetRequiredService<ILogger<AccountStore>>()));
+            new AccountStore(configDir, sp.GetRequiredService<ILogger<AccountStore>>(), appDataDir));
 
         // Auth provider: OAuth Self-Client — reads/writes keychain credential bundles.
         services.AddSingleton<IAuthProvider, OAuthProvider>();
 
         // Browser OAuth flow: generates CSRF state, builds authorization URLs, opens system browser.
         services.AddSingleton<IOAuthBrowserFlow, OAuthBrowserFlow>();
+
+        // RSA key pair provider: generates fresh 2048-bit key pairs for the Mobile OAuth flow.
+        services.AddSingleton<IRsaKeyPairProvider, RsaKeyPairProvider>();
 
         // Account service: business logic for all 'account' subcommands.
         services.AddSingleton<IAccountService, AccountService>();
@@ -62,13 +74,14 @@ internal static class Program
         services.AddSingleton<IApiRegistry>(sp =>
             new ApiRegistry(configDir, sp.GetRequiredService<ILogger<ApiRegistry>>()));
 
-        // Trace system: ITraceConfigStore → ITraceSession → ITraceWriter → TraceExporter.
-        services.AddSingleton<ITraceConfigStore>(sp =>
-            new TraceConfigStore(configDir, sp.GetRequiredService<ILogger<TraceConfigStore>>()));
+        // Trace system: ICliSettingsStore → ITraceSession → ITraceWriter → TraceExporter.
+        services.AddSingleton<ICliSettingsStore>(sp =>
+            new CliSettingsStore(configDir, sp.GetRequiredService<ILogger<CliSettingsStore>>()));
+
         services.AddSingleton<ITraceSession>(sp =>
             new TraceSession(
                 configDir,
-                sp.GetRequiredService<ITraceConfigStore>(),
+                sp.GetRequiredService<ICliSettingsStore>(),
                 sp.GetRequiredService<ILogger<TraceSession>>()));
         services.AddSingleton<ITraceWriter, TraceWriter>();
         services.AddSingleton<TraceExporter>();
@@ -118,10 +131,8 @@ internal static class Program
 
             config.AddBranch("account", account =>
             {
-                account.AddCommand<AccountCommands.AccountAddCommand>("add")
-                    .WithDescription("Add a new Zoho account (OAuth Self-Client).");
                 account.AddCommand<AccountCommands.AccountLoginCommand>("login")
-                    .WithDescription("Authenticate a new account via browser OAuth redirect.");
+                    .WithDescription("Authenticate a new Zoho account via Mobile OAuth (DC auto-detected; credentials from env).");
                 account.AddCommand<AccountCommands.AccountListCommand>("list")
                     .WithDescription("List all configured accounts.");
                 account.AddCommand<AccountCommands.AccountShowCommand>("show")
@@ -132,6 +143,8 @@ internal static class Program
                     .WithDescription("Remove an account and revoke its token.");
                 account.AddCommand<AccountCommands.AccountReAuthCommand>("re-auth")
                     .WithDescription("Re-authenticate an account using stored credentials.");
+                account.AddCommand<AccountCommands.AccountRenameCommand>("rename")
+                    .WithDescription("Rename an account and update its keychain entry.");
             });
 
             config.AddBranch("api", api =>
@@ -198,9 +211,58 @@ internal static class Program
                         .WithDescription("Show current trace configuration.");
                 });
             });
+
+            config.AddBranch("config", cfg =>
+            {
+                cfg.AddBranch("set", set =>
+                {
+                    set.AddCommand<ConfigCommands.ConfigSetEnvFileCommand>("env-file")
+                        .WithDescription("Persist the path to a .env file loaded at every CLI startup.");
+                    set.AddCommand<ConfigCommands.ConfigSetScopeFileCommand>("scope-file")
+                        .WithDescription("Persist the path to a scope list file read by account login.");
+                    set.AddCommand<ConfigCommands.ConfigSetAppDirCommand>("app-dir")
+                        .WithDescription("Persist the path to the app data directory for accounts.json.");
+                    set.AddCommand<TraceCommands.TraceConfigSetCommand>("trace-export-path")
+                        .WithDescription("Set the default trace export path.");
+                });
+                cfg.AddCommand<ConfigCommands.ConfigShowCommand>("show")
+                    .WithDescription("Show all current CLI configuration.");
+            });
         });
 
         return app.Run(args);
+    }
+
+    /// <summary>
+    /// Loads a .env file and sets any variables not already present in the environment.
+    /// OS environment variables always take precedence over .env values.
+    /// Lines starting with '#' and empty lines are ignored.
+    /// </summary>
+    private static void LoadDotEnv(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        foreach (var line in File.ReadLines(path))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#')) continue;
+
+            var idx = trimmed.IndexOf('=');
+            if (idx <= 0) continue;
+
+            var key = trimmed[..idx].Trim();
+            var value = trimmed[(idx + 1)..].Trim();
+
+            // Strip optional surrounding quotes (single or double).
+            if (value.Length >= 2 &&
+                ((value[0] == '"' && value[^1] == '"') ||
+                 (value[0] == '\'' && value[^1] == '\'')))
+                value = value[1..^1];
+
+            // OS environment takes precedence — only set if not already defined.
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+                Environment.SetEnvironmentVariable(key, value);
+        }
     }
 }
 

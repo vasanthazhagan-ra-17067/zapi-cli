@@ -127,11 +127,25 @@ internal static class ApiCommands
                 body = await File.ReadAllTextAsync(settings.BodyFile).ConfigureAwait(false);
             }
 
-            // Resolve account name: explicit --account flag or the configured default.
+            // Resolve account name: explicit --account / --account-email / --account-zuidstring or default.
             string accountName;
             if (settings.Account is not null)
             {
-                accountName = settings.Account;
+                var acct = await _accountStore.FindAsync(settings.Account).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"Account '{settings.Account}' not found.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
+            }
+            else if (settings.AccountEmail is not null)
+            {
+                var acct = await _accountStore.FindByEmailAsync(settings.AccountEmail).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"No account found with email '{settings.AccountEmail}'.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
+            }
+            else if (settings.AccountZuidString is not null)
+            {
+                var acct = await _accountStore.FindByZuidAsync(settings.AccountZuidString).ConfigureAwait(false)
+                    ?? throw new ZapiCliException($"No account found with ZUID '{settings.AccountZuidString}'.", ErrorCodes.ACCOUNT_NOT_FOUND, 1);
+                accountName = acct.Name;
             }
             else
             {

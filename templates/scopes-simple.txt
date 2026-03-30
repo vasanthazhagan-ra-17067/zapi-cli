@@ -1,0 +1,1 @@
+ZohoCliq.Chats.READ, ZohoCliq.Messages.READ, ZohoCliq.Channels.CREATE, ZohoCliq.Designations.ALL

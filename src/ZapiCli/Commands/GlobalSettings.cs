@@ -12,6 +12,14 @@ public class GlobalSettings : CommandSettings
     [CommandOption("--account|-a <ACCOUNT>")]
     public string? Account { get; init; }
 
+    /// <summary>Account email to use. Alternative to --account.</summary>
+    [CommandOption("--account-email <EMAIL>")]
+    public string? AccountEmail { get; init; }
+
+    /// <summary>Account ZUID string to use. Alternative to --account.</summary>
+    [CommandOption("--account-zuidstring <ZUIDSTRING>")]
+    public string? AccountZuidString { get; init; }
+
     /// <summary>
     /// Emit JSON output. Defaults to <c>true</c>; plain-text output is not supported in v1.
     /// </summary>

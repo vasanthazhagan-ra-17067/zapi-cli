@@ -5,21 +5,66 @@
     "status": "Completed",
     "completedDate": "2026-03-18",
     "filesCreatedOrModified": [
-      { "path": "src/zapi-cli.sln", "action": "created" },
-      { "path": "src/ZapiCli/ZapiCli.csproj", "action": "created" },
-      { "path": "src/ZapiCli/Program.cs", "action": "created" },
-      { "path": "src/ZapiCli/DependencyInjectionRegistrar.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/ZapiCli.Core.csproj", "action": "created" },
-      { "path": "src/ZapiCli.Keychain/ZapiCli.Keychain.csproj", "action": "created" },
-      { "path": "src/ZapiCli.Keychain/IKeychainProvider.cs", "action": "created" },
-      { "path": "src/ZapiCli.Keychain/MacOsKeychainProvider.cs", "action": "created" },
-      { "path": "src/ZapiCli.Keychain/WindowsKeychainProvider.cs", "action": "created" },
-      { "path": "src/ZapiCli.Keychain/LinuxKeychainProvider.cs", "action": "created" },
-      { "path": "src/ZapiCli.Keychain/EncryptedFileKeychainProvider.cs", "action": "created" },
-      { "path": "src/ZapiCli.Keychain/KeychainProviderFactory.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/ZapiCli.Tests.csproj", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/PlaceholderTests.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Fakes/InMemoryKeychainProvider.cs", "action": "created" }
+      {
+        "path": "src/zapi-cli.sln",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/ZapiCli.csproj",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/DependencyInjectionRegistrar.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/ZapiCli.Core.csproj",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Keychain/ZapiCli.Keychain.csproj",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Keychain/IKeychainProvider.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Keychain/MacOsKeychainProvider.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Keychain/WindowsKeychainProvider.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Keychain/LinuxKeychainProvider.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Keychain/EncryptedFileKeychainProvider.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Keychain/KeychainProviderFactory.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ZapiCli.Tests.csproj",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/PlaceholderTests.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/InMemoryKeychainProvider.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "IKeychainProvider.DeleteAsync returns Task (not Task<bool>) as specified in story scope",
@@ -32,8 +77,14 @@
       "Spectre.Console.Cli 0.49.1 used (same version as cliq-cli)"
     ],
     "openQuestionsResolved": [
-      { "id": "OQ-005", "resolution": "Used SHA256(MachineName + MachineGuid + 'zapi-cli') as AES-256 key. IV is first 12 bytes of .bin file, then ciphertext, then 16-byte GCM tag. MachineGuid: ioreg on macOS, HKLM registry on Windows, /etc/machine-id on Linux." },
-      { "id": "OQ-006", "resolution": "LinuxKeychainProvider.TryCreate() catches DllNotFoundException and any other error. Performs sentinel probe on init. Returns false to signal fallback to EncryptedFileKeychainProvider." }
+      {
+        "id": "OQ-005",
+        "resolution": "Used SHA256(MachineName + MachineGuid + 'zapi-cli') as AES-256 key. IV is first 12 bytes of .bin file, then ciphertext, then 16-byte GCM tag. MachineGuid: ioreg on macOS, HKLM registry on Windows, /etc/machine-id on Linux."
+      },
+      {
+        "id": "OQ-006",
+        "resolution": "LinuxKeychainProvider.TryCreate() catches DllNotFoundException and any other error. Performs sentinel probe on init. Returns false to signal fallback to EncryptedFileKeychainProvider."
+      }
     ],
     "issuesEncountered": [],
     "stateAfterStory": {
@@ -48,16 +99,46 @@
     "status": "Completed",
     "completedDate": "2026-03-18",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/IOutputWriter.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/JsonOutputWriter.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/InMemoryOutputWriter.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/ZapiCliException.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/ZapiCli.Core.csproj", "action": "modified" },
-      { "path": "src/ZapiCli/Commands/GlobalSettings.cs", "action": "created" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
-      { "path": "src/ZapiCli/ZapiCli.csproj", "action": "modified" },
-      { "path": "tests/ZapiCli.Tests/OutputWriterTests.cs", "action": "created" }
+      {
+        "path": "src/ZapiCli.Core/IOutputWriter.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/JsonOutputWriter.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/InMemoryOutputWriter.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/ZapiCliException.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/ErrorCodes.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/ZapiCli.Core.csproj",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/Commands/GlobalSettings.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/ZapiCli.csproj",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/OutputWriterTests.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "ErrorCodes uses 'static readonly string' fields with SCREAMING_SNAKE_CASE names (ACCOUNT_NOT_FOUND etc.) as specified in story, not PascalCase like cliq-cli",
@@ -83,18 +164,54 @@
     "status": "Completed",
     "completedDate": "2026-03-18",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountsRoot.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Accounts/IAccountStore.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountStore.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Security/ZohoCorpGuard.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Auth/DcResolver.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Auth/OAuthCredentials.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Auth/IAuthProvider.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Auth/OAuthProvider.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/ZapiCli.Core.csproj", "action": "modified" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
-      { "path": "tests/ZapiCli.Tests/AccountStoreTests.cs", "action": "created" }
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountsRoot.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountStore.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountStore.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Security/ZohoCorpGuard.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/DcResolver.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/OAuthCredentials.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/IAuthProvider.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/OAuthProvider.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/ZapiCli.Core.csproj",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountStoreTests.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "AccountStore constructor takes (string configDir, ILogger<AccountStore>) — no production parameterless constructor; configDir injected from Program.cs via EncryptedFileKeychainProvider.GetDefaultConfigDir(), avoiding cross-project dependency",
@@ -108,12 +225,24 @@
       "AccountStore on Windows: FileSecurity + FileSystemAccessRule FullControl for current user, wrapped in try/catch with LogWarning fallback (OQ-007)"
     ],
     "openQuestionsResolved": [
-      { "id": "OQ-002", "resolution": "Keychain blob uses camelCase JSON: { \"accessToken\": \"...\", \"clientId\": \"...\", \"clientSecret\": \"...\" }. OAuthCredentials deserialized with CamelCase JsonSerializerOptions." },
-      { "id": "OQ-003", "resolution": "RefreshTokenAsync: form-encoded POST to <dcBaseUrl>/oauth/v2/token with grant_type=client_credentials&client_id=...&client_secret=...&scope=<comma-joined>. Parses 'access_token' from JSON response." },
-      { "id": "OQ-007", "resolution": "Windows ACL: FileSecurity with SetAccessRuleProtection(isProtected:true, preserveInheritance:false) + FileSystemAccessRule(currentUser, FullControl, Allow). Wrapped in try/catch; logs warning on failure, does not abort SaveAsync." }
+      {
+        "id": "OQ-002",
+        "resolution": "Keychain blob uses camelCase JSON: { \"accessToken\": \"...\", \"clientId\": \"...\", \"clientSecret\": \"...\" }. OAuthCredentials deserialized with CamelCase JsonSerializerOptions."
+      },
+      {
+        "id": "OQ-003",
+        "resolution": "RefreshTokenAsync: form-encoded POST to <dcBaseUrl>/oauth/v2/token with grant_type=client_credentials&client_id=...&client_secret=...&scope=<comma-joined>. Parses 'access_token' from JSON response."
+      },
+      {
+        "id": "OQ-007",
+        "resolution": "Windows ACL: FileSecurity with SetAccessRuleProtection(isProtected:true, preserveInheritance:false) + FileSystemAccessRule(currentUser, FullControl, Allow). Wrapped in try/catch; logs warning on failure, does not abort SaveAsync."
+      }
     ],
     "issuesEncountered": [
-      { "issue": "Test file missing 'using ZapiCli.Keychain' causing CS0246 for IKeychainProvider in FakeHttpClientFactory", "resolution": "Added 'using ZapiCli.Keychain' to AccountStoreTests.cs imports" }
+      {
+        "issue": "Test file missing 'using ZapiCli.Keychain' causing CS0246 for IKeychainProvider in FakeHttpClientFactory",
+        "resolution": "Added 'using ZapiCli.Keychain' to AccountStoreTests.cs imports"
+      }
     ],
     "stateAfterStory": {
       "build": "passing",
@@ -127,17 +256,50 @@
     "status": "Completed",
     "completedDate": "2026-03-18",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/Accounts/AccountListView.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountShowView.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "created" },
-      { "path": "src/ZapiCli/Commands/AccountCommands.cs", "action": "created" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
-      { "path": "src/ZapiCli/ZapiCli.csproj", "action": "modified" },
-      { "path": "tests/ZapiCli.Tests/ZapiCli.Tests.csproj", "action": "modified" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeHttpMessageHandler.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/AccountCommandTests.cs", "action": "created" }
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountListView.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountShowView.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Commands/AccountCommands.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/ZapiCli.csproj",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ZapiCli.Tests.csproj",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeHttpMessageHandler.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountCommandTests.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "Business logic extracted to IAccountService/AccountService in ZapiCli.Core per ADR-0007 'no business logic in ZapiCli' rule. Command classes are thin delegates.",
@@ -150,9 +312,18 @@
       "ZapiCli.Tests.csproj now references ZapiCli (the CLI exe project) to allow testing command settings classes."
     ],
     "openQuestionsResolved": [
-      { "id": "OQ-001", "resolution": "Used { 'status':'ok', 'data':{ 'name':'<name>', 'dc':'<dc>' } } envelope as authoritative output for account add per defaultAssumption. Same wrapper for remove/set-default/re-auth." },
-      { "id": "OQ-004", "resolution": "GET {baseUrl}/oauth/user/info with Authorization: Zoho-oauthtoken <token>. Parses 'Email' and 'ZPUID' fields. Missing email → EMAIL_REQUIRED exit 1." },
-      { "id": "OQ-008", "resolution": "POST {baseUrl}/oauth/v2/token/revoke with form body token=<access_token>. Non-200 response → log warning and continue local cleanup." }
+      {
+        "id": "OQ-001",
+        "resolution": "Used { 'status':'ok', 'data':{ 'name':'<name>', 'dc':'<dc>' } } envelope as authoritative output for account add per defaultAssumption. Same wrapper for remove/set-default/re-auth."
+      },
+      {
+        "id": "OQ-004",
+        "resolution": "GET {baseUrl}/oauth/user/info with Authorization: Zoho-oauthtoken <token>. Parses 'Email' and 'ZPUID' fields. Missing email → EMAIL_REQUIRED exit 1."
+      },
+      {
+        "id": "OQ-008",
+        "resolution": "POST {baseUrl}/oauth/v2/token/revoke with form body token=<access_token>. Non-200 response → log warning and continue local cleanup."
+      }
     ],
     "issuesEncountered": [
       {
@@ -179,14 +350,38 @@
     "status": "Completed",
     "completedDate": "2026-03-18",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/Api/ApiRequest.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Api/ApiResponse.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Api/ApiClient.cs", "action": "created" },
-      { "path": "src/ZapiCli/Commands/ApiCommands.cs", "action": "created" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeAccountStore.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/ApiClientTests.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs", "action": "modified" }
+      {
+        "path": "src/ZapiCli.Core/Api/ApiRequest.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/ApiResponse.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/ApiClient.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Commands/ApiCommands.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeAccountStore.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ApiClientTests.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs",
+        "action": "modified"
+      }
     ],
     "keyDecisionsMade": [
       "IOutputWriter omitted from ApiClient constructor — the story spec listed it but ApiClient has no output responsibility; commands write via IOutputWriter. Omitting it prevents CS0169/IDE0052 warnings. Output is always handled by ApiCallCommand.",
@@ -227,9 +422,18 @@
     "completedDate": "2026-03-18",
     "lastModifiedDate": "2026-03-20",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli/Commands/UtilCommands.cs", "action": "created" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified" },
-      { "path": "tests/ZapiCli.Tests/UtilCommandTests.cs", "action": "created" }
+      {
+        "path": "src/ZapiCli/Commands/UtilCommands.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/UtilCommandTests.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "All command classes live in a single static class UtilCommands in UtilCommands.cs — consistent with the ApiCommands and AccountCommands pattern.",
@@ -265,12 +469,30 @@
     "completedDate": "2026-03-19",
     "planReference": ".ai/plans/account-login-browser-flow.md",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "modified — added STATE_MISMATCH, LOGIN_TIMEOUT" },
-      { "path": "src/ZapiCli.Core/Auth/LocalCallbackServer.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Auth/IOAuthBrowserFlow.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Auth/OAuthBrowserFlow.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Auth/LocalCallbackServerTests.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Auth/OAuthBrowserFlowTests.cs", "action": "created" }
+      {
+        "path": "src/ZapiCli.Core/ErrorCodes.cs",
+        "action": "modified — added STATE_MISMATCH, LOGIN_TIMEOUT"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/LocalCallbackServer.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/IOAuthBrowserFlow.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/OAuthBrowserFlow.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Auth/LocalCallbackServerTests.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Auth/OAuthBrowserFlowTests.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "HttpListener prefix changed from /callback/ to / (root) — HttpListener prefix /callback/ does NOT match requests to /callback?query=string (no trailing slash path). Using / as prefix matches all requests on the ephemeral port, which is safe since we own it exclusively.",
@@ -293,7 +515,17 @@
     "stateAfterStory": {
       "build": "passing",
       "tests": "94 passing, 1 pre-existing failure (AccountStore_ZuidSerializesAsZuidstring — unrelated to Story 10)",
-      "commandsWorking": ["account add", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid"]
+      "commandsWorking": [
+        "account add",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call",
+        "util time-ms",
+        "util uuid"
+      ]
     }
   },
   {
@@ -303,15 +535,42 @@
     "completedDate": "2026-03-19",
     "planReference": ".ai/plans/account-login-browser-flow.md",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — extracted ExchangeAndFinalizeAsync, added LoginAsync, injected IOAuthBrowserFlow" },
-      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — added LoginAsync signature" },
-      { "path": "src/ZapiCli/Commands/LoginConfig.cs", "action": "created" },
-      { "path": "templates/account-login.json", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Auth/LoginAsyncTests.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Auth/LoginConfigTests.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeOAuthBrowserFlow.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeLocalCallbackServer.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs", "action": "modified — added [JsonPropertyName(\"zuidstring\")] to Zuid property (pre-existing bug fix)" }
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified — extracted ExchangeAndFinalizeAsync, added LoginAsync, injected IOAuthBrowserFlow"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified — added LoginAsync signature"
+      },
+      {
+        "path": "src/ZapiCli/Commands/LoginConfig.cs",
+        "action": "created"
+      },
+      {
+        "path": "templates/account-login.json",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Auth/LoginAsyncTests.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Auth/LoginConfigTests.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeOAuthBrowserFlow.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeLocalCallbackServer.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs",
+        "action": "modified — added [JsonPropertyName(\"zuidstring\")] to Zuid property (pre-existing bug fix)"
+      }
     ],
     "keyDecisionsMade": [
       "AccountService.LoginAsync has two overloads: public (5 params) delegates to internal (6 params with Func<LocalCallbackServer> serverFactory). Default factory is () => new LocalCallbackServer(). Tests inject FakeLocalCallbackServer via factory.",
@@ -322,15 +581,31 @@
       "AccountEntry.Zuid [JsonPropertyName(\"zuidstring\")] attribute was missing despite Story 3 memory stating it was added — fixed in this session. All 109 tests now pass."
     ],
     "openQuestionsResolved": [
-      { "id": "OQ-011", "resolution": "refresh_token was already stored in OAuthCredentials — ExchangeAndFinalizeAsync captures it from the token exchange response and passes to StoreTokenAsync." }
+      {
+        "id": "OQ-011",
+        "resolution": "refresh_token was already stored in OAuthCredentials — ExchangeAndFinalizeAsync captures it from the token exchange response and passes to StoreTokenAsync."
+      }
     ],
     "issuesEncountered": [
-      { "issue": "AccountStore_ZuidSerializesAsZuidstring test failing — [JsonPropertyName(\"zuidstring\")] attribute was missing on AccountEntry.Zuid despite Story 3 memory claiming it was added.", "resolution": "Added [JsonPropertyName(\"zuidstring\")] attribute and 'using System.Text.Json.Serialization' import to AccountEntry.cs. All 109 tests now pass." }
+      {
+        "issue": "AccountStore_ZuidSerializesAsZuidstring test failing — [JsonPropertyName(\"zuidstring\")] attribute was missing on AccountEntry.Zuid despite Story 3 memory claiming it was added.",
+        "resolution": "Added [JsonPropertyName(\"zuidstring\")] attribute and 'using System.Text.Json.Serialization' import to AccountEntry.cs. All 109 tests now pass."
+      }
     ],
     "stateAfterStory": {
       "build": "passing",
       "tests": "109 passing, 0 failing",
-      "commandsWorking": ["account add", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid"]
+      "commandsWorking": [
+        "account add",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call",
+        "util time-ms",
+        "util uuid"
+      ]
     }
   },
   {
@@ -340,9 +615,18 @@
     "completedDate": "2026-03-19",
     "planReference": ".ai/plans/account-login-browser-flow.md",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli/Commands/AccountCommands.cs", "action": "modified — added AccountLoginSettings + AccountLoginCommand" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified — registered IOAuthBrowserFlow singleton, added account login command after add" },
-      { "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs", "action": "created" }
+      {
+        "path": "src/ZapiCli/Commands/AccountCommands.cs",
+        "action": "modified — added AccountLoginSettings + AccountLoginCommand"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified — registered IOAuthBrowserFlow singleton, added account login command after add"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "AccountLoginSettings.JsonFile C# property uses '--file' CLI flag (not '--json-file') — avoids collision with GlobalSettings '--json' bool flag.",
@@ -354,12 +638,26 @@
     ],
     "openQuestionsResolved": [],
     "issuesEncountered": [
-      { "issue": "Test used InMemoryOutputWriter.JsonOutputs which does not exist — correct property is SuccessOutput.", "resolution": "Fixed test to use output.SuccessOutput[0] for assertion." }
+      {
+        "issue": "Test used InMemoryOutputWriter.JsonOutputs which does not exist — correct property is SuccessOutput.",
+        "resolution": "Fixed test to use output.SuccessOutput[0] for assertion."
+      }
     ],
     "stateAfterStory": {
       "build": "passing",
       "tests": "120 passing, 0 failing",
-      "commandsWorking": ["account add", "account login", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid"]
+      "commandsWorking": [
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call",
+        "util time-ms",
+        "util uuid"
+      ]
     }
   },
   {
@@ -368,13 +666,34 @@
     "status": "Completed",
     "completedDate": "2026-03-19",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli/Commands/ScopeCommands.cs", "action": "created" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified — added scope branch (add, list)" },
-      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — added AddScopesAsync, GetScopesAsync" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — implemented AddScopesAsync, GetScopesAsync" },
-      { "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs", "action": "modified — added AddScopesAsync and GetScopesAsync stubs to FakeAccountService" },
-      { "path": ".ai/stories/story-07.json", "action": "modified — scope remove deferred to future phase" }
+      {
+        "path": "src/ZapiCli/Commands/ScopeCommands.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified — added scope branch (add, list)"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified — added AddScopesAsync, GetScopesAsync"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified — implemented AddScopesAsync, GetScopesAsync"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs",
+        "action": "modified — added AddScopesAsync and GetScopesAsync stubs to FakeAccountService"
+      },
+      {
+        "path": ".ai/stories/story-07.json",
+        "action": "modified — scope remove deferred to future phase"
+      }
     ],
     "keyDecisionsMade": [
       "scope remove deferred to a future phase by user decision on 2026-03-19. story-07.json updated with deferredItems noting the design rationale (NeedsReauth=true on remove, ZohoCorpGuard required).",
@@ -398,7 +717,20 @@
     "stateAfterStory": {
       "build": "passing",
       "tests": "135 passing, 0 failing",
-      "commandsWorking": ["account add", "account login", "account list", "account show", "account set-default", "account remove", "account re-auth", "api call", "util time-ms", "util uuid", "scope add", "scope list"]
+      "commandsWorking": [
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call",
+        "util time-ms",
+        "util uuid",
+        "scope add",
+        "scope list"
+      ]
     }
   },
   {
@@ -407,21 +739,66 @@
     "status": "Completed",
     "completedDate": "2026-03-20",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/Trace/TraceEntry.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Trace/ITraceSession.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Trace/ITraceConfigStore.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Trace/ITraceWriter.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Trace/TraceSession.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Trace/TraceConfigStore.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Trace/TraceWriter.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Trace/TraceExporter.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "modified — added SESSION_NOT_FOUND, SESSION_AMBIGUOUS, EXPORT_PATH_NOT_SET" },
-      { "path": "src/ZapiCli.Core/Api/ApiClient.cs", "action": "modified — inject ITraceWriter, capture trace info, write entry after each api call" },
-      { "path": "src/ZapiCli/Commands/TraceCommands.cs", "action": "created" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified — register trace services + trace command branches" },
-      { "path": "tests/ZapiCli.Tests/TraceTests.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeTraceWriter.cs", "action": "created" },
-      { "path": "tests/ZapiCli.Tests/ApiClientTests.cs", "action": "modified — MakeApiClient now passes FakeTraceWriter" }
+      {
+        "path": "src/ZapiCli.Core/Trace/TraceEntry.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/ITraceSession.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/ITraceConfigStore.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/ITraceWriter.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/TraceSession.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/TraceConfigStore.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/TraceWriter.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/TraceExporter.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/ErrorCodes.cs",
+        "action": "modified — added SESSION_NOT_FOUND, SESSION_AMBIGUOUS, EXPORT_PATH_NOT_SET"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/ApiClient.cs",
+        "action": "modified — inject ITraceWriter, capture trace info, write entry after each api call"
+      },
+      {
+        "path": "src/ZapiCli/Commands/TraceCommands.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified — register trace services + trace command branches"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/TraceTests.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeTraceWriter.cs",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ApiClientTests.cs",
+        "action": "modified — MakeApiClient now passes FakeTraceWriter"
+      }
     ],
     "keyDecisionsMade": [
       "ApiTraceEntry.Session and ApiTraceEntry.SessionId are NOT 'required' — default to empty string. ApiClient builds entry without these; TraceWriter fills them from the active session via GetActiveSessionAsync.",
@@ -437,12 +814,30 @@
       "Sessions.json root is TraceSessionsRoot (inner private class in TraceSession) with List<TraceSessionEntry> Sessions. Serialized with OutputJsonOptions.Shared (SnakeCaseLower) so file keys match CLI output."
     ],
     "openQuestionsResolved": [
-      { "id": "OQ-009", "resolution": "Name validation: [a-zA-Z0-9_.-], max 64 chars. Regex: @\"^[a-zA-Z0-9_.\\\"-]{1,64}$\". No uniqueness check. SESSION_AMBIGUOUS on export/close/reopen/remove by --name when multiple match." },
-      { "id": "OQ-010", "resolution": "Named Mutex keyed by UUID. WaitOne(2000) — -1 returned on timeout. Task.Run wrapping to avoid async/await thread-affinity issue with Mutex." },
-      { "id": "OQ-012", "resolution": "Status-based drain: CloseSessionAsync sets 'closing' (step 1), waits waitMs, sets 'closed' (step 3). Both under Mutex. TraceWriter drops entry silently when status='closing' or session is null (closed)." },
-      { "id": "OQ-013", "resolution": "EntryCount NOT reset on reopen. ReopenSessionAsync only changes status to 'active'. IncrementEntryCount reads current EntryCount and increments — seq continues from where it left off." },
-      { "id": "OQ-014", "resolution": "RemoveSessionAsync removes only the sessions.json entry. Trace file at ExportPath is preserved by design." },
-      { "id": "OQ-015", "resolution": "Export file name when path is a directory: '<name>-<shortId>.json' where shortId = sessionId.Replace('-','')[..8]." }
+      {
+        "id": "OQ-009",
+        "resolution": "Name validation: [a-zA-Z0-9_.-], max 64 chars. Regex: @\"^[a-zA-Z0-9_.\\\"-]{1,64}$\". No uniqueness check. SESSION_AMBIGUOUS on export/close/reopen/remove by --name when multiple match."
+      },
+      {
+        "id": "OQ-010",
+        "resolution": "Named Mutex keyed by UUID. WaitOne(2000) — -1 returned on timeout. Task.Run wrapping to avoid async/await thread-affinity issue with Mutex."
+      },
+      {
+        "id": "OQ-012",
+        "resolution": "Status-based drain: CloseSessionAsync sets 'closing' (step 1), waits waitMs, sets 'closed' (step 3). Both under Mutex. TraceWriter drops entry silently when status='closing' or session is null (closed)."
+      },
+      {
+        "id": "OQ-013",
+        "resolution": "EntryCount NOT reset on reopen. ReopenSessionAsync only changes status to 'active'. IncrementEntryCount reads current EntryCount and increments — seq continues from where it left off."
+      },
+      {
+        "id": "OQ-014",
+        "resolution": "RemoveSessionAsync removes only the sessions.json entry. Trace file at ExportPath is preserved by design."
+      },
+      {
+        "id": "OQ-015",
+        "resolution": "Export file name when path is a directory: '<name>-<shortId>.json' where shortId = sessionId.Replace('-','')[..8]."
+      }
     ],
     "issuesEncountered": [
       {
@@ -462,14 +857,27 @@
       "build": "passing",
       "tests": "154 passing, 0 failing",
       "commandsWorking": [
-        "account add", "account login", "account list", "account show",
-        "account set-default", "account remove", "account re-auth",
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
         "api call",
-        "util time-ms", "util uuid", "util time-now",
-        "scope add", "scope list",
-        "trace session start", "trace session list", "trace session export",
-        "trace session close", "trace session reopen", "trace session remove",
-        "trace config set", "trace config show"
+        "util time-ms",
+        "util uuid",
+        "util time-now",
+        "scope add",
+        "scope list",
+        "trace session start",
+        "trace session list",
+        "trace session export",
+        "trace session close",
+        "trace session reopen",
+        "trace session remove",
+        "trace config set",
+        "trace config show"
       ]
     }
   },
@@ -479,17 +887,50 @@
     "status": "Completed",
     "completedDate": "2026-03-23",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/Api/HostValidator.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Api/ApiRegistryEntry.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Api/ApiRegistryRoot.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Api/IApiRegistry.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/Api/ApiRegistry.cs", "action": "created" },
-      { "path": "src/ZapiCli/Commands/ApiRegistryCommands.cs", "action": "created" },
-      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "modified — added REGISTRY_ENTRY_NOT_FOUND, REGISTRY_ENTRY_ALREADY_EXISTS" },
-      { "path": "src/ZapiCli.Core/Api/ApiClient.cs", "action": "modified — ValidateHost now delegates to HostValidator.ValidateHost; AllowedHostSuffixes removed from ApiClient" },
-      { "path": "src/ZapiCli/Program.cs", "action": "modified — added IApiRegistry singleton, api registry branch with 5 commands" },
-      { "path": "tests/ZapiCli.Tests/ApiRegistryTests.cs", "action": "created" },
-      { "path": "docs/HELP.md", "action": "modified — added api registry list/add/update/show/remove sections, ToC entries, error codes" }
+      {
+        "path": "src/ZapiCli.Core/Api/HostValidator.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/ApiRegistryEntry.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/ApiRegistryRoot.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/IApiRegistry.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/ApiRegistry.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli/Commands/ApiRegistryCommands.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/ErrorCodes.cs",
+        "action": "modified — added REGISTRY_ENTRY_NOT_FOUND, REGISTRY_ENTRY_ALREADY_EXISTS"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/ApiClient.cs",
+        "action": "modified — ValidateHost now delegates to HostValidator.ValidateHost; AllowedHostSuffixes removed from ApiClient"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified — added IApiRegistry singleton, api registry branch with 5 commands"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ApiRegistryTests.cs",
+        "action": "created"
+      },
+      {
+        "path": "docs/HELP.md",
+        "action": "modified — added api registry list/add/update/show/remove sections, ToC entries, error codes"
+      }
     ],
     "keyDecisionsMade": [
       "HostValidator extracted as public static class in ZapiCli.Core.Api — reused by ApiClient (via thin forwarding wrapper) and api registry add/update commands in ZapiCli layer.",
@@ -515,16 +956,32 @@
       "build": "passing",
       "tests": "169 passing, 0 failing",
       "commandsWorking": [
-        "account add", "account login", "account list", "account show",
-        "account set-default", "account remove", "account re-auth",
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
         "api call",
-        "api registry list", "api registry add", "api registry update",
-        "api registry show", "api registry remove",
-        "util time-ms", "util uuid", "util time-now",
-        "scope add", "scope list",
-        "trace session start", "trace session list", "trace session export",
-        "trace session close", "trace session reopen", "trace session remove",
-        "trace config set", "trace config show"
+        "api registry list",
+        "api registry add",
+        "api registry update",
+        "api registry show",
+        "api registry remove",
+        "util time-ms",
+        "util uuid",
+        "util time-now",
+        "scope add",
+        "scope list",
+        "trace session start",
+        "trace session list",
+        "trace session export",
+        "trace session close",
+        "trace session reopen",
+        "trace session remove",
+        "trace config set",
+        "trace config show"
       ]
     }
   },
@@ -534,12 +991,30 @@
     "status": "Completed",
     "completedDate": "2026-03-23",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli/Commands/AccountCommands.cs", "action": "modified — added --scope option to AccountAddSettings.Validate(), scope parsing in AccountAddCommand.ExecuteAsync" },
-      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — added IEnumerable<string> scopes parameter to AddAccountAsync" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — added scopes parameter to AddAccountAsync, ExchangeAndFinalizeAsync; Scopes = [.. scopes]; LoginAsync passes scopes" },
-      { "path": "tests/ZapiCli.Tests/AccountCommandTests.cs", "action": "modified — updated AddAccountAsync calls with [] scopes; added Scope to AllValid test" },
-      { "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs", "action": "modified — updated FakeAccountService.AddAccountAsync stub signature" },
-      { "path": "tests/ZapiCli.Tests/Accounts/AccountAddScopesTests.cs", "action": "created" }
+      {
+        "path": "src/ZapiCli/Commands/AccountCommands.cs",
+        "action": "modified — added --scope option to AccountAddSettings.Validate(), scope parsing in AccountAddCommand.ExecuteAsync"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified — added IEnumerable<string> scopes parameter to AddAccountAsync"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified — added scopes parameter to AddAccountAsync, ExchangeAndFinalizeAsync; Scopes = [.. scopes]; LoginAsync passes scopes"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountCommandTests.cs",
+        "action": "modified — updated AddAccountAsync calls with [] scopes; added Scope to AllValid test"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs",
+        "action": "modified — updated FakeAccountService.AddAccountAsync stub signature"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Accounts/AccountAddScopesTests.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "scopes parameter is IEnumerable<string> throughout the service layer; materialised at AccountEntry with [.. scopes] collection expression",
@@ -553,16 +1028,32 @@
       "build": "passing",
       "tests": "175 passing, 0 failing",
       "commandsWorking": [
-        "account add", "account login", "account list", "account show",
-        "account set-default", "account remove", "account re-auth",
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
         "api call",
-        "api registry list", "api registry add", "api registry update",
-        "api registry show", "api registry remove",
-        "util time-ms", "util uuid", "util time-now",
-        "scope add", "scope list",
-        "trace session start", "trace session list", "trace session export",
-        "trace session close", "trace session reopen", "trace session remove",
-        "trace config set", "trace config show"
+        "api registry list",
+        "api registry add",
+        "api registry update",
+        "api registry show",
+        "api registry remove",
+        "util time-ms",
+        "util uuid",
+        "util time-now",
+        "scope add",
+        "scope list",
+        "trace session start",
+        "trace session list",
+        "trace session export",
+        "trace session close",
+        "trace session reopen",
+        "trace session remove",
+        "trace config set",
+        "trace config show"
       ]
     }
   },
@@ -572,18 +1063,54 @@
     "status": "Completed",
     "completedDate": "2026-03-23",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs", "action": "modified — removed NeedsReauth property" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountListView.cs", "action": "modified — removed NeedsReauth property" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountShowView.cs", "action": "modified — removed NeedsReauth property" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — removed NeedsReauth from ExchangeAndFinalizeAsync, ListAccountsAsync, ShowAccountAsync, AddScopesAsync, ReAuthAsync" },
-      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — updated XML docs for ReAuthAsync and AddScopesAsync" },
-      { "path": "src/ZapiCli.Core/Api/ApiClient.cs", "action": "modified — removed NeedsReauth pre-refresh block and ClearNeedsReauthAsync method; renumbered steps" },
-      { "path": "src/ZapiCli/Commands/ScopeCommands.cs", "action": "modified — removed NeedsReauth reference from class XML doc and method comment" },
-      { "path": "tests/ZapiCli.Tests/AccountStoreTests.cs", "action": "modified — removed NeedsReauth from AccountEntry initializer and assertion" },
-      { "path": "tests/ZapiCli.Tests/ApiClientTests.cs", "action": "modified — removed needsReauth parameter from MakeAccount(), deleted NeedsReauth test" },
-      { "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs", "action": "modified — removed NeedsReauth from SeedAccount and renamed/updated NeedsReauth-asserting tests" },
-      { "path": "tests/ZapiCli.Tests/AccountCommandTests.cs", "action": "modified — renamed ReAuth test, removed NeedsReauth=true seed and assertion" },
-      { "path": "tests/ZapiCli.Tests/Auth/LoginAsyncTests.cs", "action": "modified — removed NeedsReauth from AccountEntry initializer" }
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountEntry.cs",
+        "action": "modified — removed NeedsReauth property"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountListView.cs",
+        "action": "modified — removed NeedsReauth property"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountShowView.cs",
+        "action": "modified — removed NeedsReauth property"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified — removed NeedsReauth from ExchangeAndFinalizeAsync, ListAccountsAsync, ShowAccountAsync, AddScopesAsync, ReAuthAsync"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified — updated XML docs for ReAuthAsync and AddScopesAsync"
+      },
+      {
+        "path": "src/ZapiCli.Core/Api/ApiClient.cs",
+        "action": "modified — removed NeedsReauth pre-refresh block and ClearNeedsReauthAsync method; renumbered steps"
+      },
+      {
+        "path": "src/ZapiCli/Commands/ScopeCommands.cs",
+        "action": "modified — removed NeedsReauth reference from class XML doc and method comment"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountStoreTests.cs",
+        "action": "modified — removed NeedsReauth from AccountEntry initializer and assertion"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ApiClientTests.cs",
+        "action": "modified — removed needsReauth parameter from MakeAccount(), deleted NeedsReauth test"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs",
+        "action": "modified — removed NeedsReauth from SeedAccount and renamed/updated NeedsReauth-asserting tests"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountCommandTests.cs",
+        "action": "modified — renamed ReAuth test, removed NeedsReauth=true seed and assertion"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Auth/LoginAsyncTests.cs",
+        "action": "modified — removed NeedsReauth from AccountEntry initializer"
+      }
     ],
     "keyDecisionsMade": [
       "ReAuthAsync simplified: removed the entire 'load+select+save' block; now only calls RefreshTokenAsync — the sole purpose of re-auth is refreshing the token",
@@ -596,16 +1123,32 @@
       "build": "passing",
       "tests": "174 passing, 0 failing",
       "commandsWorking": [
-        "account add", "account login", "account list", "account show",
-        "account set-default", "account remove", "account re-auth",
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
         "api call",
-        "api registry list", "api registry add", "api registry update",
-        "api registry show", "api registry remove",
-        "util time-ms", "util uuid", "util time-now",
-        "scope add", "scope list",
-        "trace session start", "trace session list", "trace session export",
-        "trace session close", "trace session reopen", "trace session remove",
-        "trace config set", "trace config show"
+        "api registry list",
+        "api registry add",
+        "api registry update",
+        "api registry show",
+        "api registry remove",
+        "util time-ms",
+        "util uuid",
+        "util time-now",
+        "scope add",
+        "scope list",
+        "trace session start",
+        "trace session list",
+        "trace session export",
+        "trace session close",
+        "trace session reopen",
+        "trace session remove",
+        "trace config set",
+        "trace config show"
       ]
     }
   },
@@ -615,18 +1158,54 @@
     "status": "Completed",
     "completedDate": "2026-03-23",
     "filesCreatedOrModified": [
-      { "path": "src/ZapiCli.Core/ErrorCodes.cs", "action": "modified — added SCOPE_ENHANCE_DENIED and SCOPE_ENHANCE_FAILED constants" },
-      { "path": "src/ZapiCli.Core/Auth/IAuthProvider.cs", "action": "modified — added GetScopeEnhancementTokenAsync to interface" },
-      { "path": "src/ZapiCli.Core/Auth/OAuthProvider.cs", "action": "modified — implemented GetScopeEnhancementTokenAsync (POST to /scopeenhance, grant_type=update_scopes_token)" },
-      { "path": "src/ZapiCli.Core/Auth/LocalCallbackServer.cs", "action": "modified — added WaitForScopeEnhancedCallbackAsync (parses status + scope_enhanced query params)" },
-      { "path": "src/ZapiCli.Core/Accounts/IAccountService.cs", "action": "modified — AddScopesAsync signature now has int callbackPort = 8085 before CancellationToken" },
-      { "path": "src/ZapiCli.Core/Accounts/AccountService.cs", "action": "modified — replaced AddScopesAsync body with two-step browser consent flow; internal overload with Func<int, LocalCallbackServer> serverFactory" },
-      { "path": "src/ZapiCli/Commands/ScopeCommands.cs", "action": "modified — added --port flag to ScopeAddSettings, passed settings.Port to AddScopesAsync" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs", "action": "modified — added GetScopeEnhancementTokenAsync with PresetEnhanceToken/PresetEnhanceClientId" },
-      { "path": "tests/ZapiCli.Tests/Fakes/FakeLocalCallbackServer.cs", "action": "modified — added WaitForScopeEnhancedCallbackAsync override, SetScopeEnhancedError helper" },
-      { "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs", "action": "modified — updated FakeAccountService.AddScopesAsync stub signature (added callbackPort)" },
-      { "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs", "action": "modified — rewrote scope-add success tests to use internal overload + FakeLocalCallbackServer instead of real browser flow" },
-      { "path": "tests/ZapiCli.Tests/Scopes/ScopeAddIncrementalAuthTests.cs", "action": "created" }
+      {
+        "path": "src/ZapiCli.Core/ErrorCodes.cs",
+        "action": "modified — added SCOPE_ENHANCE_DENIED and SCOPE_ENHANCE_FAILED constants"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/IAuthProvider.cs",
+        "action": "modified — added GetScopeEnhancementTokenAsync to interface"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/OAuthProvider.cs",
+        "action": "modified — implemented GetScopeEnhancementTokenAsync (POST to /scopeenhance, grant_type=update_scopes_token)"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/LocalCallbackServer.cs",
+        "action": "modified — added WaitForScopeEnhancedCallbackAsync (parses status + scope_enhanced query params)"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified — AddScopesAsync signature now has int callbackPort = 8085 before CancellationToken"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified — replaced AddScopesAsync body with two-step browser consent flow; internal overload with Func<int, LocalCallbackServer> serverFactory"
+      },
+      {
+        "path": "src/ZapiCli/Commands/ScopeCommands.cs",
+        "action": "modified — added --port flag to ScopeAddSettings, passed settings.Port to AddScopesAsync"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs",
+        "action": "modified — added GetScopeEnhancementTokenAsync with PresetEnhanceToken/PresetEnhanceClientId"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeLocalCallbackServer.cs",
+        "action": "modified — added WaitForScopeEnhancedCallbackAsync override, SetScopeEnhancedError helper"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs",
+        "action": "modified — updated FakeAccountService.AddScopesAsync stub signature (added callbackPort)"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/ScopeCommandTests.cs",
+        "action": "modified — rewrote scope-add success tests to use internal overload + FakeLocalCallbackServer instead of real browser flow"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Scopes/ScopeAddIncrementalAuthTests.cs",
+        "action": "created"
+      }
     ],
     "keyDecisionsMade": [
       "GetScopeEnhancementTokenAsync follows the same keychain-read + HTTP pattern as RefreshTokenAsync; POST to /oauth/v2/token/scopeenhance with grant_type=update_scopes_token; returns (access_token, clientId) tuple",
@@ -637,7 +1216,10 @@
       "SCOPE_ENHANCE_DENIED and SCOPE_ENHANCE_FAILED use const (not static readonly) — this is intentional per story spec for compile-time constants only (other ErrorCodes still use static readonly)"
     ],
     "openQuestionsResolved": [
-      { "id": "OQ-LocalCallbackServerFactory", "resolution": "Used Func<int, LocalCallbackServer> serverFactory parameter in internal AddScopesAsync overload, mirroring the LoginAsync pattern" }
+      {
+        "id": "OQ-LocalCallbackServerFactory",
+        "resolution": "Used Func<int, LocalCallbackServer> serverFactory parameter in internal AddScopesAsync overload, mirroring the LoginAsync pattern"
+      }
     ],
     "issuesEncountered": [
       {
@@ -653,17 +1235,667 @@
       "build": "passing",
       "tests": "181 passing, 0 failing",
       "commandsWorking": [
-        "account add", "account login", "account list", "account show",
-        "account set-default", "account remove", "account re-auth",
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
         "api call",
-        "api registry list", "api registry add", "api registry update",
-        "api registry show", "api registry remove",
-        "util time-ms", "util uuid", "util time-now",
-        "scope add (incremental auth)", "scope list",
-        "trace session start", "trace session list", "trace session export",
-        "trace session close", "trace session reopen", "trace session remove",
-        "trace config set", "trace config show"
+        "api registry list",
+        "api registry add",
+        "api registry update",
+        "api registry show",
+        "api registry remove",
+        "util time-ms",
+        "util uuid",
+        "util time-now",
+        "scope add (incremental auth)",
+        "scope list",
+        "trace session start",
+        "trace session list",
+        "trace session export",
+        "trace session close",
+        "trace session reopen",
+        "trace session remove",
+        "trace config set",
+        "trace config show"
       ]
     }
+  },
+  {
+    "storyId": 16,
+    "title": "OAuthConstants + Constants Reference Dev-Doc",
+    "status": "Completed",
+    "completedDate": "2026-03-25",
+    "filesCreatedOrModified": [
+      {
+        "path": "src/ZapiCli.Core/OAuthConstants.cs",
+        "action": "created"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified — replaced 8085 defaults + AaaServer.profile.READ string with OAuthConstants references"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified — replaced 8085 defaults with OAuthConstants.DefaultCallbackPort"
+      },
+      {
+        "path": "src/ZapiCli/Commands/AccountCommands.cs",
+        "action": "modified — replaced 8085 defaults with OAuthConstants.DefaultCallbackPort"
+      },
+      {
+        "path": "src/ZapiCli/Commands/ScopeCommands.cs",
+        "action": "modified — replaced 8085 default with OAuthConstants.DefaultCallbackPort"
+      },
+      {
+        "path": "tech_spec/docs/constants-reference.md",
+        "action": "created"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/OAuthConstantsTests.cs",
+        "action": "created"
+      }
+    ],
+    "keyDecisionsMade": [
+      "OAuthConstants uses const (not static readonly) for both members — const is required for use as default parameter values and property initializer defaults in C#.",
+      "Both AccountService.cs and IAccountService.cs are in ZapiCli.Core.Accounts namespace; OAuthConstants in ZapiCli.Core — accessible without explicit using due to C# outer-namespace lookup rules.",
+      "AccountCommands.cs and ScopeCommands.cs already had 'using ZapiCli.Core;' — no new using directives needed."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "multi_replace accidentally misaligned brace indentation inside AccountLoginSettings.Validate()",
+        "resolution": "Applied targeted replace_string_in_file to restore correct indent."
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "195 passing, 0 failing",
+      "commandsWorking": [
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call",
+        "api registry list",
+        "api registry add",
+        "api registry update",
+        "api registry show",
+        "api registry remove",
+        "util time-ms",
+        "util uuid",
+        "util time-now",
+        "scope add (incremental auth)",
+        "scope list",
+        "trace session start",
+        "trace session list",
+        "trace session export",
+        "trace session close",
+        "trace session reopen",
+        "trace session remove",
+        "trace config set",
+        "trace config show"
+      ]
+    }
+  },
+  {
+    "storyId": 17,
+    "title": "Unified CliSettings (absorb TraceConfig + ScopeFile + AppDataDir)",
+    "status": "Completed",
+    "completedDate": "2026-03-25",
+    "filesCreatedOrModified": [
+      {
+        "path": "src/ZapiCli.Core/ICliSettingsStore.cs",
+        "action": "modified — added ScopeFile, AppDataDir, TraceDefaultExportPath to CliSettings"
+      },
+      {
+        "path": "src/ZapiCli.Core/CliSettingsStore.cs",
+        "action": "modified — added TryReadPersistedAppDataDir static method"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/ITraceConfigStore.cs",
+        "action": "deleted"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/TraceConfigStore.cs",
+        "action": "deleted"
+      },
+      {
+        "path": "src/ZapiCli.Core/Trace/TraceSession.cs",
+        "action": "modified — replaced ITraceConfigStore with ICliSettingsStore; reads TraceDefaultExportPath"
+      },
+      {
+        "path": "src/ZapiCli/Commands/TraceCommands.cs",
+        "action": "modified — TraceConfigSetCommand and TraceConfigShowCommand now use ICliSettingsStore; output key renamed to trace_default_export_path"
+      },
+      {
+        "path": "src/ZapiCli/Commands/ConfigCommands.cs",
+        "action": "modified — added ConfigSetScopeFileCommand, ConfigSetAppDirCommand; updated ConfigShowCommand to output all 4 fields"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified — removed ITraceConfigStore DI, updated TraceSession DI to use ICliSettingsStore, added 3 new config set subcommands, added TryReadPersistedAppDataDir call"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/TraceTests.cs",
+        "action": "modified — replaced MakeConfigStore/ITraceConfigStore/TraceConfig with MakeSettingsStore/ICliSettingsStore/CliSettings"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/CliSettingsTests.cs",
+        "action": "created"
+      }
+    ],
+    "keyDecisionsMade": [
+      "trace config show output key renamed from 'default_export_path' to 'trace_default_export_path' to match the CliSettings JSON property name and avoid ambiguity.",
+      "trace config set now resolves to absolute path via Path.GetFullPath before saving — consistent with config set env-file behavior.",
+      "config set scope-file has no File.Exists validation — intentionally deferred to login time per story spec.",
+      "config set app-dir uses Directory.CreateDirectory — idempotent, safe if directory already exists.",
+      "TryReadPersistedAppDataDir is a new static method on CliSettingsStore mirroring TryReadPersistedEnvFile pattern.",
+      "appDataDir variable added to Program.cs startup but not yet passed to AccountStore — story 18 will use it."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "203 passing, 0 failing",
+      "commandsWorking": [
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call",
+        "api registry list",
+        "api registry add",
+        "api registry update",
+        "api registry show",
+        "api registry remove",
+        "util time-ms",
+        "util uuid",
+        "util time-now",
+        "scope add (incremental auth)",
+        "scope list",
+        "trace session start",
+        "trace session list",
+        "trace session export",
+        "trace session close",
+        "trace session reopen",
+        "trace session remove",
+        "trace config set",
+        "trace config show",
+        "config set env-file",
+        "config set scope-file",
+        "config set app-dir",
+        "config set trace-export-path",
+        "config show"
+      ]
+    }
+  },
+  {
+    "storyId": 18,
+    "title": "AccountStore: AppDataDir Support + FindByEmail + FindByZuid",
+    "status": "Completed",
+    "completedDate": "2026-03-25",
+    "filesCreatedOrModified": [
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountStore.cs",
+        "action": "modified — added FindByEmailAsync and FindByZuidAsync"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountStore.cs",
+        "action": "modified — added optional appDataDir parameter, implemented FindByEmailAsync and FindByZuidAsync"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified — AccountStore DI registration now passes appDataDir"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeAccountStore.cs",
+        "action": "modified — added FindByEmailAsync and FindByZuidAsync stub implementations"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Accounts/AccountStoreAppDirTests.cs",
+        "action": "created"
+      }
+    ],
+    "keyDecisionsMade": [
+      "AccountStore(configDir, logger, appDataDir=null) — appDataDir defaults to null so existing 2-arg test constructors compile without change.",
+      "FindByEmailAsync uses StringComparison.OrdinalIgnoreCase for email matching.",
+      "FindByZuidAsync uses StringComparison.Ordinal for exact ZUID matching.",
+      "Program.cs reads TryReadPersistedAppDataDir before DI build (already added in story 17) — simply passes the variable to AccountStore constructor."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "Test helper MakeEntry had wrong parameter name 'zuidstring' instead of just 'email'",
+        "resolution": "Removed incorrect named parameter, used 'with { Zuid = ... }' for the ZUID field"
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "210 passing, 0 failing",
+      "commandsWorking": [
+        "account add",
+        "account login",
+        "account list",
+        "account show",
+        "account set-default",
+        "account remove",
+        "account re-auth",
+        "api call",
+        "api registry list",
+        "api registry add",
+        "api registry update",
+        "api registry show",
+        "api registry remove",
+        "util time-ms",
+        "util uuid",
+        "util time-now",
+        "scope add (incremental auth)",
+        "scope list",
+        "trace session start",
+        "trace session list",
+        "trace session export",
+        "trace session close",
+        "trace session reopen",
+        "trace session remove",
+        "trace config set",
+        "trace config show",
+        "config set env-file",
+        "config set scope-file",
+        "config set app-dir",
+        "config set trace-export-path",
+        "config show"
+      ]
+    }
+  },
+  {
+    "storyId": 19,
+    "title": "Multi-Identifier Account Resolution + --email/--zuidstring Flags",
+    "status": "Completed",
+    "completedDate": "2025-07-24",
+    "filesCreatedOrModified": [
+      {
+        "path": "src/ZapiCli.Core/ErrorCodes.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/Commands/AccountCommands.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/Commands/GlobalSettings.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/Commands/ApiCommands.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/Commands/ScopeCommands.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Accounts/AccountResolveTests.cs",
+        "action": "created"
+      }
+    ],
+    "keyDecisionsMade": [
+      "DUPLICATE_IDENTIFIER added to ErrorCodes as static readonly string (consistent with other codes)",
+      "ResolveAccountAsync is private in AccountService — not on IAccountService interface",
+      "ApiCommands and ScopeCommands resolve account via _accountStore directly (not wrapped in service method) — avoids adding a public resolution method to IAccountService only for the api call context",
+      "For set-default/remove/re-auth output, display uses settings.Name ?? settings.Email ?? settings.ZuidString since service returns void (no resolved name returned)",
+      "SCOPE_ENHANCE_FAILED added to ErrorCodes.cs to fix pre-existing build error (used in OAuthProvider.cs but missing from ErrorCodes)"
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "OAuthProvider.cs referenced ErrorCodes.SCOPE_ENHANCE_FAILED which did not exist (pre-existing bug)",
+        "resolution": "Added SCOPE_ENHANCE_FAILED to ErrorCodes.cs as static readonly string"
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "220 passing, 0 failing",
+      "commandsWorking": [
+        "account show --email",
+        "account show --zuidstring",
+        "account set-default --email",
+        "account set-default --zuidstring",
+        "account remove --email",
+        "account remove --zuidstring",
+        "account re-auth --email",
+        "account re-auth --zuidstring",
+        "api call --account-email",
+        "api call --account-zuidstring",
+        "scope add --account-email",
+        "scope list --account-zuidstring"
+      ]
+    }
+  },
+  {
+    "storyId": 20,
+    "title": "account rename Command + IAuthProvider.RenameTokenAsync",
+    "status": "Completed",
+    "completedDate": "2025-07-24",
+    "filesCreatedOrModified": [
+      {
+        "path": "src/ZapiCli.Core/ErrorCodes.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/IAuthProvider.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli.Core/Auth/OAuthProvider.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/Commands/AccountCommands.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Fakes/FakeAuthProvider.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Accounts/AccountRenameTests.cs",
+        "action": "created"
+      }
+    ],
+    "keyDecisionsMade": [
+      "RenameTokenAsync partial failure (write ok, delete fail) throws ACCOUNT_RENAME_FAILED with explicit user message",
+      "AccountService.RenameAccountAsync validates newName for invalid chars before calling ResolveAccountAsync",
+      "FakeAuthProvider.RenameTokenException allows tests to simulate partial keychain failure"
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "229 passing, 0 failing",
+      "commandsWorking": [
+        "account rename --name",
+        "account rename --email",
+        "account rename --zuidstring"
+      ]
+    }
+  },
+  {
+    "storyId": 21,
+    "title": "Remove account add/login; New account login (Mobile OAuth + DC from location)",
+    "status": "Completed",
+    "completedDate": "2025-01-27",
+    "filesCreatedOrModified": [
+      {
+        "path": "src/ZapiCli/Commands/AccountCommands.cs",
+        "action": "modified — removed AccountAddSettings/Command, old AccountLoginSettings/Command, AccountMobileLoginSettings/Command; added new AccountLoginSettings (--name optional, --scope optional) + AccountLoginCommand (env-based, ICliSettingsStore)"
+      },
+      {
+        "path": "src/ZapiCli/Commands/LoginConfig.cs",
+        "action": "deleted"
+      },
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified — removed account add, account mobile-login registrations; account login now uses new AccountLoginCommand"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/IAccountService.cs",
+        "action": "modified — removed AddAccountAsync and LoginAsync declarations; updated MobileLoginAsync signature (name nullable, no dc/port in public interface)"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified — removed AddAccountAsync and LoginAsync; public MobileLoginAsync delegates to internal overload; auth URL hardcoded to accounts.zoho.com; DC derived from result.Location; name derived from email when null; RequiredProfileScope injected and deduped"
+      },
+      {
+        "path": "src/ZapiCli.Core/ErrorCodes.cs",
+        "action": "modified — added ENV_FILE_NOT_CONFIGURED, SCOPE_FILE_NOT_CONFIGURED"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountLoginCommandTests.cs",
+        "action": "rewritten — new tests for env-based AccountLoginCommand; LoginFakeAccountService with MobileLoginAsync stub"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Accounts/AccountAddScopesTests.cs",
+        "action": "rewritten — replaced AddAccountAsync/LoginAsync tests with MobileLoginAsync internal overload scope persistence tests"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Auth/LoginAsyncTests.cs",
+        "action": "deleted"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Auth/LoginConfigTests.cs",
+        "action": "deleted"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/Auth/MobileLoginAsyncTests.cs",
+        "action": "modified — added 5 story-21 tests (auth URL global, DC from location, null name derivation, RequiredProfileScope injection, dedup)"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountCommandTests.cs",
+        "action": "modified — removed AccountAdd test section and AccountAddSettings validation tests"
+      },
+      {
+        "path": "docs/HELP.md",
+        "action": "modified — removed account add section, removed account mobile-login section, rewrote account login section for new Mobile OAuth flow; updated ToC, Authentication Overview, Datacenters, Error Reference"
+      }
+    ],
+    "keyDecisionsMade": [
+      "MobileLoginAsync internal overload keeps dc param (backward compat with tests) but auth URL still hardcoded to https://accounts.zoho.com; DC derived from result.Location",
+      "Name derivation from email: email.Replace('@','_').Replace('.','_') — inside ExchangeAndFinalizeAsync after email is known",
+      "Uniqueness check moved inside ExchangeAndFinalizeAsync (covers null-name case); early check in internal overload still runs for non-null names",
+      "LoginFakeAccountService defined inline in AccountLoginCommandTests.cs (not in Fakes/) — local scope only",
+      "LoginConfigTests.cs and LoginAsyncTests.cs deleted because their subject classes/methods were removed"
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "AccountAddScopesTests.cs used non-existent SetMobileCallbackParams on FakeLocalCallbackServer",
+        "resolution": "Switched to FakeMobileCallbackServer + MobileCallbackResult following existing MobileLoginAsyncTests.cs pattern"
+      },
+      {
+        "issue": "LoginConfigTests.cs and LoginAsyncTests.cs referenced removed LoginConfig and LoginAsync",
+        "resolution": "Both files deleted via git rm"
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "209 passing, 0 failing",
+      "commandsWorking": [
+        "account login (Mobile OAuth, env-based, DC auto-detected, name optional)"
+      ]
+    }
+  },
+  {
+    "storyId": 22,
+    "title": "Remove --env-file CLI Flag + Simplify Startup",
+    "status": "Completed",
+    "filesCreatedOrModified": [
+      {
+        "path": "src/ZapiCli/Program.cs",
+        "action": "modified"
+      },
+      {
+        "path": "templates/account-login.json",
+        "action": "deleted"
+      },
+      {
+        "path": "docs/HELP.md",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/CliSettingsTests.cs",
+        "action": "modified"
+      }
+    ],
+    "keyDecisionsMade": [
+      "Removed ExtractEnvFilePath method - not needed since env-file was a pre-scan flag, not a Spectre option.",
+      "Startup env resolution simplified: read persisted path via TryReadPersistedEnvFile, load only if non-null, no CWD fallback.",
+      "templates/account-login.json deleted - obsolete after LoginConfig removal in story 21.",
+      "HELP.md: removed --env-file row from Global Flags table and removed per-invocation override sentence from config set env-file section.",
+      "Added 3 unit tests: TryReadPersistedEnvFile null when unconfigured, returns path when configured, GlobalSettings has no EnvFile property."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "212 passing, 0 failing",
+      "commandsWorking": [
+        "all previously working commands unchanged"
+      ]
+    },
+    "completedDate": "2026-03-26"
+  },
+  {
+    "storyId": 23,
+    "title": "Remove Token Field from account show/list Output",
+    "status": "Completed",
+    "filesCreatedOrModified": [
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountShowView.cs",
+        "action": "modified"
+      },
+      {
+        "path": "src/ZapiCli.Core/Accounts/AccountService.cs",
+        "action": "modified"
+      },
+      {
+        "path": "tests/ZapiCli.Tests/AccountCommandTests.cs",
+        "action": "modified"
+      },
+      {
+        "path": "docs/HELP.md",
+        "action": "modified"
+      }
+    ],
+    "keyDecisionsMade": [
+      "Removed Token property from AccountShowView entirely - no credential fields in output per ADR-0008.",
+      "Removed Token = \"***\" from AccountService.ShowAccountAsync initializer.",
+      "AccountListView confirmed to have no Token property - no change needed.",
+      "Updated AccountCommandTests.cs: replaced AccountShow_TokenAlwaysMasked test with AccountShow_NoTokenField_InOutput using reflection to confirm no Token property.",
+      "Fixed HELP.md account show example: was showing incorrect status/data wrapper and non-existent client_id field; updated to show accurate plain JSON output."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "HELP.md account show example had incorrect status/data wrapper and client_id field not in AccountShowView",
+        "resolution": "Fixed the example to show accurate plain JSON output"
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "212 passing, 0 failing",
+      "commandsWorking": [
+        "account show (no token field in output)",
+        "account list (no token field confirmed)"
+      ]
+    },
+    "completedDate": "2026-03-26"
+  },
+  {
+    "storyId": 24,
+    "title": "Update zoho-mobile-app-setup.md Documentation",
+    "status": "Completed",
+    "filesCreatedOrModified": [
+      {
+        "path": "docs/zoho-mobile-app-setup.md",
+        "action": "modified"
+      }
+    ],
+    "keyDecisionsMade": [
+      "Renamed all account mobile-login references to account login throughout the document.",
+      "Removed Option B (--env-file per-invocation) and Option C (inline flags/shell exports) from Step 3; kept only Option A renamed to Configure env-file (required).",
+      "Added Step 3b: Configure scope-file with scope file creation and config set scope-file example.",
+      "Updated Step 4: removed custom port paragraph, stated port is fixed at 8085, exactly one redirect URI required.",
+      "Rewrote Step 5: no flags required for basic login, --scope flag alternative shown, DC now auto-detected.",
+      "Removed --dc, --client-id, --client-secret, --port from all command examples.",
+      "Updated Troubleshooting: removed --dc mismatch row, replaced --client-secret note, added ENV_FILE_NOT_CONFIGURED and SCOPE_FILE_NOT_CONFIGURED rows.",
+      "Updated Notes: removed CI/CD plain env files note and account add reference."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "212 passing, 0 failing",
+      "commandsWorking": [
+        "documentation only story"
+      ]
+    },
+    "completedDate": "2026-03-26"
+  },
+  {
+    "storyId": 25,
+    "title": "Update HELP.md",
+    "status": "Completed",
+    "filesCreatedOrModified": [
+      {
+        "path": "docs/HELP.md",
+        "action": "modified"
+      }
+    ],
+    "keyDecisionsMade": [
+      "ToC: added account rename, config set scope-file, config set app-dir entries.",
+      "account show/set-default/remove/re-auth: added --email and --zuidstring options; changed description to \"Exactly one of --name, --email, or --zuidstring is required.\"",
+      "account show/set-default/remove/re-auth error tables: added DUPLICATE_IDENTIFIER row to each.",
+      "Added full account rename section with usage, --name/--email/--zuidstring/--new-name options, example, output, error table (ACCOUNT_NOT_FOUND, ACCOUNT_ALREADY_EXISTS, INVALID_ARGS, DUPLICATE_IDENTIFIER, KEYCHAIN_ERROR, ACCOUNT_RENAME_FAILED).",
+      "scope add OPTIONS: added --port <PORT> (default 8085) for incremental OAuth flow.",
+      "config show example updated to show all 4 fields: env_file, scope_file, app_data_dir, trace_default_export_path.",
+      "Added config set scope-file section with usage, example, output.",
+      "Added config set app-dir section with usage, example, output.",
+      "Error code table: added DUPLICATE_IDENTIFIER and ACCOUNT_RENAME_FAILED rows.",
+      "Security Token masking section: updated to no longer say token is always \"***\"; now says no credential fields are emitted.",
+      "Security No secret logging section: removed obsolete --client-secret flag reference."
+    ],
+    "openQuestionsResolved": [],
+    "issuesEncountered": [
+      {
+        "issue": "Story 23 had already removed access_token from account show output; the HELP.md token masking section had stale text saying the value is always \"***\".",
+        "resolution": "Updated the token masking section to reflect that no credential fields are emitted at all."
+      }
+    ],
+    "stateAfterStory": {
+      "build": "passing",
+      "tests": "212 passing, 0 failing",
+      "commandsWorking": [
+        "all commands documented correctly in HELP.md"
+      ]
+    },
+    "completedDate": "2026-03-26"
   }
 ]

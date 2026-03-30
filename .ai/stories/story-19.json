@@ -1,0 +1,44 @@
+{
+  "storyId": 19,
+  "title": "Multi-Identifier Account Resolution + --email/--zuidstring Flags",
+  "description": "Add a ResolveAccountAsync helper to AccountService that accepts any one of (--name, --email, --zuidstring) and routes to the correct IAccountStore lookup method. Add --email and --zuidstring options to account show, set-default, remove, re-auth command settings. Add --account-email and --account-zuidstring to GlobalSettings so api call and scope commands can target an account by any identifier.",
+  "status": "Completed",
+  "completedDate": "2025-07-24",
+  "dependsOn": [18],
+  "prerequisiteState": "Stories 1–18 complete. IAccountStore has FindByEmailAsync and FindByZuidAsync. AccountService has no ResolveAccountAsync. All account commands accept only --name.",
+  "goal": "After this story: any account command that currently takes --name also accepts --email or --zuidstring (--zuidstring is the CLI flag name, Zuid is the C# property name). Exactly one identifier must be provided per invocation. GlobalSettings exposes --email and --account-zuidstring for api call and scope commands.",
+  "scope": [
+    "Add new error code to src/ZapiCli.Core/ErrorCodes.cs: public static readonly string DUPLICATE_IDENTIFIER = \"DUPLICATE_IDENTIFIER\"; with XML doc 'Thrown when more than one of --name, --email, --zuidstring is provided to a command that accepts exactly one account identifier.'",
+    "Add private async Task<AccountEntry> ResolveAccountAsync(string? name, string? email, string? zuidstring, CancellationToken ct) to src/ZapiCli.Core/Accounts/AccountService.cs. Logic: (1) Count non-null/non-whitespace identifiers across name, email, zuidstring. (2) If count == 0: throw ZapiCliException('At least one of --name, --email, or --zuidstring is required.', INVALID_ARGS, exitCode: 1). (3) If count > 1: throw ZapiCliException('Only one of --name, --email, or --zuidstring may be specified.', DUPLICATE_IDENTIFIER, exitCode: 1). (4) If name: call _accountStore.FindAsync(name, ct); if null throw ACCOUNT_NOT_FOUND. (5) If email: call _accountStore.FindByEmailAsync(email, ct); if null throw ACCOUNT_NOT_FOUND with message 'No account found with email {email}.'. (6) If zuidstring: call _accountStore.FindByZuidAsync(zuidstring, ct); if null throw ACCOUNT_NOT_FOUND with message 'No account found with ZUIDSTRING {zuidstring}.'.",
+    "Modify src/ZapiCli/Commands/AccountCommands.cs — for AccountShowSettings, AccountSetDefaultSettings, AccountRemoveSettings, AccountReAuthSettings: (1) Add [CommandOption(\"--email <EMAIL>\")] public string? Email { get; init; }. (2) Add [CommandOption(\"--zuidstring <ZUIDSTRING>\")] public string? ZuidString { get; init; }. (Note: CLI flag is --zuidstring, C# property ZuidString). (3) Update each Validate(): replace 'if string.IsNullOrWhiteSpace(Name) return error' with a check that counts non-empty values across Name, Email, ZuidString — exactly one must be provided; use the same DUPLICATE_IDENTIFIER / INVALID_ARGS messages. (4) Update corresponding ExecuteAsync methods to pass (settings.Name, settings.Email, settings.ZuidString) to the service method. Service methods must be updated to call ResolveAccountAsync internally instead of taking just a name string.",
+    "Modify src/ZapiCli.Core/Accounts/IAccountService.cs — update signatures for ShowAccountAsync, SetDefaultAsync, RemoveAccountAsync, ReAuthAsync to accept (string? name, string? email, string? zuidstring) instead of only (string name). Update XML docs.",
+    "Modify src/ZapiCli.Core/Accounts/AccountService.cs — update ShowAccountAsync, SetDefaultAsync, RemoveAccountAsync, ReAuthAsync to call ResolveAccountAsync(name, email, zuidstring, ct) at the top of each method instead of calling _accountStore.FindAsync(name) directly.",
+    "Modify src/ZapiCli/Commands/GlobalSettings.cs — add [CommandOption(\"--account-email <EMAIL>\")] public string? AccountEmail { get; init; } and [CommandOption(\"--account-zuidstring <ZUIDSTRING>\")] public string? AccountZuidString { get; init; }. These are optional; if provided, they override the --account flag for account resolution in api call and scope commands.",
+    "Modify src/ZapiCli/Commands/ApiCommands.cs and ScopeCommands.cs — when resolving the account name for an API call, prefer: if settings.Account has value use it as name, else if settings.AccountEmail has value use as email, else if settings.AccountZuidString has value use as zuidstring, else use GetDefaultAsync(). Pass to ResolveAccountAsync (exposed via IAccountService or AccountService) or directly call the appropriate IAccountStore method.",
+    "Unit tests: (1) ResolveAccountAsync with only name → calls FindAsync. (2) ResolveAccountAsync with only email → calls FindByEmailAsync. (3) ResolveAccountAsync with only zuidstring → calls FindByZuidAsync. (4) ResolveAccountAsync with two identifiers provided → throws DUPLICATE_IDENTIFIER. (5) ResolveAccountAsync with no identifiers → throws INVALID_ARGS. (6) account show --email user@example.com resolves correctly. (7) account remove --zuidstring 99999 resolves correctly."
+  ],
+  "acceptanceCriteria": [
+    "ErrorCodes.DUPLICATE_IDENTIFIER exists",
+    "AccountService.ResolveAccountAsync exists as a private method routing to the correct IAccountStore lookup",
+    "account show, set-default, remove, re-auth all accept --email and --zuidstring as alternatives to --name",
+    "Validate() on each settings class ensures exactly one identifier is provided",
+    "IAccountService signatures for show/set-default/remove/re-auth accept nullable name, email, zuidstring",
+    "GlobalSettings has --account-email and --account-zuidstring options",
+    "api call and scope commands pass all three identifier options to account resolution",
+    "dotnet build succeeds 0 errors 0 warnings",
+    "All tests pass including new resolution tests"
+  ],
+  "contextForAgent": "The CLI flag for ZPUID is --zuidstring (not --zuid — the flag was named after the JSON property key). The C# property on settings classes is ZuidString. The C# property on AccountEntry is Zuid. The JSON key on disk in accounts.json is 'zuidstring'. Keep all three consistent. For the API call command, the existing flow uses: accountName = settings.Account ?? (await _accountStore.GetDefaultAsync()).Name. Replace this with a helper that calls ResolveAccountAsync with the three identifiers (treating the --account value as name). If all three are null, fall through to GetDefaultAsync().",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli.Core/Accounts/AccountService.cs",
+    "src/ZapiCli.Core/Accounts/IAccountService.cs",
+    "src/ZapiCli.Core/Accounts/IAccountStore.cs",
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli/Commands/GlobalSettings.cs",
+    "src/ZapiCli/Commands/ApiCommands.cs",
+    "src/ZapiCli/Commands/ScopeCommands.cs",
+    "src/ZapiCli.Core/ErrorCodes.cs"
+  ],
+  "relevantOpenQuestions": []
+}

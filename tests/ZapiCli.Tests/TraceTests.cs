@@ -38,11 +38,11 @@ public sealed class TraceTests : IDisposable
            .FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
            .Value.GetString();
 
-    private ITraceConfigStore MakeConfigStore() =>
-        new TraceConfigStore(_tempDir, NullLogger<TraceConfigStore>.Instance);
+    private ICliSettingsStore MakeSettingsStore() =>
+        new CliSettingsStore(_tempDir, NullLogger<CliSettingsStore>.Instance);
 
     private ITraceSession MakeTraceSession() =>
-        new TraceSession(_tempDir, MakeConfigStore(), NullLogger<TraceSession>.Instance);
+        new TraceSession(_tempDir, MakeSettingsStore(), NullLogger<TraceSession>.Instance);
 
     private TraceWriter MakeTraceWriter(ITraceSession session) =>
         new(session, NullLogger<TraceWriter>.Instance);
@@ -89,11 +89,11 @@ public sealed class TraceTests : IDisposable
     public async Task TraceWriter_SecurityHeaders_AbsentFromWrittenFile()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
 
         // Configure default export path so we don't need --export-path.
         var exportDir = Path.Combine(_tempDir, "traces-out");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var traceSession = session;
         await traceSession.StartSessionAsync("test-sec-headers", null);
@@ -132,9 +132,9 @@ public sealed class TraceTests : IDisposable
     public async Task StartSession_InvalidName_Throws_InvalidArgs()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-out2");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var ex = await Assert.ThrowsAsync<ZapiCliException>(
             () => session.StartSessionAsync("bad/name", null));
@@ -147,9 +147,9 @@ public sealed class TraceTests : IDisposable
     public async Task StartSession_ValidName_Succeeds()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-out3");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("my_session-123.ok", null);
         Assert.Equal("active", entry.Status);
@@ -177,9 +177,9 @@ public sealed class TraceTests : IDisposable
     public async Task Export_TraceFileUnchanged_AfterExport()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-export-safe");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("export-safe", null);
         var writer = MakeTraceWriter(session);
@@ -203,9 +203,9 @@ public sealed class TraceTests : IDisposable
     {
         const string longBody = "LONGLONGLONGLONGLONGLONGLONGLONGLONGBODY";
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-trunc");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("trunc-test", null);
         var writer = MakeTraceWriter(session);
@@ -232,9 +232,9 @@ public sealed class TraceTests : IDisposable
     public async Task SessionEntryCount_IncrementsPerEntry()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-count");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("count-test", null);
         var writer = MakeTraceWriter(session);
@@ -258,9 +258,9 @@ public sealed class TraceTests : IDisposable
     public async Task RemoveSession_SessionsJsonEntryGone_FilePreserved()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-remove");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("remove-test", null);
         var writer = MakeTraceWriter(session);
@@ -284,9 +284,9 @@ public sealed class TraceTests : IDisposable
     public async Task ReopenSession_StatusActive_SeqContinues()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-reopen");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("reopen-test", null);
         var writer = MakeTraceWriter(session);
@@ -324,9 +324,9 @@ public sealed class TraceTests : IDisposable
     public async Task CloseSession_SetsStatusClosed()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-close");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("close-test", null);
 
@@ -352,9 +352,9 @@ public sealed class TraceTests : IDisposable
     public async Task Export_DuplicateName_Throws_SessionAmbiguous()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-ambig");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         // Start two sessions with the same name — both should succeed.
         var e1 = await session.StartSessionAsync("shared-name", null);
@@ -390,9 +390,9 @@ public sealed class TraceTests : IDisposable
     public async Task StartSession_DuplicateNameAllowed_DifferentUniqueIds()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-dup");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var e1 = await session.StartSessionAsync("dup-name", null);
         var e2 = await session.StartSessionAsync("dup-name", null);
@@ -411,9 +411,9 @@ public sealed class TraceTests : IDisposable
     public async Task TraceWriter_ClosedSession_NoNewEntries()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-closed-write");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("closed-write-test", null);
         var writer = MakeTraceWriter(session);
@@ -436,9 +436,9 @@ public sealed class TraceTests : IDisposable
     public async Task TraceWriter_XAuthToken_XApiKey_AreStripped()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-xheaders");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         await session.StartSessionAsync("strip-x-headers", null);
         var writer = MakeTraceWriter(session);
@@ -481,9 +481,9 @@ public sealed class TraceTests : IDisposable
     public async Task Export_TypeFilter_ReturnsOnlyMatchingType()
     {
         var session = MakeTraceSession();
-        var configStore = MakeConfigStore();
+        var settingsStore = MakeSettingsStore();
         var exportDir = Path.Combine(_tempDir, "traces-type-filter");
-        await configStore.SaveAsync(new TraceConfig { DefaultExportPath = exportDir });
+        await settingsStore.SaveAsync(new CliSettings { TraceDefaultExportPath = exportDir });
 
         var entry = await session.StartSessionAsync("type-filter-test", null);
         var writer = MakeTraceWriter(session);

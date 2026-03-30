@@ -98,8 +98,11 @@ public sealed class EncryptedFileKeychainProvider : IKeychainProvider
     {
         var machineName = Environment.MachineName ?? string.Empty;
         var machineGuid = GetMachineGuid();
-        var combined = Encoding.UTF8.GetBytes(machineName + machineGuid + "zapi-cli");
-        return SHA256.HashData(combined);
+        var keyMaterial = Encoding.UTF8.GetBytes(machineName + machineGuid);
+        var salt = "zapi-cli-keystore"u8.ToArray();
+        // HKDF is used instead of a bare SHA-256 hash — SHA-256 is not a KDF and
+        // machine identifiers such as /etc/machine-id are world-readable on Linux.
+        return HKDF.DeriveKey(HashAlgorithmName.SHA256, keyMaterial, 32, salt);
     }
 
     private static string GetMachineGuid()

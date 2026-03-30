@@ -1,137 +1,322 @@
 {
-  "lastSyncedHelpMd": "2026-03-24",
+  "lastSyncedHelpMd": "2026-03-26",
   "syncedItems": [
     {
       "type": "new-command",
       "subject": "account add",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "account login",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "account set-default",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "account remove",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "util time-now",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "trace session list",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "trace session reopen",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "trace session remove",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "trace config set",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-command",
       "subject": "trace config show",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-error-code",
       "subject": "ACCOUNT_ALREADY_EXISTS",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-error-code",
       "subject": "IO_ERROR",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-error-code",
       "subject": "KEYCHAIN_ERROR",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-error-code",
       "subject": "ACCOUNT_DOMAIN_BLOCKED",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-error-code",
       "subject": "EMAIL_REQUIRED",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-error-code",
       "subject": "STATE_MISMATCH",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-error-code",
       "subject": "LOGIN_TIMEOUT",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "new-error-code",
       "subject": "INTERNAL_ERROR",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "changed-behaviour",
       "subject": "Global Flags section",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "changed-behaviour",
       "subject": "Datacenters reference",
       "syncedDate": "2026-03-23",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "changed-output",
       "subject": "account re-auth",
       "syncedDate": "2026-03-24",
-      "artefactsModified": ["SKILL.md"]
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     },
     {
       "type": "changed-behaviour",
       "subject": "needs_reauth field removal from account outputs",
       "syncedDate": "2026-03-24",
-      "artefactsModified": ["SKILL.md", "http-api-analysis.agent.md"]
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
+      ]
+    },
+    {
+      "type": "updated-binary",
+      "subject": "linux-arm64/zapi-cli",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "linux-x64/zapi-cli",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "osx-arm64/zapi-cli",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "osx-x64/zapi-cli",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "win-arm64/zapi-cli.exe",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "win-x64/zapi-cli.exe",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": []
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "account add — removed from HELP.md",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "account login interface change (env-based, scope-file, DC auto-detected, no --dc/--client-id/--client-secret/--port)",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-flag",
+      "subject": "account show/set-default/remove/re-auth --email and --zuidstring",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-command",
+      "subject": "account rename",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-flag",
+      "subject": "scope add --port",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-command",
+      "subject": "config set scope-file",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-command",
+      "subject": "config set app-dir",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "Datacenters section — DC auto-detected from callback, no --dc flag",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "ENV_FILE_NOT_CONFIGURED",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "SCOPE_FILE_NOT_CONFIGURED",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "DUPLICATE_IDENTIFIER",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "ACCOUNT_RENAME_FAILED",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "changed-output",
+      "subject": "config show — now returns 4 fields (env_file, scope_file, app_data_dir, trace_default_export_path)",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
     }
   ],
   "sessionLog": [
@@ -139,28 +324,37 @@
       "date": "2026-03-23",
       "deltaType": "new-command",
       "subject": "account add, account login, account set-default, account remove, util time-now, trace session list, trace session reopen, trace session remove, trace config set, trace config show",
-      "artefactsModified": ["SKILL.md"],
+      "artefactsModified": [
+        "SKILL.md"
+      ],
       "summary": "Added 10 missing commands to CLI — Available Operations table from HELP.md documentation."
     },
     {
       "date": "2026-03-23",
       "deltaType": "new-error-code",
       "subject": "ACCOUNT_ALREADY_EXISTS, IO_ERROR, KEYCHAIN_ERROR, ACCOUNT_DOMAIN_BLOCKED, EMAIL_REQUIRED, STATE_MISMATCH, LOGIN_TIMEOUT, INTERNAL_ERROR",
-      "artefactsModified": ["SKILL.md"],
+      "artefactsModified": [
+        "SKILL.md"
+      ],
       "summary": "Added 8 new error codes to Complete Error Code Reference table from HELP.md comprehensive error handling reference."
     },
     {
       "date": "2026-03-23",
       "deltaType": "changed-behaviour",
       "subject": "Global Flags and Datacenters documentation",
-      "artefactsModified": ["SKILL.md"],
+      "artefactsModified": [
+        "SKILL.md"
+      ],
       "summary": "Added Global Flags section documenting -a/--account, --json, --no-input, -h/--help flags. Added Datacenters section documenting all 9 supported datacenter codes (us, eu, in, au, cn, jp, sa, uk, ca) from HELP.md authentication overview."
     },
     {
       "date": "2026-03-23",
       "deltaType": "new-binary-platform",
       "subject": "win-arm64",
-      "artefactsModified": ["HELP.md", "SKILL.md"],
+      "artefactsModified": [
+        "HELP.md",
+        "SKILL.md"
+      ],
       "summary": "Created tools/win-arm64/ and copied zapi-cli.exe from build/win-arm64/. Added Windows (ARM64) row to HELP.md installation table. Added Windows arm64 row to SKILL.md Tool Location table and added MINGW/CYGWIN+aarch64 detection branch to the bash platform-detection script."
     },
     {
@@ -174,23 +368,68 @@
       "date": "2026-03-24",
       "deltaType": "changed-output",
       "subject": "account re-auth",
-      "artefactsModified": ["SKILL.md"],
+      "artefactsModified": [
+        "SKILL.md"
+      ],
       "summary": "account re-auth output no longer includes needs_reauth field; updated operations table row in SKILL.md to remove the needs_reauth mention."
     },
     {
       "date": "2026-03-24",
       "deltaType": "changed-behaviour",
       "subject": "needs_reauth field removal from account list/show outputs",
-      "artefactsModified": ["SKILL.md", "http-api-analysis.agent.md"],
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
+      ],
       "summary": "needs_reauth removed as a data field from all account outputs; updated SKILL.md account show ops table row, Accounts section bash block, Agent Behaviour Step 1 (removed step 3, renumbered 4-7 to 3-6), Edge Cases table row; http-api-analysis.agent.md needs_reauth check bullet also removed."
+    },
+    {
+      "date": "2026-03-26",
+      "deltaType": "updated-binary",
+      "subject": "all 6 platform binaries (linux-arm64, linux-x64, osx-arm64, osx-x64, win-arm64, win-x64)",
+      "artefactsModified": [],
+      "summary": "Overwrote all 6 platform binaries in tools/ after publish-all.sh built new versions. All checksums verified matching after copy."
+    },
+    {
+      "date": "2026-03-26",
+      "deltaType": "changed-behaviour",
+      "subject": "account add removal; account login interface change; multi-identifier flags; account rename; scope add --port; config set scope-file/app-dir; Datacenters section; 4 new error codes",
+      "artefactsModified": [
+        "SKILL.md"
+      ],
+      "summary": "Synced SKILL.md with HELP.md changes from stories 21-25: removed account add row; updated account login to env-based/scope-file flow; updated account show/set-default/remove/re-auth to accept --email/--zuidstring; added account rename row; added --port to scope add; added config set scope-file and app-dir rows; updated Datacenters section to reflect DC auto-detection; added 4 new error codes (ENV_FILE_NOT_CONFIGURED, SCOPE_FILE_NOT_CONFIGURED, DUPLICATE_IDENTIFIER, ACCOUNT_RENAME_FAILED). http-api-analysis.agent.md required no changes."
     }
   ],
   "syncedBinaries": [
-    { "platform": "linux-arm64", "file": "zapi-cli", "syncedDate": "2026-03-23" },
-    { "platform": "linux-x64", "file": "zapi-cli", "syncedDate": "2026-03-23" },
-    { "platform": "osx-arm64", "file": "zapi-cli", "syncedDate": "2026-03-23" },
-    { "platform": "osx-x64", "file": "zapi-cli", "syncedDate": "2026-03-23" },
-    { "platform": "win-arm64", "file": "zapi-cli.exe", "syncedDate": "2026-03-23" },
-    { "platform": "win-x64", "file": "zapi-cli.exe", "syncedDate": "2026-03-23" }
+    {
+      "platform": "linux-arm64",
+      "file": "zapi-cli",
+      "syncedDate": "2026-03-26"
+    },
+    {
+      "platform": "linux-x64",
+      "file": "zapi-cli",
+      "syncedDate": "2026-03-26"
+    },
+    {
+      "platform": "osx-arm64",
+      "file": "zapi-cli",
+      "syncedDate": "2026-03-26"
+    },
+    {
+      "platform": "osx-x64",
+      "file": "zapi-cli",
+      "syncedDate": "2026-03-26"
+    },
+    {
+      "platform": "win-arm64",
+      "file": "zapi-cli.exe",
+      "syncedDate": "2026-03-26"
+    },
+    {
+      "platform": "win-x64",
+      "file": "zapi-cli.exe",
+      "syncedDate": "2026-03-26"
+    }
   ]
 }

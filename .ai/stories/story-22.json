@@ -1,0 +1,38 @@
+{
+  "storyId": 22,
+  "title": "Remove env-file CLI Flag + Simplify Startup Env Resolution",
+  "description": "Remove the --env-file pre-scan flag and the CWD .env fallback from Program.cs startup. The only way to configure an env-file is via 'zapi-cli config set env-file <path>'. If no env-file is configured, no .env file is loaded at startup (silent). The error for missing ZOHO_CLIENT_ID is thrown at login time (story-21), not at startup.",
+  "status": "Completed",
+  "dependsOn": [
+    21
+  ],
+  "prerequisiteState": "Stories 1–21 complete. Program.cs has ExtractEnvFilePath pre-scan, resolvedEnvFile logic that falls back to CWD .env, and a --env-file flag. Story-21 defers env-var validation to login time.",
+  "goal": "After this story: Program.cs startup env resolution is: read CliSettingsStore.TryReadPersistedEnvFile(earlyConfigDir); if non-null, LoadDotEnv(persistedEnvFile); done. No --env-file flag. No CWD fallback. Silent if unconfigured.",
+  "scope": [
+    "Modify src/ZapiCli/Program.cs — remove the ExtractEnvFilePath method entirely. Remove all code that pre-scans args for '--env-file'. Remove the '?? Path.Combine(Directory.GetCurrentDirectory(), \".env\")' CWD fallback. New env resolution: var persistedEnvFile = CliSettingsStore.TryReadPersistedEnvFile(earlyConfigDir); if (persistedEnvFile != null) LoadDotEnv(persistedEnvFile); — no else branch, no fallback, no CLI flag.",
+    "Verify that GlobalSettings.cs and all command settings classes have no --env-file option defined. If any exist, remove them.",
+    "Verify that templates/ contains no account-login.json references to env-file or client credentials. If templates/account-login.json exists and is no longer relevant after story-21 deleted LoginConfig, delete it or update its content to be consistent with the new login surface (no file-based login config).",
+    "Update docs/HELP.md — remove any mention of --env-file as a CLI flag. Update the 'Configuration' or 'Authentication Overview' section to state: env-file is configured once via 'zapi-cli config set env-file <path>' and auto-loaded at every subsequent invocation. There is no per-invocation override.",
+    "Unit tests: (1) When no env-file is configured (TryReadPersistedEnvFile returns null), LoadDotEnv is NOT called — verify no side effects from missing file. (2) When env-file is configured, it is loaded at startup. (3) Verify --env-file is no longer a recognised flag (Spectre will return INVALID_ARGS if it is passed)."
+  ],
+  "acceptanceCriteria": [
+    "ExtractEnvFilePath method removed from Program.cs",
+    "No --env-file CLI flag exists anywhere in command settings",
+    "No CWD .env fallback in startup resolution",
+    "Startup env resolution is: read persisted path, load if non-null, done",
+    "templates/account-login.json is deleted or updated to remove credential fields",
+    "HELP.md updated to remove --env-file flag reference",
+    "dotnet build succeeds 0 errors 0 warnings",
+    "All tests pass"
+  ],
+  "contextForAgent": "The ExtractEnvFilePath pre-scan method rebuilds the args array without the --env-file flag before Spectre parses it. Removing it is safe because the flag no longer exists as a Spectre option after this story. Double check that no existing test calls ExtractEnvFilePath — remove any such test. The LoadDotEnv helper in Program.cs is kept intact (used during normal startup). Only the resolution logic changes.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli/Program.cs",
+    "src/ZapiCli/Commands/GlobalSettings.cs",
+    "docs/HELP.md",
+    "templates/"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-03-26"
+}

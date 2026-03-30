@@ -1,0 +1,46 @@
+{
+  "storyId": 25,
+  "title": "Update docs/HELP.md for All New and Changed Commands",
+  "description": "Update HELP.md to reflect all changes made in stories 16–24: remove account add section, rewrite account login section (new simplified interface), remove account mobile-login section, add account rename section, update account show/set-default/remove/re-auth to document --email and --zuidstring flags, update config show output example with new fields, add config set scope-file and config set app-dir subsections, update scope add to remove --port, remove token from all output examples.",
+  "status": "Completed",
+  "dependsOn": [
+    24
+  ],
+  "prerequisiteState": "Stories 1–24 complete. HELP.md still documents account add, old account login, account mobile-login. No account rename section. Config show shows only env_file.",
+  "goal": "After this story: HELP.md is fully consistent with the current CLI surface. An AI agent or developer reading HELP.md has accurate command signatures, output formats, and error code tables.",
+  "scope": [
+    "Remove the entire 'account add' section from HELP.md including its usage block, all options, examples, and error table.",
+    "Remove the entire 'account mobile-login' section including usage block, options, examples, and error table.",
+    "Rewrite the 'account login' section: Usage: 'zapi-cli account login [OPTIONS]'. Options: '--name <NAME> (optional)' and '--scope <SCOPE> (optional, comma-separated; additive to configured scope file)'. Remove --port, --client-id, --client-secret, --dc, --file options. Add a paragraph explaining prerequisites: env-file must be configured ('config set env-file') with ZOHO_CLIENT_ID set; scope must be provided via --scope flag or configured scope file ('config set scope-file'). Update the Example (inline flags) to only show: 'zapi-cli account login --scope \"ZohoCliq.Channels.READ\"'. Update Example (minimal with scope-file): 'zapi-cli account login'. Update Example output: { status: ok, data: { name: 'myaccount', dc: 'in' } } — no dc flag needed because it is auto-detected. Keep the flow description (browser opens, 120 second timeout) but note the fixed callback URL: http://localhost:8085/callback. Update error table: remove rows about --port, add ENV_FILE_NOT_CONFIGURED, add SCOPE_FILE_NOT_CONFIGURED, add IO_ERROR for missing scope file.",
+    "Add a new 'account rename' section after 'account re-auth': Usage, Options (--name / --email / --zuidstring as source, --new-name as required target), Example, Example output { status: ok, data: { old_name: '...', new_name: '...' } }, Error table (ACCOUNT_NOT_FOUND, ACCOUNT_ALREADY_EXISTS, INVALID_ARGS, KEYCHAIN_ERROR, ACCOUNT_RENAME_FAILED, DUPLICATE_IDENTIFIER).",
+    "Update 'account show', 'account set-default', 'account remove', 'account re-auth' sections: add --email and --zuidstring to the OPTIONS table. Update Validate notes: 'Exactly one of --name, --email, or --zuidstring is required.' Update error tables to include DUPLICATE_IDENTIFIER.",
+    "Update 'scope add' section: remove --port option from the OPTIONS table and all examples (scope add no longer has --port after story 15 — confirm whether --port was kept; if it was, the scope add command still needs it for the incremental auth callback; review carefully. If --port is still present in scope add per story 15, keep it in HELP.md).",
+    "Update 'config show' section: update the Example output JSON to include all four fields: { env_file: '...', scope_file: '...', app_data_dir: '...', trace_default_export_path: '...' }.",
+    "Add 'config set scope-file' subsection: Usage, PATH argument description ('Absolute path to a newline or comma-delimited scope list file. AaaServer.profile.READ is always included automatically.'), Example, Example output { status: ok, data: { scope_file: '...' } }.",
+    "Add 'config set app-dir' subsection: Usage, PATH argument description ('App-owned data directory where accounts.json is stored. The directory is created if it does not exist.'), Example, Example output { status: ok, data: { app_data_dir: '...' } }.",
+    "Remove any 'access_token: ***' from all account show output examples throughout the document.",
+    "Update the Authentication Overview section: remove the Self-Client vs Browser Login distinction. Replace with a description of the unified Mobile OAuth flow. Note env-file requirement and scope-file option. Note DC auto-detection from callback."
+  ],
+  "acceptanceCriteria": [
+    "account add section removed",
+    "account mobile-login section removed",
+    "account login section documents only --name (optional) and --scope (optional)",
+    "account login prerequisites paragraph present (env-file, scope-file)",
+    "account rename section added with full options, examples, and error table",
+    "account show/set-default/remove/re-auth OPTIONS tables include --email and --zuidstring",
+    "config show example output includes all four config fields",
+    "config set scope-file and config set app-dir subsections added",
+    "No 'access_token' or '***' in any output example",
+    "HELP.md Authentication Overview section consistent with Mobile OAuth flow"
+  ],
+  "contextForAgent": "Read the full current HELP.md before making changes. Scope add --port: story 15 added --port to scope add for the incremental auth callback server. That flag should remain in HELP.md because scope add still uses a local callback server. Only account login has lost --port. Double-check the current ScopeAddSettings in src/ZapiCli/Commands/ScopeCommands.cs to confirm whether --port is still present before updating HELP.md.",
+  "openItems": [],
+  "sourceReferences": [
+    "docs/HELP.md",
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli/Commands/ScopeCommands.cs",
+    "src/ZapiCli/Commands/ConfigCommands.cs"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-03-26"
+}

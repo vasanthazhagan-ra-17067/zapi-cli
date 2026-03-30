@@ -42,6 +42,32 @@ public sealed class OAuthBrowserFlow : IOAuthBrowserFlow
     }
 
     /// <inheritdoc />
+    public string BuildMobileAuthorizationUrl(
+        string baseUrl,
+        string clientId,
+        string redirectUri,
+        string[] scopes,
+        string state,
+        string publicKeyBase64)
+    {
+        var encodedClientId = Uri.EscapeDataString(clientId);
+        var encodedRedirectUri = Uri.EscapeDataString(redirectUri);
+        var encodedScope = Uri.EscapeDataString(string.Join(",", scopes));
+        var encodedState = Uri.EscapeDataString(state);
+        var encodedSsId = Uri.EscapeDataString(publicKeyBase64);
+
+        return $"{baseUrl}/oauth/v2/mobile/auth" +
+               $"?response_type=code" +
+               $"&client_id={encodedClientId}" +
+               $"&redirect_uri={encodedRedirectUri}" +
+               $"&scope={encodedScope}" +
+               $"&state={encodedState}" +
+               $"&access_type=offline" +
+               $"&newmobilepage=true" +
+               $"&ss_id={encodedSsId}";
+    }
+
+    /// <inheritdoc />
     public void OpenBrowser(string url)
     {
         // Always print to stderr first — visible even in piped scenarios and serves as fallback.

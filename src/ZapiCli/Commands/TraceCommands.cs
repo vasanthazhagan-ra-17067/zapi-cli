@@ -8,7 +8,7 @@ namespace ZapiCli.Commands;
 /// <summary>
 /// The <c>trace</c> command group: <c>trace session</c> and <c>trace config</c> subgroups.
 /// All commands are thin — they validate flags, call <see cref="ITraceSession"/> /
-/// <see cref="ITraceConfigStore"/> / <see cref="TraceExporter"/>, and write output via
+/// <see cref="ICliSettingsStore"/> / <see cref="TraceExporter"/>, and write output via
 /// <see cref="IOutputWriter"/>. No domain logic here.
 /// </summary>
 internal static class TraceCommands
@@ -339,25 +339,26 @@ internal static class TraceCommands
 
     public sealed class TraceConfigSetCommand : AsyncCommand<TraceConfigSetSettings>
     {
-        private readonly ITraceConfigStore _configStore;
+        private readonly ICliSettingsStore _settingsStore;
         private readonly IOutputWriter _output;
 
-        public TraceConfigSetCommand(ITraceConfigStore configStore, IOutputWriter output)
+        public TraceConfigSetCommand(ICliSettingsStore settingsStore, IOutputWriter output)
         {
-            _configStore = configStore;
+            _settingsStore = settingsStore;
             _output = output;
         }
 
         public override async Task<int> ExecuteAsync(CommandContext context, TraceConfigSetSettings settings)
         {
-            var existing = await _configStore.LoadAsync().ConfigureAwait(false);
-            var updated = existing with { DefaultExportPath = settings.DefaultExportPath };
-            await _configStore.SaveAsync(updated).ConfigureAwait(false);
+            var absPath = Path.GetFullPath(settings.DefaultExportPath!);
+            var existing = await _settingsStore.LoadAsync().ConfigureAwait(false);
+            var updated = existing with { TraceDefaultExportPath = absPath };
+            await _settingsStore.SaveAsync(updated).ConfigureAwait(false);
 
             _output.WriteJson(new
             {
                 status = "ok",
-                data = new { default_export_path = updated.DefaultExportPath },
+                data = new { trace_default_export_path = absPath },
             });
             return 0;
         }
@@ -369,19 +370,19 @@ internal static class TraceCommands
 
     public sealed class TraceConfigShowCommand : AsyncCommand<TraceConfigShowSettings>
     {
-        private readonly ITraceConfigStore _configStore;
+        private readonly ICliSettingsStore _settingsStore;
         private readonly IOutputWriter _output;
 
-        public TraceConfigShowCommand(ITraceConfigStore configStore, IOutputWriter output)
+        public TraceConfigShowCommand(ICliSettingsStore settingsStore, IOutputWriter output)
         {
-            _configStore = configStore;
+            _settingsStore = settingsStore;
             _output = output;
         }
 
         public override async Task<int> ExecuteAsync(CommandContext context, TraceConfigShowSettings settings)
         {
-            var config = await _configStore.LoadAsync().ConfigureAwait(false);
-            _output.WriteJson(new { default_export_path = config.DefaultExportPath });
+            var config = await _settingsStore.LoadAsync().ConfigureAwait(false);
+            _output.WriteJson(new { trace_default_export_path = config.TraceDefaultExportPath });
             return 0;
         }
     }

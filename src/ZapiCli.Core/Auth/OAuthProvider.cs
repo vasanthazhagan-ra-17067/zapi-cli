@@ -86,6 +86,42 @@ public sealed class OAuthProvider : IAuthProvider
         }
     }
 
+    public async Task RenameTokenAsync(string oldName, string newName, CancellationToken ct = default)
+    {
+        var json = await _keychain.GetAsync(MakeKey(oldName), ct).ConfigureAwait(false);
+        if (json is null)
+            throw new ZapiCliException(
+                $"No credentials found in keychain for account '{oldName}'.",
+                ErrorCodes.KEYCHAIN_ERROR,
+                exitCode: 2);
+
+        try
+        {
+            await _keychain.SetAsync(MakeKey(newName), json, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to write credentials for '{NewName}' to keychain.", newName);
+            throw new ZapiCliException(
+                $"Failed to write credentials for account '{newName}' to keychain.",
+                ErrorCodes.KEYCHAIN_ERROR,
+                exitCode: 2);
+        }
+
+        try
+        {
+            await _keychain.DeleteAsync(MakeKey(oldName), ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Credentials written for '{NewName}' but failed to remove old key '{OldName}'.", newName, oldName);
+            throw new ZapiCliException(
+                $"Credentials written for '{newName}' but failed to remove old key '{oldName}'. Manually remove the old keychain entry if needed.",
+                ErrorCodes.ACCOUNT_RENAME_FAILED,
+                exitCode: 1);
+        }
+    }
+
     public async Task<string> RefreshTokenAsync(
         string accountName,
         IEnumerable<string> scopes,

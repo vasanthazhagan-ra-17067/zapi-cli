@@ -1,0 +1,9 @@
+# Cliq communication scopes
+ZohoCliq.Chats.READ, ZohoCliq.Messages.READ
+
+# Channel and designation scopes
+ZohoCliq.Channels.CREATE, ZohoCliq.Designations.ALL
+
+# Additional scopes can be added on new lines
+# ZohoCliq.Users.READ
+# ZohoCliq.Teams.READ

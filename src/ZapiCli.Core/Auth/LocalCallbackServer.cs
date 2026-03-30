@@ -200,6 +200,76 @@ public class LocalCallbackServer : IDisposable, IAsyncDisposable
         await RespondAsync(context, BuildSuccessHtml()).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Waits for the Zoho Mobile OAuth redirect callback.
+    /// Parses <c>code</c>, <c>state</c>, and optionally <c>gt_hash</c>, <c>gt_sec</c>,
+    /// <c>accounts-server</c>, and <c>location</c> from the query string.
+    /// Only <c>code</c> and <c>state</c> are required; the rest are Zoho client-type-dependent.
+    /// </summary>
+    /// <param name="timeout">Maximum time to wait before throwing LOGIN_TIMEOUT.</param>
+    /// <param name="ct">Optional external cancellation token.</param>
+    /// <returns>A <see cref="MobileCallbackResult"/> with all redirect parameters.</returns>
+    /// <exception cref="ZapiCliException">
+    /// Thrown with <see cref="ErrorCodes.STATE_MISMATCH"/> if <c>?error=...</c> is present in the callback.
+    /// Thrown with <see cref="ErrorCodes.INVALID_ARGS"/> if <c>code</c> or <c>state</c> are missing.
+    /// Thrown with <see cref="ErrorCodes.LOGIN_TIMEOUT"/> if the timeout expires.
+    /// </exception>
+    public virtual async Task<MobileCallbackResult> WaitForMobileCallbackAsync(
+        TimeSpan timeout,
+        CancellationToken ct = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(timeout);
+
+        HttpListenerContext context;
+        try
+        {
+            context = await _listener!.GetContextAsync()
+                .WaitAsync(cts.Token)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new ZapiCliException(
+                "Browser authentication timed out. Run the command again.",
+                ErrorCodes.LOGIN_TIMEOUT,
+                exitCode: 1);
+        }
+
+        var query = context.Request.QueryString;
+
+        var error = query["error"];
+        if (!string.IsNullOrEmpty(error))
+        {
+            await RespondAsync(context, BuildErrorHtml(error)).ConfigureAwait(false);
+            throw new ZapiCliException(error, ErrorCodes.STATE_MISMATCH, exitCode: 1);
+        }
+
+        var code = query["code"];
+        var state = query["state"];
+        var gtHash = query["gt_hash"];
+        var gtSec = query["gt_sec"];
+        var accountsServer = query["accounts-server"];
+        var location = query["location"];
+
+        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+        {
+            var received = new System.Collections.Generic.List<string>();
+            var missing = new System.Collections.Generic.List<string>();
+            void Check(string name, string? val) { if (!string.IsNullOrEmpty(val)) received.Add(name); else missing.Add(name); }
+            Check("code", code); Check("state", state);
+
+            var diagnostic = $"Mobile OAuth callback was missing required parameters. " +
+                $"Received: [{string.Join(", ", received)}]. Missing: [{string.Join(", ", missing)}].";
+
+            await RespondAsync(context, BuildErrorHtml(diagnostic)).ConfigureAwait(false);
+            throw new ZapiCliException(diagnostic, ErrorCodes.INVALID_ARGS, exitCode: 1);
+        }
+
+        await RespondAsync(context, BuildSuccessHtml()).ConfigureAwait(false);
+        return new MobileCallbackResult(code, state, gtHash, gtSec, accountsServer, location);
+    }
+
     private static async Task RespondAsync(HttpListenerContext context, string html)
     {
         var response = context.Response;

@@ -28,4 +28,23 @@ public interface IOAuthBrowserFlow
     /// serves as the manual-paste fallback.
     /// </summary>
     void OpenBrowser(string url);
+
+    /// <summary>
+    /// Builds the Zoho Mobile OAuth 2.0 authorization URL (<c>/oauth/v2/mobile/auth</c>).
+    /// Includes <c>ss_id</c> (RSA public key) so Zoho can encrypt the <c>client_secret</c>
+    /// in the redirect callback.
+    /// </summary>
+    /// <param name="baseUrl">Zoho Accounts base URL (e.g. <c>https://accounts.zoho.com</c>).</param>
+    /// <param name="clientId">OAuth client ID.</param>
+    /// <param name="redirectUri">Redirect URI registered in Zoho Developer Console.</param>
+    /// <param name="scopes">Array of scope strings to request (joined with comma).</param>
+    /// <param name="state">CSRF state token from <see cref="GenerateState"/>.</param>
+    /// <param name="publicKeyBase64">Base64-encoded SubjectPublicKeyInfo RSA public key (the <c>ss_id</c> parameter).</param>
+    string BuildMobileAuthorizationUrl(
+        string baseUrl,
+        string clientId,
+        string redirectUri,
+        string[] scopes,
+        string state,
+        string publicKeyBase64);
 }

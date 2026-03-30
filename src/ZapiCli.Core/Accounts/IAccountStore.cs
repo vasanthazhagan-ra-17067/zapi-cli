@@ -19,4 +19,24 @@ public interface IAccountStore
     /// Throws <see cref="ZapiCliException"/> with code <c>NO_DEFAULT_ACCOUNT</c> if no accounts are configured.
     /// </summary>
     Task<AccountEntry> GetDefaultAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the first account whose <c>Email</c> matches <paramref name="email"/> case-insensitively,
+    /// or <see langword="null"/> if no account has that email.
+    /// </summary>
+    Task<AccountEntry?> FindByEmailAsync(string email, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the first account whose <c>Zuid</c> (zuidstring on disk) matches
+    /// <paramref name="zuidstring"/> with <see cref="StringComparison.Ordinal"/> (exact),
+    /// or <see langword="null"/> if no account has that ZUID.
+    /// </summary>
+    Task<AccountEntry?> FindByZuidAsync(string zuidstring, CancellationToken ct = default);
+
+    /// <summary>
+    /// Copies <c>accounts.json</c> from the current data directory to <paramref name="newDataDir"/>
+    /// if the source file exists and a file does not already exist at the destination.
+    /// Returns <see langword="true"/> if a file was copied; <see langword="false"/> otherwise.
+    /// </summary>
+    Task<bool> MigrateToDirectoryAsync(string newDataDir, CancellationToken ct = default);
 }

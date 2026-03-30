@@ -22,12 +22,13 @@ public sealed class AccountStore : IAccountStore
     private readonly string _accountsPath;
     private readonly ILogger<AccountStore> _logger;
 
-    /// <summary>Testable constructor — accepts an explicit config directory.</summary>
-    public AccountStore(string configDir, ILogger<AccountStore> logger)
+    /// <summary>Testable constructor — accepts an explicit config directory and optional app-data directory.</summary>
+    public AccountStore(string configDir, ILogger<AccountStore> logger, string? appDataDir = null)
     {
         _logger = logger;
-        Directory.CreateDirectory(configDir);
-        _accountsPath = Path.Combine(configDir, "accounts.json");
+        var dataDir = appDataDir ?? configDir;
+        Directory.CreateDirectory(dataDir);
+        _accountsPath = Path.Combine(dataDir, "accounts.json");
     }
 
     // ─── IAccountStore ────────────────────────────────────────────────────────
@@ -68,6 +69,33 @@ public sealed class AccountStore : IAccountStore
                 ErrorCodes.NO_DEFAULT_ACCOUNT);
 
         return account;
+    }
+
+    public async Task<AccountEntry?> FindByEmailAsync(string email, CancellationToken ct = default)
+    {
+        var root = await LoadAsync(ct).ConfigureAwait(false);
+        return root.Accounts.FirstOrDefault(a =>
+            a.Email is not null &&
+            a.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public async Task<AccountEntry?> FindByZuidAsync(string zuidstring, CancellationToken ct = default)
+    {
+        var root = await LoadAsync(ct).ConfigureAwait(false);
+        return root.Accounts.FirstOrDefault(a =>
+            a.Zuid is not null &&
+            a.Zuid.Equals(zuidstring, StringComparison.Ordinal));
+    }
+
+    public Task<bool> MigrateToDirectoryAsync(string newDataDir, CancellationToken ct = default)
+    {
+        var destinationPath = Path.Combine(newDataDir, "accounts.json");
+        if (File.Exists(_accountsPath) && !File.Exists(destinationPath))
+        {
+            File.Copy(_accountsPath, destinationPath);
+            return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

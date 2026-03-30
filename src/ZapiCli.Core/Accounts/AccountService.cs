@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using ZapiCli.Core.Auth;
@@ -31,115 +33,148 @@ public sealed class AccountService : IAccountService
         _browserFlow = browserFlow;
     }
 
-    // ─── AddAccountAsync ──────────────────────────────────────────────────────
+    // ─── MobileLoginAsync ─────────────────────────────────────────────────────
 
-    public async Task<(string Name, string Dc)> AddAccountAsync(
-        string name,
-        string code,
-        string redirectUri,
+    public Task<(string Name, string Dc)> MobileLoginAsync(
+        string? name,
         string clientId,
-        string clientSecret,
-        string dc,
-        IEnumerable<string> scopes,
-        CancellationToken ct = default)
-    {
-        // Uniqueness check — abort early before any network call.
-        var existing = await _accountStore.FindAsync(name, ct).ConfigureAwait(false);
-        if (existing is not null)
-            throw new ZapiCliException(
-                $"Account '{name}' already exists. Use 'account remove' first to replace it.",
-                ErrorCodes.ACCOUNT_ALREADY_EXISTS,
-                exitCode: 1);
-
-        return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, scopes, ct)
-            .ConfigureAwait(false);
-    }
-
-    // ─── LoginAsync ───────────────────────────────────────────────────────────
-
-    public Task<(string Name, string Dc)> LoginAsync(
-        string name,
-        string clientId,
-        string clientSecret,
         string[] scopes,
-        string dc,
-        int callbackPort = 8085,
+        string? clientSecret = null,
         CancellationToken ct = default) =>
-        LoginAsync(name, clientId, clientSecret, scopes, dc, callbackPort, () => new LocalCallbackServer(callbackPort), ct);
+        MobileLoginAsync(name, clientId, scopes, "us", OAuthConstants.DefaultCallbackPort, clientSecret,
+            new RsaKeyPairProvider(), ct, () => new LocalCallbackServer(OAuthConstants.DefaultCallbackPort));
 
     /// <summary>
-    /// Internal overload that accepts a <paramref name="serverFactory"/> — used by tests to inject
-    /// a fake callback server that returns preset code+state without binding an HttpListener.
+    /// Internal overload for unit tests: accepts injectable <see cref="IRsaKeyPairProvider"/> and
+    /// <paramref name="serverFactory"/> to avoid network/browser activity in tests.
+    /// The <paramref name="dc"/> parameter is preserved for test backward compatibility but is
+    /// not used for auth URL construction — auth URL always uses https://accounts.zoho.com.
+    /// Effective DC is derived from the <c>location</c> field in the OAuth callback.
     /// </summary>
-    internal async Task<(string Name, string Dc)> LoginAsync(
-        string name,
+    internal async Task<(string Name, string Dc)> MobileLoginAsync(
+        string? name,
         string clientId,
-        string clientSecret,
         string[] scopes,
         string dc,
         int callbackPort,
-        Func<LocalCallbackServer> serverFactory,
-        CancellationToken ct = default)
+        string? clientSecret,
+        IRsaKeyPairProvider rsaProvider,
+        CancellationToken ct,
+        Func<LocalCallbackServer> serverFactory)
     {
-        // Step 1: Uniqueness check.
-        var existing = await _accountStore.FindAsync(name, ct).ConfigureAwait(false);
-        if (existing is not null)
-            throw new ZapiCliException(
-                $"Account '{name}' already exists. Use 'account remove' first to replace it.",
-                ErrorCodes.ACCOUNT_ALREADY_EXISTS,
-                exitCode: 1);
+        // Step 1: Inject required profile scope + dedup.
+        var finalScopes = scopes
+            .Append(OAuthConstants.RequiredProfileScope)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
-        // Step 2: Resolve DC base URL (needed to build the authorization URL).
-        var baseUrl = DcResolver.GetAccountsBaseUrl(dc);
+        // Step 2 (early, optional): Uniqueness check for non-null names before browser opens.
+        if (name is not null)
+        {
+            var existing = await _accountStore.FindAsync(name, ct).ConfigureAwait(false);
+            if (existing is not null)
+                throw new ZapiCliException(
+                    $"Account '{name}' already exists. Use 'account remove' first to replace it.",
+                    ErrorCodes.ACCOUNT_ALREADY_EXISTS,
+                    exitCode: 1);
+        }
 
-        // Step 3–7: Browser OAuth flow.
+        // Step 3: Generate RSA key pair (public key → ss_id, private key → decrypt gt_sec).
+        var (publicKeyBase64, privateKey) = rsaProvider.Generate();
+        using var privateRsa = privateKey; // ensures RSA key is disposed when login completes or throws
+
+        // Step 4: Start callback server + build mobile auth URL.
+        // Auth URL always uses https://accounts.zoho.com as the global entry point.
+        const string globalAuthBase = "https://accounts.zoho.com";
         await using var server = serverFactory();
 
         var state = _browserFlow.GenerateState();
         var redirectUri = $"http://localhost:{server.Port}/callback";
-        var authUrl = _browserFlow.BuildAuthorizationUrl(baseUrl, clientId, redirectUri, scopes, state);
+        var authUrl = _browserFlow.BuildMobileAuthorizationUrl(
+            globalAuthBase, clientId, redirectUri, finalScopes, state, publicKeyBase64);
 
         Console.Error.WriteLine($"Redirect URI (must be registered in Zoho Developer Console): {redirectUri}");
         _browserFlow.OpenBrowser(authUrl);
-
         Console.Error.WriteLine("Waiting for browser authentication... (timeout: 120s)");
 
-        var (code, returnedState) = await server
-            .WaitForCallbackAsync(TimeSpan.FromSeconds(120), ct)
+        // Step 5: Wait for mobile callback with full parameter set.
+        var result = await server
+            .WaitForMobileCallbackAsync(TimeSpan.FromSeconds(120), ct)
             .ConfigureAwait(false);
 
-        // Step 8: CSRF state verification.
-        if (returnedState != state)
+        // Step 6: CSRF state verification.
+        if (result.State != state)
             throw new ZapiCliException(
                 "OAuth state mismatch — possible CSRF attack.",
                 ErrorCodes.STATE_MISMATCH,
                 exitCode: 1);
 
-        // Step 9: Exchange code + finalize (same as AddAccountAsync).
-        return await ExchangeAndFinalizeAsync(name, code, redirectUri, clientId, clientSecret, dc, scopes, ct)
-            .ConfigureAwait(false);
+        // Step 7: Derive effectiveDc from callback location (defaults to "us" if absent).
+        var effectiveDc = result.Location?.ToLowerInvariant() is { Length: > 0 } loc ? loc : "us";
+
+        // Step 8: Get client_secret — decrypt gt_sec via RSA, or fall back to the explicitly provided secret.
+        string resolvedClientSecret;
+        if (!string.IsNullOrEmpty(result.GtSec))
+        {
+            try
+            {
+                var cipherBytes = Convert.FromBase64String(result.GtSec);
+                var plainBytes = privateRsa.Decrypt(cipherBytes, RSAEncryptionPadding.Pkcs1);
+                resolvedClientSecret = Encoding.UTF8.GetString(plainBytes);
+            }
+            catch (Exception ex) when (ex is FormatException or CryptographicException)
+            {
+                throw new ZapiCliException(
+                    "Failed to decrypt the client secret from the OAuth redirect. " +
+                    "Ensure the client ID is registered with Zoho as a Mobile/Desktop app type.",
+                    ErrorCodes.RSA_DECRYPT_FAILURE,
+                    exitCode: 2);
+            }
+        }
+        else if (!string.IsNullOrEmpty(clientSecret))
+        {
+            resolvedClientSecret = clientSecret;
+        }
+        else
+        {
+            throw new ZapiCliException(
+                "Zoho did not return an encrypted client secret (gt_sec) in the OAuth callback. " +
+                "Pass --client-secret to provide it explicitly.",
+                ErrorCodes.RSA_DECRYPT_FAILURE,
+                exitCode: 2);
+        }
+
+        // Step 9: Token exchange + account persistence.
+        return await ExchangeAndFinalizeAsync(
+            name, result.Code, redirectUri, clientId, resolvedClientSecret, effectiveDc, finalScopes, ct,
+            accountsServerOverride: result.AccountsServer,
+            rtHash: result.GtHash,
+            requireDcLocations: true).ConfigureAwait(false);
     }
+
 
     // ─── ExchangeAndFinalizeAsync ─────────────────────────────────────────────
 
     /// <summary>
-    /// Shared token-exchange + account-persistence helper used by both
-    /// <see cref="AddAccountAsync"/> and <see cref="LoginAsync"/>.
+    /// Shared token-exchange + account-persistence helper used by <see cref="MobileLoginAsync"/>.
     /// Performs: POST /oauth/v2/token → GET /oauth/user/info → ZohoCorp guard →
-    /// keychain store → accounts.json persist.
+    /// name derivation (when null) → uniqueness check → keychain store → accounts.json persist.
     /// </summary>
     private async Task<(string Name, string Dc)> ExchangeAndFinalizeAsync(
-        string name,
+        string? name,
         string code,
         string redirectUri,
         string clientId,
         string clientSecret,
         string dc,
         IEnumerable<string> scopes,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? accountsServerOverride = null,
+        string? rtHash = null,
+        bool requireDcLocations = false)
     {
-        // Step 1: Resolve DC base URL — validates dc value.
-        var baseUrl = DcResolver.GetAccountsBaseUrl(dc);
+        // Step 1: Resolve DC base URL (mobile flow may override with accounts-server from redirect).
+        var baseUrl = accountsServerOverride ?? DcResolver.GetAccountsBaseUrl(dc);
 
         // Step 2: Exchange the grant code for access_token + refresh_token.
         using var httpClient = _httpClientFactory.CreateClient();
@@ -153,6 +188,10 @@ public sealed class AccountService : IAccountService
             ["client_secret"] = clientSecret,
             ["redirect_uri"] = redirectUri,
         };
+
+        // Mobile flow: include rt_hash (= gt_hash from redirect) in the token exchange.
+        if (rtHash is not null)
+            tokenFormData["rt_hash"] = rtHash;
 
         HttpResponseMessage tokenResponse;
         try
@@ -210,6 +249,19 @@ public sealed class AccountService : IAccountService
 
             accessToken = atEl.GetString()!;
             refreshToken = rtEl.GetString()!;
+
+            // Mobile flow: warn if dc_locations is absent but only hard-fail when
+            // accounts-server was NOT already provided by the callback (no fallback routing available).
+            if (requireDcLocations &&
+                (!tokenRoot.TryGetProperty("dc_locations", out var dclEl) ||
+                 dclEl.ValueKind != JsonValueKind.Object) &&
+                accountsServerOverride is null)
+                throw new ZapiCliException(
+                    "Token exchange response did not contain 'dc_locations'. " +
+                    "This is required for the Zoho Mobile OAuth flow. " +
+                    "Ensure your client ID is registered as a Mobile/Desktop app type in the Zoho Developer Console.",
+                    ErrorCodes.DCL_MISSING,
+                    exitCode: 2);
         }
 
         // Step 3: Fetch user-info to validate token and retrieve email + ZPUID.
@@ -250,7 +302,7 @@ public sealed class AccountService : IAccountService
             if (string.IsNullOrEmpty(email))
                 throw new ZapiCliException(
                     "The Zoho user-info endpoint did not return an email address. " +
-                    "Ensure the 'AaaServer.profile.READ' scope is granted on your Self-Client app.",
+                    $"Ensure the '{OAuthConstants.RequiredProfileScope}' scope is granted on your Self-Client app.",
                     ErrorCodes.EMAIL_REQUIRED,
                     exitCode: 1);
 
@@ -263,8 +315,21 @@ public sealed class AccountService : IAccountService
             // Step 5: ZohoCorp block — MUST run after email is known, BEFORE any write.
             ZohoCorpGuard.AssertNotZohoCorp(email);
 
+            // Step 5b: Derive account name from email when not provided by caller.
+            var resolvedName = string.IsNullOrWhiteSpace(name)
+                ? email.Replace('@', '_').Replace('.', '_')
+                : name;
+
+            // Step 5c: Uniqueness check (also catches null-name case deferred from caller).
+            var existingAcct = await _accountStore.FindAsync(resolvedName, ct).ConfigureAwait(false);
+            if (existingAcct is not null)
+                throw new ZapiCliException(
+                    $"Account '{resolvedName}' already exists. Use 'account remove' first to replace it.",
+                    ErrorCodes.ACCOUNT_ALREADY_EXISTS,
+                    exitCode: 1);
+
             // Step 6: Store credentials in the OS keychain.
-            await _authProvider.StoreTokenAsync(name, accessToken, refreshToken, clientId, clientSecret, ct)
+            await _authProvider.StoreTokenAsync(resolvedName, accessToken, refreshToken, clientId, clientSecret, ct)
                 .ConfigureAwait(false);
 
             // Step 7: Persist account entry in accounts.json.
@@ -273,7 +338,7 @@ public sealed class AccountService : IAccountService
 
             var entry = new AccountEntry
             {
-                Name = name,
+                Name = resolvedName,
                 Dc = dc,
                 Email = email,
                 Zuid = zuid,
@@ -288,7 +353,7 @@ public sealed class AccountService : IAccountService
 
             await _accountStore.SaveAsync(updatedRoot, ct).ConfigureAwait(false);
 
-            return (name, dc);
+            return (resolvedName, dc);
         }
     }
 
@@ -314,15 +379,12 @@ public sealed class AccountService : IAccountService
     // ─── ShowAccountAsync ─────────────────────────────────────────────────────
 
     public async Task<AccountShowView> ShowAccountAsync(
-        string name,
+        string? name,
+        string? email = null,
+        string? zuidstring = null,
         CancellationToken ct = default)
     {
-        var account = await _accountStore.FindAsync(name, ct).ConfigureAwait(false);
-        if (account is null)
-            throw new ZapiCliException(
-                $"Account '{name}' not found.",
-                ErrorCodes.ACCOUNT_NOT_FOUND,
-                exitCode: 1);
+        var account = await ResolveAccountAsync(name, email, zuidstring, ct).ConfigureAwait(false);
 
         return new AccountShowView
         {
@@ -332,24 +394,18 @@ public sealed class AccountService : IAccountService
             Zuid = account.Zuid,
             Scopes = account.Scopes,
             IsDefault = account.IsDefault,
-            Token = "***",
         };
     }
 
     // ─── SetDefaultAsync ──────────────────────────────────────────────────────
 
-    public async Task SetDefaultAsync(string name, CancellationToken ct = default)
+    public async Task SetDefaultAsync(string? name, string? email = null, string? zuidstring = null, CancellationToken ct = default)
     {
+        var account = await ResolveAccountAsync(name, email, zuidstring, ct).ConfigureAwait(false);
+
         var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
-
-        if (!root.Accounts.Any(a => a.Name == name))
-            throw new ZapiCliException(
-                $"Account '{name}' not found.",
-                ErrorCodes.ACCOUNT_NOT_FOUND,
-                exitCode: 1);
-
         var updatedAccounts = root.Accounts
-            .Select(a => a with { IsDefault = a.Name == name })
+            .Select(a => a with { IsDefault = a.Name == account.Name })
             .ToList();
 
         await _accountStore.SaveAsync(
@@ -359,21 +415,15 @@ public sealed class AccountService : IAccountService
 
     // ─── RemoveAccountAsync ───────────────────────────────────────────────────
 
-    public async Task RemoveAccountAsync(string name, CancellationToken ct = default)
+    public async Task RemoveAccountAsync(string? name, string? email = null, string? zuidstring = null, CancellationToken ct = default)
     {
-        var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
-
-        var account = root.Accounts.FirstOrDefault(a => a.Name == name);
-        if (account is null)
-            throw new ZapiCliException(
-                $"Account '{name}' not found.",
-                ErrorCodes.ACCOUNT_NOT_FOUND,
-                exitCode: 1);
+        var account = await ResolveAccountAsync(name, email, zuidstring, ct).ConfigureAwait(false);
+        var resolvedName = account.Name;
 
         // Attempt server-side token revocation (best-effort — failure does not abort local cleanup).
         try
         {
-            var accessToken = await _authProvider.GetTokenAsync(name, ct).ConfigureAwait(false);
+            var accessToken = await _authProvider.GetTokenAsync(resolvedName, ct).ConfigureAwait(false);
             var baseUrl = DcResolver.GetAccountsBaseUrl(account.Dc);
 
             using var httpClient = _httpClientFactory.CreateClient();
@@ -390,21 +440,22 @@ public sealed class AccountService : IAccountService
                     "Token revocation returned HTTP {StatusCode} for account '{AccountName}'. " +
                     "Continuing with local cleanup.",
                     (int)revokeResponse.StatusCode,
-                    name);
+                    resolvedName);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
                 "Token revocation failed for account '{AccountName}'. Continuing with local cleanup.",
-                name);
+                resolvedName);
         }
 
         // Clear keychain entry (best-effort).
-        await _authProvider.ClearTokenAsync(name, ct).ConfigureAwait(false);
+        await _authProvider.ClearTokenAsync(resolvedName, ct).ConfigureAwait(false);
 
         // Remove from accounts.json and re-assign default if needed.
-        var remaining = root.Accounts.Where(a => a.Name != name).ToList();
+        var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
+        var remaining = root.Accounts.Where(a => a.Name != resolvedName).ToList();
 
         if (account.IsDefault && remaining.Count > 0)
             remaining[0] = remaining[0] with { IsDefault = true };
@@ -416,19 +467,14 @@ public sealed class AccountService : IAccountService
 
     // ─── ReAuthAsync ──────────────────────────────────────────────────────────
 
-    public async Task ReAuthAsync(string name, CancellationToken ct = default)
+    public async Task ReAuthAsync(string? name, string? email = null, string? zuidstring = null, CancellationToken ct = default)
     {
-        var account = await _accountStore.FindAsync(name, ct).ConfigureAwait(false);
-        if (account is null)
-            throw new ZapiCliException(
-                $"Account '{name}' not found.",
-                ErrorCodes.ACCOUNT_NOT_FOUND,
-                exitCode: 1);
+        var account = await ResolveAccountAsync(name, email, zuidstring, ct).ConfigureAwait(false);
 
         // Apply ZohoCorp block defensively — account should never have been added with a corp email.
         ZohoCorpGuard.AssertNotZohoCorp(account.Email);
 
-        await _authProvider.RefreshTokenAsync(name, account.Scopes, account.Dc, ct)
+        await _authProvider.RefreshTokenAsync(account.Name, account.Scopes, account.Dc, ct)
             .ConfigureAwait(false);
     }
 
@@ -437,7 +483,7 @@ public sealed class AccountService : IAccountService
     public Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
         string accountName,
         IEnumerable<string> scopesToAdd,
-        int callbackPort = 8085,
+        int callbackPort = OAuthConstants.DefaultCallbackPort,
         CancellationToken ct = default) =>
         AddScopesAsync(accountName, scopesToAdd, callbackPort, port => new LocalCallbackServer(port), ct);
 
@@ -531,5 +577,105 @@ public sealed class AccountService : IAccountService
         ZohoCorpGuard.AssertNotZohoCorp(account.Email);
 
         return account.Scopes.ToList();
+    }
+
+    // ─── RenameAccountAsync ───────────────────────────────────────────────────
+
+    public async Task<(string OldName, string NewName)> RenameAccountAsync(
+        string? name,
+        string? email,
+        string? zuidstring,
+        string newName,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+            throw new ZapiCliException(
+                "--new-name is required.",
+                ErrorCodes.INVALID_ARGS,
+                exitCode: 1);
+
+        if (newName.IndexOfAny(['/', '\\', ':', '*', '?']) >= 0)
+            throw new ZapiCliException(
+                "--new-name must not contain / \\ : * ? characters.",
+                ErrorCodes.INVALID_ARGS,
+                exitCode: 1);
+
+        var oldEntry = await ResolveAccountAsync(name, email, zuidstring, ct).ConfigureAwait(false);
+
+        var root = await _accountStore.LoadAsync(ct).ConfigureAwait(false);
+
+        if (root.Accounts.Any(a => a.Name.Equals(newName, StringComparison.Ordinal)))
+            throw new ZapiCliException(
+                $"Account '{newName}' already exists. Choose a different name.",
+                ErrorCodes.ACCOUNT_ALREADY_EXISTS,
+                exitCode: 1);
+
+        await _authProvider.RenameTokenAsync(oldEntry.Name, newName, ct).ConfigureAwait(false);
+
+        var updatedAccounts = root.Accounts
+            .Select(a => a.Name.Equals(oldEntry.Name, StringComparison.Ordinal)
+                ? a with { Name = newName }
+                : a)
+            .ToList();
+
+        await _accountStore.SaveAsync(new AccountsRoot { Accounts = updatedAccounts }, ct).ConfigureAwait(false);
+
+        return (oldEntry.Name, newName);
+    }
+
+    // ─── ResolveAccountAsync (private helper) ─────────────────────────────────
+
+    private async Task<AccountEntry> ResolveAccountAsync(
+        string? name,
+        string? email,
+        string? zuidstring,
+        CancellationToken ct)
+    {
+        var count = (string.IsNullOrWhiteSpace(name) ? 0 : 1)
+                  + (string.IsNullOrWhiteSpace(email) ? 0 : 1)
+                  + (string.IsNullOrWhiteSpace(zuidstring) ? 0 : 1);
+
+        if (count == 0)
+            throw new ZapiCliException(
+                "At least one of --name, --email, or --zuidstring is required.",
+                ErrorCodes.INVALID_ARGS,
+                exitCode: 1);
+
+        if (count > 1)
+            throw new ZapiCliException(
+                "Only one of --name, --email, or --zuidstring may be specified.",
+                ErrorCodes.DUPLICATE_IDENTIFIER,
+                exitCode: 1);
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            var byName = await _accountStore.FindAsync(name, ct).ConfigureAwait(false);
+            if (byName is null)
+                throw new ZapiCliException(
+                    $"Account '{name}' not found.",
+                    ErrorCodes.ACCOUNT_NOT_FOUND,
+                    exitCode: 1);
+            return byName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var byEmail = await _accountStore.FindByEmailAsync(email, ct).ConfigureAwait(false);
+            if (byEmail is null)
+                throw new ZapiCliException(
+                    $"No account found with email '{email}'.",
+                    ErrorCodes.ACCOUNT_NOT_FOUND,
+                    exitCode: 1);
+            return byEmail;
+        }
+
+        // zuidstring path
+        var byZuid = await _accountStore.FindByZuidAsync(zuidstring!, ct).ConfigureAwait(false);
+        if (byZuid is null)
+            throw new ZapiCliException(
+                $"No account found with ZUIDSTRING '{zuidstring}'.",
+                ErrorCodes.ACCOUNT_NOT_FOUND,
+                exitCode: 1);
+        return byZuid;
     }
 }

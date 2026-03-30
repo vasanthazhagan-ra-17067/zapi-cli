@@ -94,6 +94,14 @@ public sealed class TraceWriter : ITraceWriter
                 line + "\n",
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
                 ct).ConfigureAwait(false);
+
+            // Step 8: Restrict trace file to owner only — trace entries may contain
+            // full API response bodies including PII. Idempotent; safe to call on every append.
+            if (!OperatingSystem.IsWindows())
+            {
+                try { File.SetUnixFileMode(session.ExportPath, UnixFileMode.UserRead | UnixFileMode.UserWrite); }
+                catch (PlatformNotSupportedException) { }
+            }
         }
         catch (Exception ex)
         {
@@ -145,6 +153,12 @@ public sealed class TraceWriter : ITraceWriter
                 line + "\n",
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
                 ct).ConfigureAwait(false);
+
+            if (!OperatingSystem.IsWindows())
+            {
+                try { File.SetUnixFileMode(session.ExportPath, UnixFileMode.UserRead | UnixFileMode.UserWrite); }
+                catch (PlatformNotSupportedException) { }
+            }
         }
         catch (Exception ex)
         {

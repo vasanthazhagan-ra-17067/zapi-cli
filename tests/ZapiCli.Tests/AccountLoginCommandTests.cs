@@ -1,5 +1,4 @@
-using System.Text;
-using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZapiCli.Commands;
 using ZapiCli.Core;
 using ZapiCli.Core.Accounts;
@@ -10,11 +9,13 @@ namespace ZapiCli.Tests;
 public sealed class AccountLoginCommandTests : IDisposable
 {
     private readonly string _tmpDir;
+    private readonly CliSettingsStore _settingsStore;
 
     public AccountLoginCommandTests()
     {
         _tmpDir = Path.Combine(Path.GetTempPath(), $"zapi-login-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tmpDir);
+        _settingsStore = new CliSettingsStore(_tmpDir, NullLogger<CliSettingsStore>.Instance);
     }
 
     public void Dispose()
@@ -24,329 +25,307 @@ public sealed class AccountLoginCommandTests : IDisposable
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 
-    private static FakeAccountService BuildService(string? expectName = null, string expectDc = "us")
-    {
-        return new FakeAccountService(expectName ?? "dev", expectDc);
-    }
-
-    private static AccountCommands.AccountLoginCommand BuildCommand(
-        IAccountService? service = null,
-        InMemoryOutputWriter? output = null)
+    private AccountCommands.AccountLoginCommand BuildCommand(
+        LoginFakeAccountService? service = null,
+        InMemoryOutputWriter? output = null,
+        ICliSettingsStore? settingsStore = null)
     {
         return new AccountCommands.AccountLoginCommand(
-            service ?? BuildService(),
-            output ?? new InMemoryOutputWriter());
+            service ?? new LoginFakeAccountService(),
+            output ?? new InMemoryOutputWriter(),
+            settingsStore ?? _settingsStore);
     }
 
-    private string WriteLoginFile(object config)
-    {
-        var path = Path.Combine(_tmpDir, "login.json");
-        File.WriteAllText(path, JsonSerializer.Serialize(config,
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.KebabCaseLower }));
-        return path;
-    }
-
-    // ── Settings.Validate ─────────────────────────────────────────────────────
+    // ── AccountLoginSettings.Validate ─────────────────────────────────────────
 
     [Fact]
-    public void Validate_Succeeds_WhenAllFlagsProvided()
+    public void Validate_Succeeds_WhenNameIsNull()
     {
-        var settings = new AccountCommands.AccountLoginSettings
-        {
-            Name = "dev",
-            ClientId = "cid",
-            ClientSecret = "csecret",
-            Scope = "ZohoAPI.READ",
-        };
-
-        var result = settings.Validate();
-
-        Assert.True(result.Successful);
+        var settings = new AccountCommands.AccountLoginSettings { Name = null };
+        Assert.True(settings.Validate().Successful);
     }
 
     [Fact]
-    public void Validate_Fails_WhenScopeMissingAndNoFile()
+    public void Validate_Succeeds_WhenNameIsClean()
     {
-        var settings = new AccountCommands.AccountLoginSettings
-        {
-            Name = "dev",
-            ClientId = "cid",
-            ClientSecret = "csecret",
-        };
+        var settings = new AccountCommands.AccountLoginSettings { Name = "my-account" };
+        Assert.True(settings.Validate().Successful);
+    }
 
+    [Fact]
+    public void Validate_Fails_WhenNameContainsSlash()
+    {
+        var settings = new AccountCommands.AccountLoginSettings { Name = "bad/name" };
         var result = settings.Validate();
-
         Assert.False(result.Successful);
-        Assert.Contains("scope", result.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Validate_Fails_WhenFileMissing()
-    {
-        var settings = new AccountCommands.AccountLoginSettings
-        {
-            JsonFile = Path.Combine(_tmpDir, "does-not-exist.json"),
-        };
-
-        var result = settings.Validate();
-
-        Assert.False(result.Successful);
-        Assert.Contains("not found", result.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Validate_Succeeds_WhenFileHasAllRequiredFields()
-    {
-        var path = WriteLoginFile(new
-        {
-            name = "acc",
-            ClientId = "cid",
-            ClientSecret = "cs",
-            scope = new[] { "ZohoAPI.READ" },
-            dc = "us",
-        });
-
-        // Write with the correct kebab-case keys that LoginConfig expects.
-        File.WriteAllText(path, """
-            {
-              "name": "acc",
-              "client-id": "cid",
-              "client-secret": "cs",
-              "scope": ["ZohoAPI.READ"],
-              "dc": "us"
-            }
-            """);
-
-        var settings = new AccountCommands.AccountLoginSettings { JsonFile = path };
-        var result = settings.Validate();
-
-        Assert.True(result.Successful);
-    }
-
-    [Fact]
-    public void Validate_Fails_WhenFileIsMissingRequiredFields()
-    {
-        var path = Path.Combine(_tmpDir, "incomplete.json");
-        File.WriteAllText(path, """{ "dc": "us" }""");
-
-        var settings = new AccountCommands.AccountLoginSettings { JsonFile = path };
-        var result = settings.Validate();
-
-        Assert.False(result.Successful);
-        // Should mention missing fields.
-        Assert.NotEmpty(result.Message ?? string.Empty);
+        Assert.Contains("--name", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     // ── ExecuteAsync ──────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ExecuteAsync_CallsLoginAsync_WithAllFlagValues()
+    public async Task ExecuteAsync_MissingClientId_ThrowsEnvFileNotConfigured()
     {
-        var fakeService = new FakeAccountService("dev", "us");
-        var output = new InMemoryOutputWriter();
-        var command = new AccountCommands.AccountLoginCommand(fakeService, output);
-
-        var settings = new AccountCommands.AccountLoginSettings
-        {
-            Name = "dev",
-            ClientId = "cid",
-            ClientSecret = "csecret",
-            Scope = "ZohoAPI.READ,ZohoAPI.WRITE",
-            Dc = "us",
-        };
-
-        var code = await command.ExecuteAsync(null!, settings);
-
-        Assert.Equal(0, code);
-        Assert.NotNull(fakeService.LastLoginArgs);
-        Assert.Equal("dev", fakeService.LastLoginArgs!.Value.Name);
-        Assert.Equal("cid", fakeService.LastLoginArgs!.Value.ClientId);
-        Assert.Equal("csecret", fakeService.LastLoginArgs!.Value.ClientSecret);
-        Assert.Equal(["ZohoAPI.READ", "ZohoAPI.WRITE"], fakeService.LastLoginArgs!.Value.Scopes);
-        Assert.Equal("us", fakeService.LastLoginArgs!.Value.Dc);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_Writes_StatusOkOutput()
-    {
-        var fakeService = new FakeAccountService("dev", "us");
-        var output = new InMemoryOutputWriter();
-        var command = new AccountCommands.AccountLoginCommand(fakeService, output);
-
-        var settings = new AccountCommands.AccountLoginSettings
-        {
-            Name = "dev",
-            ClientId = "cid",
-            ClientSecret = "csecret",
-            Scope = "ZohoAPI.READ",
-        };
-
-        await command.ExecuteAsync(null!, settings);
-
-        Assert.Single(output.SuccessOutput);
-        var json = output.SuccessOutput[0];
-        Assert.Contains("\"status\"", json);
-        Assert.Contains("\"ok\"", json);
-        Assert.Contains("\"name\"", json);
-        Assert.Contains("\"dc\"", json);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_CallsLoginAsync_WithFileValues()
-    {
-        var path = Path.Combine(_tmpDir, "login.json");
-        File.WriteAllText(path, """
-            {
-              "name": "fromfile",
-              "client-id": "file-cid",
-              "client-secret": "file-cs",
-              "scope": ["ZohoAPI.READ"],
-              "dc": "eu"
-            }
-            """);
-
-        var fakeService = new FakeAccountService("fromfile", "eu");
-        var output = new InMemoryOutputWriter();
-        var command = new AccountCommands.AccountLoginCommand(fakeService, output);
-
-        var settings = new AccountCommands.AccountLoginSettings { JsonFile = path };
-
-        var code = await command.ExecuteAsync(null!, settings);
-
-        Assert.Equal(0, code);
-        Assert.NotNull(fakeService.LastLoginArgs);
-        Assert.Equal("fromfile", fakeService.LastLoginArgs!.Value.Name);
-        Assert.Equal("file-cid", fakeService.LastLoginArgs!.Value.ClientId);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_CliNameOverridesFileValue()
-    {
-        var path = Path.Combine(_tmpDir, "login.json");
-        File.WriteAllText(path, """
-            {
-              "name": "fromfile",
-              "client-id": "cid",
-              "client-secret": "cs",
-              "scope": ["ZohoAPI.READ"]
-            }
-            """);
-
-        var fakeService = new FakeAccountService("staging", "us");
-        var output = new InMemoryOutputWriter();
-        var command = new AccountCommands.AccountLoginCommand(fakeService, output);
-
-        var settings = new AccountCommands.AccountLoginSettings
-        {
-            JsonFile = path,
-            Name = "staging",  // CLI overrides file
-        };
-
-        await command.ExecuteAsync(null!, settings);
-
-        Assert.Equal("staging", fakeService.LastLoginArgs!.Value.Name);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ScopeStringIsSplitAndTrimmed()
-    {
-        var fakeService = new FakeAccountService("dev", "us");
-        var output = new InMemoryOutputWriter();
-        var command = new AccountCommands.AccountLoginCommand(fakeService, output);
-
-        var settings = new AccountCommands.AccountLoginSettings
-        {
-            Name = "dev",
-            ClientId = "cid",
-            ClientSecret = "cs",
-            Scope = " ZohoAPI.READ , ZohoAPI.WRITE ",
-        };
-
-        await command.ExecuteAsync(null!, settings);
-
-        Assert.Equal(["ZohoAPI.READ", "ZohoAPI.WRITE"],
-            fakeService.LastLoginArgs!.Value.Scopes);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_PropagatesAccountAlreadyExistsException()
-    {
-        var fakeService = new FakeAccountService("dev", "us",
-            throwException: new ZapiCliException(
-                "Account 'dev' already exists.",
-                ErrorCodes.ACCOUNT_ALREADY_EXISTS,
-                exitCode: 1));
-        var output = new InMemoryOutputWriter();
-        var command = new AccountCommands.AccountLoginCommand(fakeService, output);
-
-        var settings = new AccountCommands.AccountLoginSettings
-        {
-            Name = "dev",
-            ClientId = "cid",
-            ClientSecret = "cs",
-            Scope = "ZohoAPI.READ",
-        };
-
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        var command = BuildCommand();
         var ex = await Assert.ThrowsAsync<ZapiCliException>(() =>
-            command.ExecuteAsync(null!, settings));
-
-        Assert.Equal(ErrorCodes.ACCOUNT_ALREADY_EXISTS, ex.Code);
+            command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings()));
+        Assert.Equal(ErrorCodes.ENV_FILE_NOT_CONFIGURED, ex.Code);
         Assert.Equal(1, ex.ExitCode);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NoScopeAndNoScopeFile_ThrowsScopeFileNotConfigured()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        try
+        {
+            var command = BuildCommand();
+            var ex = await Assert.ThrowsAsync<ZapiCliException>(() =>
+                command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings()));
+            Assert.Equal(ErrorCodes.SCOPE_FILE_NOT_CONFIGURED, ex.Code);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeFileConfiguredButMissing_ThrowsIoError()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        try
+        {
+            var missingPath = Path.Combine(_tmpDir, "does-not-exist.txt");
+            await _settingsStore.SaveAsync(new CliSettings { ScopeFile = missingPath });
+            var command = BuildCommand();
+            var ex = await Assert.ThrowsAsync<ZapiCliException>(() =>
+                command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings()));
+            Assert.Equal(ErrorCodes.IO_ERROR, ex.Code);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeFromFlag_CallsMobileLoginWithCorrectScopes()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        try
+        {
+            var service = new LoginFakeAccountService();
+            var command = BuildCommand(service);
+            await command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings
+            {
+                Scope = "ZohoCRM.Contacts.READ,ZohoCRM.Deals.ALL",
+            });
+            Assert.NotNull(service.LastMobileLoginArgs);
+            Assert.Contains("ZohoCRM.Contacts.READ", service.LastMobileLoginArgs!.Value.Scopes);
+            Assert.Contains("ZohoCRM.Deals.ALL", service.LastMobileLoginArgs.Value.Scopes);
+            Assert.Equal("test-cid", service.LastMobileLoginArgs.Value.ClientId);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeFromFile_CallsMobileLoginWithCorrectScopes()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        try
+        {
+            var scopeFile = Path.Combine(_tmpDir, "scopes.txt");
+            File.WriteAllLines(scopeFile, ["ZohoCliq.Channels.READ", "# comment", "ZohoCliq.Messages.ALL"]);
+            await _settingsStore.SaveAsync(new CliSettings { ScopeFile = scopeFile });
+            var service = new LoginFakeAccountService();
+            var command = BuildCommand(service);
+            await command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings());
+            Assert.NotNull(service.LastMobileLoginArgs);
+            Assert.Contains("ZohoCliq.Channels.READ", service.LastMobileLoginArgs!.Value.Scopes);
+            Assert.Contains("ZohoCliq.Messages.ALL", service.LastMobileLoginArgs.Value.Scopes);
+            Assert.DoesNotContain("# comment", service.LastMobileLoginArgs.Value.Scopes);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeFromFlagAndFile_MergedAndDeduped()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        try
+        {
+            var scopeFile = Path.Combine(_tmpDir, "scopes.txt");
+            File.WriteAllLines(scopeFile, ["ZohoCliq.Channels.READ"]);
+            await _settingsStore.SaveAsync(new CliSettings { ScopeFile = scopeFile });
+            var service = new LoginFakeAccountService();
+            var command = BuildCommand(service);
+            await command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings
+            {
+                Scope = "ZohoCliq.Channels.READ,ZohoCRM.Contacts.ALL",
+            });
+            Assert.NotNull(service.LastMobileLoginArgs);
+            var scopes = service.LastMobileLoginArgs!.Value.Scopes;
+            Assert.Equal(2, scopes.Length);
+            Assert.Contains("ZohoCliq.Channels.READ", scopes);
+            Assert.Contains("ZohoCRM.Contacts.ALL", scopes);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WritesOkOutput()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        try
+        {
+            var service = new LoginFakeAccountService(returnName: "myaccount", returnDc: "eu");
+            var output = new InMemoryOutputWriter();
+            var command = BuildCommand(service, output);
+            await command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings
+            {
+                Scope = "ZohoCRM.Contacts.READ",
+            });
+            Assert.Single(output.SuccessOutput);
+            var json = output.SuccessOutput[0];
+            Assert.Contains("\"status\"", json);
+            Assert.Contains("\"ok\"", json);
+            Assert.Contains("\"name\"", json);
+            Assert.Contains("\"myaccount\"", json);
+            Assert.Contains("\"dc\"", json);
+            Assert.Contains("\"eu\"", json);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NamePassedThrough()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        try
+        {
+            var service = new LoginFakeAccountService();
+            var command = BuildCommand(service);
+            await command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings
+            {
+                Name = "my-profile",
+                Scope = "ZohoCRM.Contacts.READ",
+            });
+            Assert.Equal("my-profile", service.LastMobileLoginArgs!.Value.Name);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NullName_PassedAsNull()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        try
+        {
+            var service = new LoginFakeAccountService();
+            var command = BuildCommand(service);
+            await command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings
+            {
+                Scope = "ZohoCRM.Contacts.READ",
+            });
+            Assert.Null(service.LastMobileLoginArgs!.Value.Name);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ClientSecretFromEnv_PassedToMobileLogin()
+    {
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", "test-cid");
+        Environment.SetEnvironmentVariable("ZOHO_CLIENT_SECRET", "test-secret");
+        try
+        {
+            var service = new LoginFakeAccountService();
+            var command = BuildCommand(service);
+            await command.ExecuteAsync(null!, new AccountCommands.AccountLoginSettings
+            {
+                Scope = "ZohoCRM.Contacts.READ",
+            });
+            Assert.Equal("test-secret", service.LastMobileLoginArgs!.Value.ClientSecret);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_ID", null);
+            Environment.SetEnvironmentVariable("ZOHO_CLIENT_SECRET", null);
+        }
     }
 }
 
 /// <summary>
-/// Fake <see cref="IAccountService"/> for AccountLoginCommandTests.
-/// Records LoginAsync call parameters and returns a preset (name, dc) tuple.
+/// Fake <see cref="IAccountService"/> for <see cref="AccountLoginCommandTests"/>.
+/// Records MobileLoginAsync call parameters and returns a preset (name, dc) tuple.
 /// </summary>
-internal sealed class FakeAccountService : IAccountService
+internal sealed class LoginFakeAccountService : IAccountService
 {
     private readonly string _returnName;
     private readonly string _returnDc;
     private readonly ZapiCliException? _throwException;
 
-    public (string Name, string ClientId, string ClientSecret, string[] Scopes, string Dc)? LastLoginArgs { get; private set; }
+    public (string? Name, string ClientId, string[] Scopes, string? ClientSecret)? LastMobileLoginArgs { get; private set; }
 
-    public FakeAccountService(string returnName, string returnDc, ZapiCliException? throwException = null)
+    public LoginFakeAccountService(string returnName = "dev", string returnDc = "us", ZapiCliException? throwException = null)
     {
         _returnName = returnName;
         _returnDc = returnDc;
         _throwException = throwException;
     }
 
-    public Task<(string Name, string Dc)> LoginAsync(
-        string name, string clientId, string clientSecret, string[] scopes, string dc,
-        int callbackPort = 8085, CancellationToken ct = default)
+    public Task<(string Name, string Dc)> MobileLoginAsync(
+        string? name, string clientId, string[] scopes, string? clientSecret = null, CancellationToken ct = default)
     {
         if (_throwException is not null)
             throw _throwException;
 
-        LastLoginArgs = (name, clientId, clientSecret, scopes, dc);
+        LastMobileLoginArgs = (name, clientId, scopes, clientSecret);
         return Task.FromResult((_returnName, _returnDc));
     }
 
     // ── Unused stubs ──────────────────────────────────────────────────────────
-    public Task<(string Name, string Dc)> AddAccountAsync(string name, string code, string redirectUri,
-        string clientId, string clientSecret, string dc, IEnumerable<string> scopes, CancellationToken ct = default) =>
-        throw new NotImplementedException();
-
     public Task<IReadOnlyList<AccountListView>> ListAccountsAsync(CancellationToken ct = default) =>
         throw new NotImplementedException();
 
-    public Task<AccountShowView> ShowAccountAsync(string name, CancellationToken ct = default) =>
+    public Task<AccountShowView> ShowAccountAsync(string? name, string? email = null, string? zuidstring = null, CancellationToken ct = default) =>
         throw new NotImplementedException();
 
-    public Task SetDefaultAsync(string name, CancellationToken ct = default) =>
+    public Task SetDefaultAsync(string? name, string? email = null, string? zuidstring = null, CancellationToken ct = default) =>
         throw new NotImplementedException();
 
-    public Task RemoveAccountAsync(string name, CancellationToken ct = default) =>
+    public Task RemoveAccountAsync(string? name, string? email = null, string? zuidstring = null, CancellationToken ct = default) =>
         throw new NotImplementedException();
 
-    public Task ReAuthAsync(string name, CancellationToken ct = default) =>
+    public Task ReAuthAsync(string? name, string? email = null, string? zuidstring = null, CancellationToken ct = default) =>
+        throw new NotImplementedException();
+
+    public Task<(string OldName, string NewName)> RenameAccountAsync(
+        string? name, string? email, string? zuidstring, string newName, CancellationToken ct = default) =>
         throw new NotImplementedException();
 
     public Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(
-        string accountName, IEnumerable<string> scopesToAdd, int callbackPort = 8085, CancellationToken ct = default) =>
+        string accountName, IEnumerable<string> scopesToAdd, int callbackPort = OAuthConstants.DefaultCallbackPort, CancellationToken ct = default) =>
         throw new NotImplementedException();
 
     public Task<List<string>> GetScopesAsync(string accountName, CancellationToken ct = default) =>
