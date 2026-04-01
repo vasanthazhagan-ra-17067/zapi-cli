@@ -1,6 +1,6 @@
-# zapi-cli
+# zapi
 
-**zapi-cli** is a standalone, multi-platform CLI binary for interacting with any Zoho product's REST APIs. It manages multiple Zoho accounts, handles OAuth authentication, and exposes a general-purpose HTTP API invoker designed for scriptable, deterministic use by both human developers and AI agents (GitHub Copilot CLI Skills, Claude Agent Skills).
+**zapi** is a standalone, multi-platform CLI binary for interacting with any Zoho product's REST APIs. It manages multiple Zoho accounts, handles OAuth authentication, and exposes a general-purpose HTTP API invoker designed for scriptable, deterministic use by both human developers and AI agents (GitHub Copilot CLI Skills, Claude Agent Skills).
 
 Ships as a single self-contained binary — no runtime, no dependencies, no installation required beyond placing the binary in your `PATH`.
 
@@ -18,25 +18,26 @@ Ships as a single self-contained binary — no runtime, no dependencies, no inst
    - [account show](#account-show)
    - [account set-default](#account-set-default)
    - [account remove](#account-remove)
-   - [account re-auth](#account-re-auth)
+   - [account use](#account-use)
+   - [account refresh](#account-refresh) *(was: `account re-auth`)*
    - [account rename](#account-rename)
-   - [api call](#api-call)
-   - [api registry list](#api-registry-list)
-   - [api registry add](#api-registry-add)
-   - [api registry update](#api-registry-update)
-   - [api registry show](#api-registry-show)
-   - [api registry remove](#api-registry-remove)
-   - [util time-ms](#util-time-ms)
+   - [account scope add](#account-scope-add) *(was: `scope add`)*
+   - [account scope list](#account-scope-list) *(was: `scope list`)*
+   - [api request](#api-request) (alias: `api req`; `api call` is deprecated)
+   - [api endpoints list](#api-endpoints-list) *(was: `api registry list`)*
+   - [api endpoints add](#api-endpoints-add) *(was: `api registry add`)*
+   - [api endpoints update](#api-endpoints-update) *(was: `api registry update`)*
+   - [api endpoints show](#api-endpoints-show) *(was: `api registry show`)*
+   - [api endpoints remove](#api-endpoints-remove) *(was: `api registry remove`)*
+   - [util timestamp](#util-timestamp) *(was: `util time-ms`)*
    - [util uuid](#util-uuid)
-   - [util time-now](#util-time-now)
-   - [scope add](#scope-add)
-   - [scope list](#scope-list)
-   - [trace session start](#trace-session-start)
-   - [trace session list](#trace-session-list)
-   - [trace session export](#trace-session-export)
-   - [trace session close](#trace-session-close)
-   - [trace session reopen](#trace-session-reopen)
-   - [trace session remove](#trace-session-remove)
+   - [util now](#util-now) *(was: `util time-now`)*
+   - [trace start](#trace-start) *(was: `trace session start`)*
+   - [trace list](#trace-list) *(was: `trace session list`)*
+   - [trace export](#trace-export) *(was: `trace session export`)*
+   - [trace close](#trace-close) *(was: `trace session close`)*
+   - [trace reopen](#trace-reopen) *(was: `trace session reopen`)*
+   - [trace remove](#trace-remove) *(was: `trace session remove`)*
    - [trace config set](#trace-config-set)
    - [trace config show](#trace-config-show)
    - [config set env-file](#config-set-env-file)
@@ -59,37 +60,37 @@ Pre-built binaries are available for all major platforms:
 
 | Platform | Binary path (in release archive) |
 |---|---|
-| macOS (Apple Silicon) | `build/osx-arm64/zapi-cli` |
-| macOS (Intel) | `build/osx-x64/zapi-cli` |
-| Linux (x64) | `build/linux-x64/zapi-cli` |
-| Linux (ARM64) | `build/linux-arm64/zapi-cli` |
-| Windows (x64) | `build/win-x64/zapi-cli.exe` |
-| Windows (ARM64) | `build/win-arm64/zapi-cli.exe` |
+| macOS (Apple Silicon) | `build/osx-arm64/zapi` |
+| macOS (Intel) | `build/osx-x64/zapi` |
+| Linux (x64) | `build/linux-x64/zapi` |
+| Linux (ARM64) | `build/linux-arm64/zapi` |
+| Windows (x64) | `build/win-x64/zapi.exe` |
+| Windows (ARM64) | `build/win-arm64/zapi.exe` |
 
 ### Make it executable and place it in your PATH
 
 **macOS / Linux:**
 ```bash
-chmod +x ./zapi-cli
-mv ./zapi-cli /usr/local/bin/zapi-cli
+chmod +x ./zapi
+mv ./zapi /usr/local/bin/zapi
 ```
 
 **Windows (PowerShell):**
 ```powershell
 # Copy to a directory already on your PATH, e.g.:
-Copy-Item .\zapi-cli.exe "$env:USERPROFILE\bin\zapi-cli.exe"
+Copy-Item .\zapi.exe "$env:USERPROFILE\bin\zapi.exe"
 ```
 
 ### Verify installation
 
 ```bash
-zapi-cli --help
+zapi --help
 ```
 
 Expected output:
 ```
 USAGE:
-    zapi-cli [OPTIONS] <COMMAND>
+    zapi [OPTIONS] <COMMAND>
 
 OPTIONS:
     -h, --help    Prints help information
@@ -106,16 +107,18 @@ Before making any API calls you need to add at least one account. See [Authentic
 
 ```bash
 # Set up credentials via env-file (one-time)
-zapi-cli config set env-file /path/to/.env
+zapi config set env-file /path/to/.env
 
 # Add an account via Mobile OAuth browser flow
-zapi-cli account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
+zapi account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
 ```
 
 Once an account is added, set it as the default so you don't need to pass `--account` on every invocation:
 
 ```bash
-zapi-cli account set-default --name myaccount
+zapi account set-default --name myaccount
+# or using the positional shorthand:
+zapi account use myaccount
 ```
 
 ---
@@ -148,13 +151,13 @@ Printed to **stderr**:
 | `1` | General error (see `code` field in stderr JSON) |
 | `2` | Authentication failure (token exchange failed, re-auth required) |
 
-> **Note for AI agents:** Always check the exit code first. Exit code 2 means the account needs re-authentication — invoke `zapi-cli account re-auth --name <ACCOUNT>` before retrying the failed command.
+> **Note for AI agents:** Always check the exit code first. Exit code 2 means the account needs re-authentication — invoke `zapi account refresh --name <ACCOUNT>` before retrying the failed command.
 
 ---
 
 ## Authentication Overview
 
-zapi-cli uses the **Zoho Mobile OAuth 2.0 flow** (`/oauth/v2/mobile/auth`). This requires a **Mobile Application** (or Desktop Application) client registered in the Zoho Developer Console — not a Self-Client or Server-based client.
+zapi uses the **Zoho Mobile OAuth 2.0 flow** (`/oauth/v2/mobile/auth`). This requires a **Mobile Application** (or Desktop Application) client registered in the Zoho Developer Console — not a Self-Client or Server-based client.
 
 For full setup instructions including how to create the Mobile Application client and register the redirect URI, see [docs/zoho-mobile-app-setup.md](zoho-mobile-app-setup.md).
 
@@ -167,13 +170,13 @@ For full setup instructions including how to create the Mobile Application clien
 
 ```bash
 # Set up credentials via env-file (one-time setup)
-zapi-cli config set env-file /path/to/.env
+zapi config set env-file /path/to/.env
 
 # Optional: configure a scope file so you don't need --scope on every login
-zapi-cli config set scope-file /path/to/scopes.txt
+zapi config set scope-file /path/to/scopes.txt
 
 # Add an account — opens browser, DC auto-detected from callback
-zapi-cli account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
+zapi account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
 ```
 
 ### Token storage
@@ -184,7 +187,7 @@ All tokens (access token + refresh token) are stored exclusively in the OS keych
 
 Access tokens are automatically refreshed when:
 - A `401 Unauthorized` response is received from Zoho.
-- A manual `account re-auth` is run.
+- A manual `account refresh` is run.
 
 ---
 
@@ -218,7 +221,7 @@ For full setup instructions (creating the Mobile Application client, registering
 
 ```
 USAGE:
-    zapi-cli account login [OPTIONS]
+    zapi account login [OPTIONS]
 
 OPTIONS:
     --name <NAME>      Account alias (optional; derived from email if omitted)
@@ -229,11 +232,11 @@ ENVIRONMENT VARIABLES (resolved from env-file if configured):
     ZOHO_CLIENT_SECRET   Zoho client secret (optional for RSA-capable Mobile clients)
 ```
 
-**Credential resolution:** Set `ZOHO_CLIENT_ID` and optionally `ZOHO_CLIENT_SECRET` in your environment or in a `.env` file configured with `zapi-cli config set env-file <path>`.
+**Credential resolution:** Set `ZOHO_CLIENT_ID` and optionally `ZOHO_CLIENT_SECRET` in your environment or in a `.env` file configured with `zapi config set env-file <path>`.
 
 **Scope resolution:** Scopes are merged from two sources (deduplicated case-insensitively):
 1. `--scope` flag: comma-separated scopes inline.
-2. Configured scope-file (set via `zapi-cli config set scope-file <path>`): one scope per line or comma-separated; lines starting with `#` are treated as comments.
+2. Configured scope-file (set via `zapi config set scope-file <path>`): one scope per line or comma-separated; lines starting with `#` are treated as comments.
 
 At least one scope must be resolved from one of these sources, or `SCOPE_FILE_NOT_CONFIGURED` is thrown. `AaaServer.profile.READ` is always injected automatically.
 
@@ -249,13 +252,13 @@ At least one scope must be resolved from one of these sources, or `SCOPE_FILE_NO
 
 #### How the flow works
 
-1. zapi-cli reads `ZOHO_CLIENT_ID` from the environment (loaded from env-file if configured).
+1. zapi reads `ZOHO_CLIENT_ID` from the environment (loaded from env-file if configured).
 2. It generates an RSA key pair. The public key (`ss_id`) is embedded in the auth URL.
 3. It starts a local HTTP server on `http://localhost:8085/callback`.
 4. It builds the Zoho Mobile OAuth URL (`/oauth/v2/mobile/auth`) using `https://accounts.zoho.com` as the global entry point.
 5. It opens the browser to that URL. You authenticate interactively.
 6. Zoho redirects to the callback with `code`, `state` (CSRF), `gt_sec` (RSA-encrypted client secret), and `location` (detected datacenter).
-7. zapi-cli validates the CSRF state, decrypts `gt_sec` with the RSA private key to recover `client_secret`.
+7. zapi validates the CSRF state, decrypts `gt_sec` with the RSA private key to recover `client_secret`.
 8. It posts to the Zoho accounts server indicated by the callback to exchange the code for tokens.
 9. It fetches user info (email, ZUID) to derive the account name (if `--name` was omitted).
 10. Credentials are stored in the OS keychain and the account is persisted.
@@ -265,13 +268,13 @@ The flow times out after **120 seconds** if no callback is received.
 #### Example (scope from flag)
 
 ```bash
-zapi-cli account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
+zapi account login --scope "ZohoCliq.Channels.READ,ZohoCliq.Messages.CREATE"
 ```
 
 #### Example (named account, scope from configured scope-file)
 
 ```bash
-zapi-cli account login --name work
+zapi account login --name work
 ```
 
 #### Example output (stdout)
@@ -294,9 +297,9 @@ AI agents and scripts should ignore stderr during this command and check stdout 
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `ENV_FILE_NOT_CONFIGURED` | `ZOHO_CLIENT_ID` is not set in the environment or configured env-file. | Run `zapi-cli config set env-file <path>` (pointing to a file with `ZOHO_CLIENT_ID=...`) or export the variable. |
-| `SCOPE_FILE_NOT_CONFIGURED` | No scopes were resolved from `--scope` or the configured scope-file. | Pass `--scope <SCOPES>` or run `zapi-cli config set scope-file <path>`. |
-| `IO_ERROR` | The configured scope-file path does not exist at runtime. | Update with `zapi-cli config set scope-file <path>`. |
+| `ENV_FILE_NOT_CONFIGURED` | `ZOHO_CLIENT_ID` is not set in the environment or configured env-file. | Run `zapi config set env-file <path>` (pointing to a file with `ZOHO_CLIENT_ID=...`) or export the variable. |
+| `SCOPE_FILE_NOT_CONFIGURED` | No scopes were resolved from `--scope` or the configured scope-file. | Pass `--scope <SCOPES>` or run `zapi config set scope-file <path>`. |
+| `IO_ERROR` | The configured scope-file path does not exist at runtime. | Update with `zapi config set scope-file <path>`. |
 | `LOGIN_TIMEOUT` | Browser callback not received within 120 seconds. | Ensure the browser opened and you completed sign-in. Re-run the command. |
 | `STATE_MISMATCH` | The `state` parameter in the callback did not match. Possible CSRF. | Re-run to generate a fresh state token. |
 | `AUTH_FAILURE` | Token exchange with Zoho failed. | Verify `ZOHO_CLIENT_ID`, that the redirect URI is registered, and that your Zoho credentials are correct. |
@@ -311,7 +314,7 @@ List all configured accounts.
 
 ```
 USAGE:
-    zapi-cli account list [OPTIONS]
+    zapi account list [OPTIONS]
 ```
 
 Returns all accounts with tokens masked. Safe to log — no secrets are exposed.
@@ -319,7 +322,7 @@ Returns all accounts with tokens masked. Safe to log — no secrets are exposed.
 #### Example
 
 ```bash
-zapi-cli account list
+zapi account list
 ```
 
 #### Example output
@@ -363,21 +366,21 @@ Show full details for a single account. Credentials are never included in output
 
 ```
 USAGE:
-    zapi-cli account show [OPTIONS]
+    zapi account show [OPTIONS]
 
 OPTIONS:
-    --name <NAME>              Account alias
-    --email <EMAIL>            Identify account by email address
-    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
+    --name <NAME>       Account alias
+    --email <EMAIL>     Identify account by email address
+    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
 
 ```
 
-Exactly one of `--name`, `--email`, or `--zuidstring` is required. Use `--name` with the default account if no identifier is passed will use the default account (if set).
+Exactly one of `--name`, `--email`, or `--zuid` is required. Use `--name` with the default account if no identifier is passed will use the default account (if set).
 
 #### Example
 
 ```bash
-zapi-cli account show --name myaccount
+zapi account show --name myaccount
 ```
 
 #### Example output
@@ -399,10 +402,10 @@ zapi-cli account show --name myaccount
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `ACCOUNT_NOT_FOUND` | No account with that name/email/zuidstring exists. | Run `account list` to see available accounts. |
-| `NO_DEFAULT_ACCOUNT` | No identifier was provided and no default is set. | Run `account set-default` or pass `--name`/`--email`/`--zuidstring`. |
+| `ACCOUNT_NOT_FOUND` | No account with that name/email/zuid exists. | Run `account list` to see available accounts. |
+| `NO_DEFAULT_ACCOUNT` | No identifier was provided and no default is set. | Run `account set-default` or pass `--name`/`--email`/`--zuid`. |
 | `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
-| `INVALID_ARGS` | More than one of `--name`, `--email`, `--zuidstring` was provided. | Pass exactly one identifier. |
+| `INVALID_ARGS` | More than one of `--name`, `--email`, `--zuid` was provided. | Pass exactly one identifier. |
 
 ---
 
@@ -412,20 +415,20 @@ Set the default account used when `--account` is not specified.
 
 ```
 USAGE:
-    zapi-cli account set-default [OPTIONS]
+    zapi account set-default [OPTIONS]
 
 OPTIONS:
-    --name <NAME>              Account alias
-    --email <EMAIL>            Identify account by email address
-    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
+    --name <NAME>       Account alias
+    --email <EMAIL>     Identify account by email address
+    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
 ```
 
-Exactly one of `--name`, `--email`, or `--zuidstring` is required.
+Exactly one of `--name`, `--email`, or `--zuid` is required.
 
 #### Example
 
 ```bash
-zapi-cli account set-default --name myaccount
+zapi account set-default --name myaccount
 ```
 
 #### Example output
@@ -445,8 +448,49 @@ zapi-cli account set-default --name myaccount
 | Error code | Cause | Resolution |
 |---|---|---|
 | `ACCOUNT_NOT_FOUND` | The named account does not exist. | Run `account list` to verify the account name. |
-| `INVALID_ARGS` | None or more than one of `--name`, `--email`, `--zuidstring` was provided. | Pass exactly one identifier. |
+| `INVALID_ARGS` | None or more than one of `--name`, `--email`, `--zuid` was provided. | Pass exactly one identifier. |
 | `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
+
+---
+
+### account use
+
+Set the default account by name (positional shorthand for `account set-default`).
+
+```
+USAGE:
+    zapi account use <NAME>
+
+ARGUMENTS:
+    <NAME>    Account alias to set as default
+```
+
+Equivalent to `account set-default --name <NAME>` but uses a positional argument instead of a flag.
+
+#### Example
+
+```bash
+zapi account use work
+```
+
+#### Example output
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "name": "work",
+    "is_default": true
+  }
+}
+```
+
+#### Common errors
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `ACCOUNT_NOT_FOUND` | No account with that name exists. | Run `account list` to see available accounts. |
+| `INVALID_ARGS` | `<NAME>` argument was not provided. | Pass a name: `zapi account use <NAME>`. |
 
 ---
 
@@ -456,15 +500,15 @@ Remove an account, revoke its OAuth token, and delete it from the keychain.
 
 ```
 USAGE:
-    zapi-cli account remove [OPTIONS]
+    zapi account remove [OPTIONS]
 
 OPTIONS:
-    --name <NAME>              Account alias
-    --email <EMAIL>            Identify account by email address
-    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
+    --name <NAME>       Account alias
+    --email <EMAIL>     Identify account by email address
+    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
 ```
 
-Exactly one of `--name`, `--email`, or `--zuidstring` is required.
+Exactly one of `--name`, `--email`, or `--zuid` is required.
 
 This command attempts a server-side token revocation call to Zoho (best-effort — the account is removed locally even if revocation fails). The access token and refresh token are deleted from the OS keychain.
 
@@ -473,7 +517,7 @@ This command attempts a server-side token revocation call to Zoho (best-effort �
 #### Example
 
 ```bash
-zapi-cli account remove --name myaccount
+zapi account remove --name myaccount
 ```
 
 #### Example output
@@ -493,36 +537,38 @@ zapi-cli account remove --name myaccount
 | Error code | Cause | Resolution |
 |---|---|---|
 | `ACCOUNT_NOT_FOUND` | No account with that name/email/zuidstring exists. | Run `account list` to verify. |
-| `INVALID_ARGS` | None or more than one identifier was provided. | Pass exactly one of `--name`, `--email`, `--zuidstring`. |
+| `INVALID_ARGS` | None or more than one identifier was provided. | Pass exactly one of `--name`, `--email`, `--zuid`. |
 | `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
 | `KEYCHAIN_ERROR` | Failed to delete credentials from the OS keychain. | Check keychain permissions and retry. |
 
 ---
 
-### account re-auth
+### account refresh
+
+*(was: `account re-auth` — deprecated alias still accepted)*
 
 Re-authenticate an existing account using its stored `client-id` and `client-secret` to obtain a fresh access token.
 
 ```
 USAGE:
-    zapi-cli account re-auth [OPTIONS]
+    zapi account refresh [OPTIONS]
 
 OPTIONS:
-    --name <NAME>              Account alias
-    --email <EMAIL>            Identify account by email address
-    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
+    --name <NAME>       Account alias
+    --email <EMAIL>     Identify account by email address
+    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
 ```
 
-Exactly one of `--name`, `--email`, or `--zuidstring` is required.
+Exactly one of `--name`, `--email`, or `--zuid` is required.
 
-Use this command when an `api call` returns a `NEEDS_REAUTH` error code, or when a token refresh is needed after adding new scopes.
+Use this command when an `api request` returns a `NEEDS_REAUTH` error code, or when a token refresh is needed after adding new scopes.
 
-Re-auth uses the stored refresh token to silently obtain a new access token without opening a browser.
+Refresh uses the stored refresh token to silently obtain a new access token without opening a browser.
 
 #### Example
 
 ```bash
-zapi-cli account re-auth --name myaccount
+zapi account refresh --name myaccount
 ```
 
 #### Example output
@@ -541,7 +587,7 @@ zapi-cli account re-auth --name myaccount
 | Error code | Cause | Resolution |
 |---|---|---|
 | `ACCOUNT_NOT_FOUND` | The named account does not exist. | Run `account list` to verify. |
-| `INVALID_ARGS` | None or more than one identifier was provided. | Pass exactly one of `--name`, `--email`, `--zuidstring`. |
+| `INVALID_ARGS` | None or more than one identifier was provided. | Pass exactly one of `--name`, `--email`, `--zuid`. |
 | `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
 | `AUTH_FAILURE` | Token refresh failed — refresh token may be expired or revoked. | Run `account remove` then re-add the account via `account login`. |
 | `KEYCHAIN_ERROR` | Could not read credentials from the OS keychain. | Check keychain permissions. |
@@ -554,16 +600,16 @@ Rename an existing account to a new alias. The account's keychain entry is also 
 
 ```
 USAGE:
-    zapi-cli account rename [OPTIONS]
+    zapi account rename [OPTIONS]
 
 OPTIONS:
-    --name <NAME>              Current account alias
-    --email <EMAIL>            Identify account by email address
-    --zuidstring <ZUIDSTRING>  Identify account by Zoho User ID string
-    --new-name <NEW_NAME>      New account alias (required)
+    --name <NAME>       Current account alias
+    --email <EMAIL>     Identify account by email address
+    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
+    --to <NEW_NAME>     New account alias (required) *(deprecated alias: `--new-name`)*
 ```
 
-Exactly one of `--name`, `--email`, or `--zuidstring` is required to identify the account to rename. `--new-name` is always required.
+Exactly one of `--name`, `--email`, or `--zuid` is required to identify the account to rename. `--to` is always required.
 
 The new name must not contain `/`, `\`, `:`, `*`, or `?` characters.
 
@@ -571,10 +617,10 @@ The new name must not contain `/`, `\`, `:`, `*`, or `?` characters.
 
 ```bash
 # Rename by current name
-zapi-cli account rename --name work --new-name work-eu
+zapi account rename --name work --to work-eu
 
 # Rename by email
-zapi-cli account rename --email user@example.com --new-name personal
+zapi account rename --email user@example.com --to personal
 ```
 
 #### Example output
@@ -594,21 +640,24 @@ zapi-cli account rename --email user@example.com --new-name personal
 | Error code | Cause | Resolution |
 |---|---|---|
 | `ACCOUNT_NOT_FOUND` | No account matched the identifier. | Run `account list` to verify. |
-| `ACCOUNT_ALREADY_EXISTS` | An account with `--new-name` already exists. | Choose a different name or remove the conflicting account. |
-| `INVALID_ARGS` | `--new-name` was omitted, contains invalid characters, or zero/multiple source identifiers were provided. | Provide exactly one source identifier and a valid `--new-name`. |
+| `ACCOUNT_ALREADY_EXISTS` | An account with `--to` already exists. | Choose a different name or remove the conflicting account. |
+| `INVALID_ARGS` | `--to` was omitted, contains invalid characters, or zero/multiple source identifiers were provided. | Provide exactly one source identifier and a valid `--to`. |
 | `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
 | `KEYCHAIN_ERROR` | Failed to rename credentials in the OS keychain. | Check keychain permissions. |
 | `ACCOUNT_RENAME_FAILED` | Rename completed for accounts.json but keychain update failed. | The account is saved under the new name in accounts.json; manually update or remove and re-add. |
 
 ---
 
-### api call
+### api request
+
+Aliases: **`api req`** (short alias), **`api call`** (deprecated — see note below).
 
 Invoke a Zoho API endpoint and return the raw JSON response.
 
 ```
 USAGE:
-    zapi-cli api call [OPTIONS]
+    zapi api request [OPTIONS]
+    zapi api req     [OPTIONS]   # short alias
 
 OPTIONS:
     --url <URL>              Full Zoho API endpoint URL (required)
@@ -620,7 +669,13 @@ OPTIONS:
     -a, --account <ACCOUNT>  Use a specific account (overrides default)
 ```
 
-**Authentication is automatic.** zapi-cli injects `Authorization: Zoho-oauthtoken <token>` on every request. You do not need to pass auth headers manually.
+> **Deprecation notice:** The legacy alias `api call` is still accepted but emits the following warning to **stderr**:
+> ```
+> Warning: 'api call' is deprecated and will be removed in a future version. Use 'api request' instead.
+> ```
+> Update scripts to use `api request` or `api req`. The warning does not affect exit codes or stdout output.
+
+**Authentication is automatic.** zapi injects `Authorization: Zoho-oauthtoken <token>` on every request. You do not need to pass auth headers manually.
 
 **Token refresh is automatic.** If a `401` response is received, the token is refreshed transparently before the request is retried.
 
@@ -635,15 +690,13 @@ OPTIONS:
 #### GET request
 
 ```bash
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.com/cliq/v2/channels" \
   -X GET
 ```
 
-#### GET with query parameters
-
 ```bash
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.com/cliq/v2/channels" \
   -X GET \
   --query "limit=50" \
@@ -653,16 +706,16 @@ zapi-cli api call \
 #### POST with inline JSON body
 
 ```bash
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.com/cliq/v2/channels/general/message" \
   -X POST \
-  --body '{"text": "Hello from zapi-cli"}'
+  --body '{"text": "Hello from zapi"}'
 ```
 
 #### POST with body from file
 
 ```bash
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.com/cliq/v2/channels/general/message" \
   -X POST \
   --body-file ./message.json
@@ -671,7 +724,7 @@ zapi-cli api call \
 #### PUT with custom headers
 
 ```bash
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.com/crm/v6/Leads/1234567890" \
   -X PUT \
   --header "Content-Type:application/json" \
@@ -681,7 +734,7 @@ zapi-cli api call \
 #### Using a non-default account
 
 ```bash
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.in/cliq/v2/channels" \
   -X GET \
   --account eu-staging
@@ -713,24 +766,22 @@ The `data` field contains the raw Zoho API response body parsed as JSON:
 | `HOST_NOT_ALLOWED` | The URL host is not on the Zoho allowlist. | Use a valid Zoho API URL (e.g., `zohoapis.com`). |
 | `INVALID_ARGS` | `--url` or `--method` was not provided. | Both flags are required. |
 | `API_ERROR` | Zoho returned a non-2xx HTTP response. | Check the `data` field in stderr for the Zoho error details. |
-| `NEEDS_REAUTH` | The stored token needs refreshing. | Run `account re-auth --name <ACCOUNT>` then retry. |
+| `NEEDS_REAUTH` | The stored token needs refreshing. | Run `account refresh --name <ACCOUNT>` then retry. |
 | `AUTH_FAILURE` | Token refresh failed during automatic retry. | Re-add the account via `account login`. |
 | `ACCOUNT_NOT_FOUND` | The account specified with `--account` does not exist. | Run `account list` to verify. |
 | `NO_DEFAULT_ACCOUNT` | No account specified and no default set. | Run `account set-default --name <ACCOUNT>`. |
 
 ---
 
-### api registry list
+### api endpoints list
 
-List all entries in the local API registry. No account required.
+*(was: `api registry list` — deprecated alias still accepted)*
+
+List all entries in the local API endpoint registry. No account required.
 
 ```
 USAGE:
-    zapi-cli api registry list [OPTIONS]
-
-OPTIONS:
-    --account, -a <ACCOUNT>    Use a specific account (not required for registry commands).
-    --help                     Show help.
+    zapi api endpoints list
 ```
 
 #### Example output (stdout)
@@ -750,16 +801,18 @@ Returns an empty array `[]` if no entries have been registered.
 
 ---
 
-### api registry add
+### api endpoints add
 
-Add a new named API endpoint to the local registry. No account required. The `--url` is validated against the host allowlist (ADR-0004).
+*(was: `api registry add` — deprecated alias still accepted)*
+
+Add a new named API endpoint to the local endpoint registry. No account required. The `--url` is validated against the host allowlist (ADR-0004).
 
 ```
 USAGE:
-    zapi-cli api registry add [OPTIONS]
+    zapi api endpoints add [OPTIONS]
 
 OPTIONS:
-    --id <ID>                  Unique identifier for this registry entry (required).
+    --id <ID>                  Unique identifier for this endpoint entry (required).
     --url <URL>                Full endpoint URL (required). Must be a Zoho domain.
     --method <METHOD>          HTTP method: GET, POST, PUT, PATCH, DELETE (required).
     --purpose <PURPOSE>        Human-readable description of what this endpoint does (required).
@@ -769,7 +822,7 @@ OPTIONS:
 #### Example
 
 ```bash
-zapi-cli api registry add \
+zapi api endpoints add \
   --id cliq-channels \
   --url https://cliq.zoho.com/api/v2/channels \
   --method GET \
@@ -786,19 +839,21 @@ zapi-cli api registry add \
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `REGISTRY_ENTRY_ALREADY_EXISTS` | An entry with the same `--id` already exists. | Use `api registry update --id <ID>` to modify it or choose a different id. |
+| `ENDPOINT_ALREADY_EXISTS` | An entry with the same `--id` already exists. | Use `api endpoints update --id <ID>` to modify it or choose a different id. |
 | `HOST_NOT_ALLOWED` | The `--url` host is not on the Zoho allowlist. | Use a URL under `zoho.com`, `zohoapis.com`, etc. |
 | `INVALID_ARGS` | A required flag is missing or `--method` is invalid. | All four flags are required. Method must be one of `GET POST PUT PATCH DELETE`. |
 
 ---
 
-### api registry update
+### api endpoints update
 
-Update one or more fields of an existing registry entry. Only the supplied flags are changed; omitted flags retain their existing values.
+*(was: `api registry update` — deprecated alias still accepted)*
+
+Update one or more fields of an existing endpoint entry. Only the supplied flags are changed; omitted flags retain their existing values.
 
 ```
 USAGE:
-    zapi-cli api registry update [OPTIONS]
+    zapi api endpoints update [OPTIONS]
 
 OPTIONS:
     --id <ID>                  Id of the entry to update (required).
@@ -814,7 +869,7 @@ At least one of `--url`, `--method`, or `--purpose` must be provided.
 
 ```bash
 # Update only the purpose
-zapi-cli api registry update --id cliq-channels --purpose "Fetch all Cliq channels"
+zapi api endpoints update --id cliq-channels --purpose "Fetch all Cliq channels"
 ```
 
 #### Example output (stdout)
@@ -827,19 +882,21 @@ zapi-cli api registry update --id cliq-channels --purpose "Fetch all Cliq channe
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `REGISTRY_ENTRY_NOT_FOUND` | No entry with the given `--id` exists. | Run `api registry list` to see all ids. |
+| `ENDPOINT_NOT_FOUND` | No entry with the given `--id` exists. | Run `api endpoints list` to see all ids. |
 | `HOST_NOT_ALLOWED` | The new `--url` host is not on the Zoho allowlist. | Use a URL under `zoho.com`, `zohoapis.com`, etc. |
 | `INVALID_ARGS` | No updatable field was provided, or `--method` value is invalid. | Provide at least one of `--url`, `--method`, or `--purpose`. |
 
 ---
 
-### api registry show
+### api endpoints show
 
-Show a single registry entry by its id.
+*(was: `api registry show` — deprecated alias still accepted)*
+
+Show a single endpoint entry by its id.
 
 ```
 USAGE:
-    zapi-cli api registry show [OPTIONS]
+    zapi api endpoints show [OPTIONS]
 
 OPTIONS:
     --id <ID>                  Id of the entry to show (required).
@@ -849,7 +906,7 @@ OPTIONS:
 #### Example
 
 ```bash
-zapi-cli api registry show --id cliq-channels
+zapi api endpoints show --id cliq-channels
 ```
 
 #### Example output (stdout)
@@ -867,18 +924,20 @@ zapi-cli api registry show --id cliq-channels
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `REGISTRY_ENTRY_NOT_FOUND` | No entry with the given `--id` exists. | Run `api registry list` to see all registered ids. |
+| `ENDPOINT_NOT_FOUND` | No entry with the given `--id` exists. | Run `api endpoints list` to see all registered ids. |
 | `INVALID_ARGS` | `--id` was not provided. | `--id` is required. |
 
 ---
 
-### api registry remove
+### api endpoints remove
 
-Remove an entry from the local API registry by its id.
+*(was: `api registry remove` — deprecated alias still accepted)*
+
+Remove an entry from the local API endpoint registry by its id.
 
 ```
 USAGE:
-    zapi-cli api registry remove [OPTIONS]
+    zapi api endpoints remove [OPTIONS]
 
 OPTIONS:
     --id <ID>                  Id of the entry to remove (required).
@@ -888,7 +947,7 @@ OPTIONS:
 #### Example
 
 ```bash
-zapi-cli api registry remove --id cliq-channels
+zapi api endpoints remove --id cliq-channels
 ```
 
 #### Example output (stdout)
@@ -901,18 +960,20 @@ zapi-cli api registry remove --id cliq-channels
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `REGISTRY_ENTRY_NOT_FOUND` | No entry with the given `--id` exists. | Run `api registry list` to see all registered ids. |
+| `ENDPOINT_NOT_FOUND` | No entry with the given `--id` exists. | Run `api endpoints list` to see all registered ids. |
 | `INVALID_ARGS` | `--id` was not provided. | `--id` is required. |
 
 ---
 
-### scope add
+### account scope add
 
-Add one or more OAuth scopes to an existing account. After adding scopes, run `account re-auth` to obtain a new access token that includes the updated scopes.
+*(was: `scope add` — deprecated alias still accepted)*
+
+Add one or more OAuth scopes to an existing account. After adding scopes, run `account refresh` to obtain a new access token that includes the updated scopes.
 
 ```
 USAGE:
-    zapi-cli scope add [OPTIONS]
+    zapi account scope add [OPTIONS]
 
 OPTIONS:
     --scope <SCOPE>          OAuth scope(s) to add, comma-separated (required)
@@ -925,7 +986,7 @@ Scopes are deduplicated — adding a scope that already exists is a no-op for th
 #### Example
 
 ```bash
-zapi-cli scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
+zapi account scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
 ```
 
 #### Example output
@@ -944,7 +1005,7 @@ zapi-cli scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
 }
 ```
 
-> **Note:** After `scope add`, run `account re-auth --name <ACCOUNT>` to obtain a new access token that includes the updated scopes. The new token is stored silently using the stored `client_id` and `client_secret`.
+> **Note:** After `account scope add`, run `account refresh --name <ACCOUNT>` to obtain a new access token that includes the updated scopes. The new token is stored silently using the stored `client_id` and `client_secret`.
 
 #### Common errors
 
@@ -957,13 +1018,15 @@ zapi-cli scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
 
 ---
 
-### scope list
+### account scope list
+
+*(was: `scope list` — deprecated alias still accepted)*
 
 List all OAuth scopes configured for an account.
 
 ```
 USAGE:
-    zapi-cli scope list [OPTIONS]
+    zapi account scope list [OPTIONS]
 
 OPTIONS:
     -a, --account <ACCOUNT>  Account alias (uses default account if omitted)
@@ -972,7 +1035,7 @@ OPTIONS:
 #### Example
 
 ```bash
-zapi-cli scope list --account myaccount
+zapi account scope list --account myaccount
 ```
 
 #### Example output
@@ -997,13 +1060,15 @@ zapi-cli scope list --account myaccount
 
 ---
 
-### util time-ms
+### util timestamp
+
+*(was: `util time-ms` — deprecated alias still accepted)*
 
 Output the current UTC time as a Unix millisecond timestamp.
 
 ```
 USAGE:
-    zapi-cli util time-ms [OPTIONS]
+    zapi util timestamp
 ```
 
 Useful for constructing time-range query parameters for Zoho APIs that accept Unix millisecond timestamps.
@@ -1011,7 +1076,7 @@ Useful for constructing time-range query parameters for Zoho APIs that accept Un
 #### Example
 
 ```bash
-zapi-cli util time-ms
+zapi util timestamp
 ```
 
 #### Example output
@@ -1026,7 +1091,7 @@ zapi-cli util time-ms
 
 ```bash
 # Capture the timestamp into a shell variable
-TS=$(zapi-cli util time-ms | jq -r '.ts')
+TS=$(zapi util timestamp | jq -r '.ts')
 echo "Current time: $TS ms"
 ```
 
@@ -1038,7 +1103,7 @@ Generate a random UUID v4.
 
 ```
 USAGE:
-    zapi-cli util uuid [OPTIONS]
+    zapi util uuid [OPTIONS]
 ```
 
 Useful for generating idempotency keys or unique identifiers when constructing API request bodies.
@@ -1046,7 +1111,7 @@ Useful for generating idempotency keys or unique identifiers when constructing A
 #### Example
 
 ```bash
-zapi-cli util uuid
+zapi util uuid
 ```
 
 #### Example output
@@ -1060,8 +1125,8 @@ zapi-cli util uuid
 #### Usage in a pipeline
 
 ```bash
-IDEMPOTENCY_KEY=$(zapi-cli util uuid | jq -r '.uuid')
-zapi-cli api call \
+IDEMPOTENCY_KEY=$(zapi util uuid | jq -r '.uuid')
+zapi api request \
   --url "https://www.zohoapis.com/crm/v6/Leads" \
   -X POST \
   --header "Idempotency-Key:$IDEMPOTENCY_KEY" \
@@ -1070,13 +1135,15 @@ zapi-cli api call \
 
 ---
 
-### util time-now
+### util now
+
+*(was: `util time-now` — deprecated alias still accepted)*
 
 Output the current India Standard Time (IST, GMT+5:30) as a formatted timestamp.
 
 ```
 USAGE:
-    zapi-cli util time-now [OPTIONS]
+    zapi util now
 ```
 
 The time is formatted as `DD/MM/YY HH:mm:ss.fff` (24-hour clock with milliseconds). Uses a fixed +05:30 offset — no OS timezone database dependency.
@@ -1084,7 +1151,7 @@ The time is formatted as `DD/MM/YY HH:mm:ss.fff` (24-hour clock with millisecond
 #### Example
 
 ```bash
-zapi-cli util time-now
+zapi util now
 ```
 
 #### Example output
@@ -1098,19 +1165,21 @@ zapi-cli util time-now
 #### Usage in a pipeline
 
 ```bash
-NOW_IST=$(zapi-cli util time-now | jq -r '.now')
+NOW_IST=$(zapi util now | jq -r '.now')
 echo "Current IST time: $NOW_IST"
 ```
 
 ---
 
-### trace session start
+### trace start
 
-Start a named trace session. All subsequent `api call` invocations will write trace entries live to the resolved export file until the session is closed.
+*(was: `trace session start` — deprecated alias still accepted)*
+
+Start a named trace session. All subsequent `api request` invocations will write trace entries live to the resolved export file until the session is closed.
 
 ```
 USAGE:
-    zapi-cli trace session start [OPTIONS]
+    zapi trace start [OPTIONS]
 
 OPTIONS:
     --name <NAME>          Session name (required; allowed chars: [a-zA-Z0-9_.-], max 64)
@@ -1128,7 +1197,7 @@ Session names are **non-unique** — multiple sessions may share the same name. 
 #### Example
 
 ```bash
-zapi-cli trace session start --name my-session --export-path /tmp/traces/
+zapi trace start --name my-session --export-path /tmp/traces/
 ```
 
 #### Example output
@@ -1155,19 +1224,21 @@ zapi-cli trace session start --name my-session --export-path /tmp/traces/
 
 ---
 
-### trace session list
+### trace list
+
+*(was: `trace session list` — deprecated alias still accepted)*
 
 List all known trace sessions with their current status and entry counts.
 
 ```
 USAGE:
-    zapi-cli trace session list [OPTIONS]
+    zapi trace list
 ```
 
 #### Example
 
 ```bash
-zapi-cli trace session list
+zapi trace list
 ```
 
 #### Example output
@@ -1189,19 +1260,21 @@ zapi-cli trace session list
 
 | Status | Meaning |
 |---|---|
-| `active` | Session is live; `api call` writes trace entries. |
+| `active` | Session is live; `api request` writes trace entries. |
 | `closing` | Session is draining in-flight writes; new entries are silently dropped. |
 | `closed` | Session is sealed; no further entries are written. |
 
 ---
 
-### trace session export
+### trace export
+
+*(was: `trace session export` — deprecated alias still accepted)*
 
 Read and return the entries from a trace file, with optional type filtering and body truncation.
 
 ```
 USAGE:
-    zapi-cli trace session export [OPTIONS]
+    zapi trace export [OPTIONS]
 
 OPTIONS:
     --id <ID>                Session UUID (mutually exclusive with --name)
@@ -1219,7 +1292,7 @@ Either `--id` or `--name` is required. If `--name` matches multiple sessions, `S
 #### Example
 
 ```bash
-zapi-cli trace session export --id 550e8400-e29b-41d4-a716-446655440000 --type api --truncate-body 200
+zapi trace export --id 550e8400-e29b-41d4-a716-446655440000 --type api --truncate-body 200
 ```
 
 #### Example output
@@ -1251,30 +1324,32 @@ zapi-cli trace session export --id 550e8400-e29b-41d4-a716-446655440000 --type a
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `SESSION_NOT_FOUND` | No session with the specified `--id` or `--name` exists. | Run `trace session list` to see available sessions. |
-| `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` from `trace session list`. |
+| `SESSION_NOT_FOUND` | No session with the specified `--id` or `--name` exists. | Run `trace list` to see available sessions. |
+| `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` from `trace list`. |
 | `INVALID_ARGS` | Both `--id` and `--name` provided, or neither, or `--type` is not `api`/`pex`. | Provide exactly one of `--id` or `--name`. |
 
 ---
 
-### trace session close
+### trace close
 
-Seal a trace session. In-flight `api call` writes are drained for `--wait-ms` milliseconds, then the session is marked `closed` and no further entries are accepted.
+*(was: `trace session close` — deprecated alias still accepted)*
+
+Seal a trace session. In-flight `api request` writes are drained for `--drain-timeout` milliseconds, then the session is marked `closed` and no further entries are accepted.
 
 ```
 USAGE:
-    zapi-cli trace session close [OPTIONS]
+    zapi trace close [OPTIONS]
 
 OPTIONS:
-    --id <ID>        Session UUID (mutually exclusive with --name)
-    --name <NAME>    Session name (mutually exclusive with --id)
-    --wait-ms <MS>   Drain window before sealing, in milliseconds (default: 5000)
+    --id <ID>                  Session UUID (mutually exclusive with --name)
+    --name <NAME>              Session name (mutually exclusive with --id)
+    --drain-timeout <MS>       Drain window before sealing, in milliseconds (default: 5000) *(deprecated alias: `--wait-ms`)*
 ```
 
 #### Example
 
 ```bash
-zapi-cli trace session close --id 550e8400-e29b-41d4-a716-446655440000
+zapi trace close --id 550e8400-e29b-41d4-a716-446655440000
 ```
 
 #### Example output
@@ -1293,18 +1368,20 @@ zapi-cli trace session close --id 550e8400-e29b-41d4-a716-446655440000
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace session list` to see available sessions. |
+| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace list` to see available sessions. |
 | `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` instead. |
 
 ---
 
-### trace session reopen
+### trace reopen
 
-Re-activate a closed session. Subsequent `api call` invocations append entries to the existing trace file, with sequence numbers continuing from the last `entry_count`.
+*(was: `trace session reopen` — deprecated alias still accepted)*
+
+Re-activate a closed session. Subsequent `api request` invocations append entries to the existing trace file, with sequence numbers continuing from the last `entry_count`.
 
 ```
 USAGE:
-    zapi-cli trace session reopen [OPTIONS]
+    zapi trace reopen [OPTIONS]
 
 OPTIONS:
     --id <ID>        Session UUID (mutually exclusive with --name)
@@ -1314,7 +1391,7 @@ OPTIONS:
 #### Example
 
 ```bash
-zapi-cli trace session reopen --id 550e8400-e29b-41d4-a716-446655440000
+zapi trace reopen --id 550e8400-e29b-41d4-a716-446655440000
 ```
 
 #### Example output
@@ -1334,18 +1411,20 @@ zapi-cli trace session reopen --id 550e8400-e29b-41d4-a716-446655440000
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace session list` to see available sessions. |
+| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace list` to see available sessions. |
 | `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` instead. |
 
 ---
 
-### trace session remove
+### trace remove
+
+*(was: `trace session remove` — deprecated alias still accepted)*
 
 Remove a session from the sessions index. The trace file at `export_path` is **preserved** on disk.
 
 ```
 USAGE:
-    zapi-cli trace session remove [OPTIONS]
+    zapi trace remove [OPTIONS]
 
 OPTIONS:
     --id <ID>        Session UUID (mutually exclusive with --name)
@@ -1357,7 +1436,7 @@ OPTIONS:
 #### Example
 
 ```bash
-zapi-cli trace session remove --id 550e8400-e29b-41d4-a716-446655440000
+zapi trace remove --id 550e8400-e29b-41d4-a716-446655440000
 ```
 
 #### Example output
@@ -1376,29 +1455,29 @@ zapi-cli trace session remove --id 550e8400-e29b-41d4-a716-446655440000
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace session list` to see available sessions. |
+| `SESSION_NOT_FOUND` | No session with that `--id` or `--name` exists. | Run `trace list` to see available sessions. |
 | `SESSION_AMBIGUOUS` | Multiple sessions share the specified `--name`. | Use `--id` with the specific `unique_id` instead. |
 
 ---
 
 ### trace config set
 
-Persist the default export path used when `trace session start` is called without `--export-path`.
+Persist the default export path used when `trace start` is called without `--export-path`.
 
 ```
 USAGE:
-    zapi-cli trace config set [OPTIONS]
+    zapi trace config set [OPTIONS]
 
 OPTIONS:
     --default-export-path <PATH>    Directory or file path for trace output (required)
 ```
 
-This value is stored in `trace-config.json` in the zapi-cli config directory.
+This value is stored in `trace-config.json` in the zapi config directory.
 
 #### Example
 
 ```bash
-zapi-cli trace config set --default-export-path /tmp/traces/
+zapi trace config set --default-export-path /tmp/traces/
 ```
 
 #### Example output
@@ -1426,13 +1505,13 @@ Show the current trace configuration.
 
 ```
 USAGE:
-    zapi-cli trace config show [OPTIONS]
+    zapi trace config show [OPTIONS]
 ```
 
 #### Example
 
 ```bash
-zapi-cli trace config show
+zapi trace config show
 ```
 
 #### Example output
@@ -1457,7 +1536,7 @@ For a guide on creating and populating the `.env` file see [docs/zoho-mobile-app
 
 ```
 USAGE:
-    zapi-cli config set env-file <PATH>
+    zapi config set env-file <PATH>
 
 ARGUMENTS:
     <PATH>    Absolute or relative path to a .env file (must exist)
@@ -1466,13 +1545,13 @@ ARGUMENTS:
 #### Example
 
 ```bash
-zapi-cli config set env-file /home/user/projects/zapi-cli/.env
+zapi config set env-file /home/user/projects/zapi/.env
 ```
 
 #### Example output (stdout)
 
 ```json
-{"status":"ok","data":{"env_file":"/home/user/projects/zapi-cli/.env"}}
+{"status":"ok","data":{"env_file":"/home/user/projects/zapi/.env"}}
 ```
 
 The path is resolved to an absolute path before being stored.
@@ -1493,7 +1572,7 @@ Persist the absolute path to a scope file that is automatically read when `accou
 
 ```
 USAGE:
-    zapi-cli config set scope-file <PATH>
+    zapi config set scope-file <PATH>
 
 ARGUMENTS:
     <PATH>    Absolute or relative path to a scope file (file need not exist at configuration time)
@@ -1502,13 +1581,13 @@ ARGUMENTS:
 #### Example command
 
 ```bash
-zapi-cli config set scope-file /home/user/projects/zapi-cli/scopes.txt
+zapi config set scope-file /home/user/projects/zapi/scopes.txt
 ```
 
 #### Example output (stdout)
 
 ```json
-{"status":"ok","data":{"scope_file":"/home/user/projects/zapi-cli/scopes.txt"}}
+{"status":"ok","data":{"scope_file":"/home/user/projects/zapi/scopes.txt"}}
 ```
 
 #### Scope file format
@@ -1554,7 +1633,7 @@ The `migrated` field in the response indicates whether a file copy was performed
 
 ```
 USAGE:
-    zapi-cli config set app-dir <PATH>
+    zapi config set app-dir <PATH>
 
 ARGUMENTS:
     <PATH>    Absolute or relative path to the desired app data directory
@@ -1563,19 +1642,19 @@ ARGUMENTS:
 #### Example
 
 ```bash
-zapi-cli config set app-dir /home/user/projects/myproject/.zapi-cli
+zapi config set app-dir /home/user/projects/myproject/.zapi
 ```
 
 #### Example output (stdout, with migration)
 
 ```json
-{"status":"ok","data":{"app_data_dir":"/home/user/projects/myproject/.zapi-cli","migrated":true}}
+{"status":"ok","data":{"app_data_dir":"/home/user/projects/myproject/.zapi","migrated":true}}
 ```
 
 #### Example output (stdout, no migration)
 
 ```json
-{"status":"ok","data":{"app_data_dir":"/home/user/projects/myproject/.zapi-cli","migrated":false}}
+{"status":"ok","data":{"app_data_dir":"/home/user/projects/myproject/.zapi","migrated":false}}
 ```
 
 ---
@@ -1586,21 +1665,21 @@ Show the current persisted CLI configuration.
 
 ```
 USAGE:
-    zapi-cli config show [OPTIONS]
+    zapi config show [OPTIONS]
 ```
 
 #### Example
 
 ```bash
-zapi-cli config show
+zapi config show
 ```
 
 #### Example output
 
 ```json
 {
-  "env_file": "/home/user/projects/zapi-cli/.env",
-  "scope_file": "/home/user/projects/zapi-cli/scopes.txt",
+  "env_file": "/home/user/projects/zapi/.env",
+  "scope_file": "/home/user/projects/zapi/scopes.txt",
   "app_data_dir": null,
   "trace_default_export_path": null
 }
@@ -1625,13 +1704,13 @@ These flags are accepted by all subcommands:
 
 ## Scripting & AI Agent Usage
 
-zapi-cli is designed to be a first-class citizen in automated pipelines and AI agent contexts. All output is JSON, all errors are structured, and all exit codes are deterministic.
+zapi is designed to be a first-class citizen in automated pipelines and AI agent contexts. All output is JSON, all errors are structured, and all exit codes are deterministic.
 
 ### Checking exit code and parsing output
 
 ```bash
 # Run a command and check success
-if zapi-cli account list > /tmp/accounts.json; then
+if zapi account list > /tmp/accounts.json; then
   cat /tmp/accounts.json | jq '.data.accounts[].name'
 else
   # Read the structured error from stderr
@@ -1643,13 +1722,13 @@ fi
 
 ```bash
 # Get all account names
-zapi-cli account list | jq -r '.data.accounts[].name'
+zapi account list | jq -r '.data.accounts[].name'
 
 # Get default account name
-zapi-cli account list | jq -r '.data.accounts[] | select(.is_default == true) | .name'
+zapi account list | jq -r '.data.accounts[] | select(.is_default == true) | .name'
 
 # Make an API call and extract a specific field
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.com/cliq/v2/channels" \
   -X GET \
   | jq '.data.channels[].name'
@@ -1658,7 +1737,7 @@ zapi-cli api call \
 ### Handling errors in scripts
 
 ```bash
-OUTPUT=$(zapi-cli api call --url "https://www.zohoapis.com/cliq/v2/channels" -X GET 2>/tmp/err.json)
+OUTPUT=$(zapi api request --url "https://www.zohoapis.com/cliq/v2/channels" -X GET 2>/tmp/err.json)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
@@ -1667,9 +1746,9 @@ elif [ $EXIT_CODE -eq 2 ]; then
   # Auth failure — attempt re-auth
   ERROR_CODE=$(cat /tmp/err.json | jq -r '.code')
   ACCOUNT=$(cat /tmp/err.json | jq -r '.account // "myaccount"')
-  zapi-cli account re-auth --name "$ACCOUNT"
+  zapi account refresh --name "$ACCOUNT"
   # Retry the original command
-  zapi-cli api call --url "https://www.zohoapis.com/cliq/v2/channels" -X GET
+  zapi api request --url "https://www.zohoapis.com/cliq/v2/channels" -X GET
 else
   echo "Error: $(cat /tmp/err.json | jq -r '.error')"
   exit 1
@@ -1682,13 +1761,13 @@ Because errors go to stderr and results go to stdout, you can cleanly separate t
 
 ```bash
 # Capture stdout only (ignore stderr)
-RESULT=$(zapi-cli api call --url "..." -X GET 2>/dev/null)
+RESULT=$(zapi api request --url "..." -X GET 2>/dev/null)
 
 # Capture stderr only (for error inspection)
-ERROR=$(zapi-cli api call --url "..." -X GET 2>&1 >/dev/null)
+ERROR=$(zapi api request --url "..." -X GET 2>&1 >/dev/null)
 
 # Capture both to separate files
-zapi-cli api call --url "..." -X GET >result.json 2>error.json
+zapi api request --url "..." -X GET >result.json 2>error.json
 ```
 
 ### Non-interactive mode (AI agents)
@@ -1696,22 +1775,22 @@ zapi-cli api call --url "..." -X GET >result.json 2>error.json
 Pass `--no-input` to ensure the CLI never blocks waiting for keyboard input. This is critical in headless agent contexts.
 
 ```bash
-zapi-cli --no-input account list
-zapi-cli --no-input api call --url "..." -X GET --account myaccount
+zapi --no-input account list
+zapi --no-input api request --url "..." -X GET --account myaccount
 ```
 
 ### Recommended pattern for AI agents
 
 ```bash
 # 1. Verify the account exists and is healthy
-ACCOUNT_STATUS=$(zapi-cli account show --name myaccount 2>/dev/null)
+ACCOUNT_STATUS=$(zapi account show --name myaccount 2>/dev/null)
 if [ $? -ne 0 ]; then
   echo "Account not found or error. Aborting." >&2
   exit 1
 fi
 
 # 2. Make the API call
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.com/cliq/v2/channels" \
   -X GET \
   --account myaccount
@@ -1721,10 +1800,10 @@ zapi-cli api call \
 
 ```bash
 # Build a time-windowed API query
-NOW=$(zapi-cli util time-ms | jq -r '.ts')
+NOW=$(zapi util timestamp | jq -r '.ts')
 ONE_HOUR_AGO=$((NOW - 3600000))
 
-zapi-cli api call \
+zapi api request \
   --url "https://www.zohoapis.com/cliq/v2/search" \
   -X GET \
   --query "from=$ONE_HOUR_AGO" \
@@ -1751,7 +1830,7 @@ All error responses are emitted on **stderr** as:
 | `ACCOUNT_RENAME_FAILED` | 1 | The keychain entry could not be renamed after accounts.json was updated. | The account is saved under the new name; manually remove and re-add if the keychain is inconsistent. |
 | `NO_DEFAULT_ACCOUNT` | 1 | No `--account` flag was provided and no default account has been set. | Run `account set-default --name <ACCOUNT>` or pass `--account` explicitly. |
 | `AUTH_FAILURE` | 2 | OAuth token exchange or refresh request failed. | Verify `client-id`, `client-secret`, and the grant code. Re-add the account if the issue persists. |
-| `NEEDS_REAUTH` | 2 | The account's refresh token has expired or been revoked and needs re-authentication. | Run `account re-auth --name <ACCOUNT>`. If that fails with `AUTH_FAILURE`, re-add the account. |
+| `NEEDS_REAUTH` | 2 | The account's refresh token has expired or been revoked and needs re-authentication. | Run `account refresh --name <ACCOUNT>`. If that fails with `AUTH_FAILURE`, re-add the account. |
 | `API_ERROR` | 1 | Zoho API returned a non-2xx HTTP status code. | Inspect the `data` field in the error JSON for the Zoho error body. |
 | `INVALID_ARGS` | 1 | A required flag is missing or a flag value is in an invalid format. | Check the `error` field for which flag is missing. Run `--help` on the subcommand. |
 | `IO_ERROR` | 1 | A file read or write operation failed (e.g., `--body-file` path not found). | Verify that the file path exists and is readable. |
@@ -1761,14 +1840,74 @@ All error responses are emitted on **stderr** as:
 | `HOST_NOT_ALLOWED` | 1 | The `--url` hostname is not on the Zoho domain allowlist. | Only URLs under `zoho.com`, `zoho.eu`, `zoho.in`, `zoho.com.au`, `zohoapis.com`, and `zohoapis.in` are accepted. |
 | `STATE_MISMATCH` | 1 | The OAuth callback `state` parameter did not match the generated CSRF token. | Indicates a possible CSRF attack or a stale/replayed callback. Discard and re-run `account login`. |
 | `LOGIN_TIMEOUT` | 1 | The browser-based OAuth callback was not received within 120 seconds. | Ensure the browser opened and you completed the sign-in before the timeout. Re-run `account login`. |
-| `ENV_FILE_NOT_CONFIGURED` | 1 | `ZOHO_CLIENT_ID` is not set in the environment or configured env-file. | Run `zapi-cli config set env-file <path>` or export `ZOHO_CLIENT_ID`. |
-| `SCOPE_FILE_NOT_CONFIGURED` | 1 | No scopes resolved from `--scope` or the configured scope-file. | Pass `--scope <SCOPES>` or run `zapi-cli config set scope-file <path>`. |
+| `ENV_FILE_NOT_CONFIGURED` | 1 | `ZOHO_CLIENT_ID` is not set in the environment or configured env-file. | Run `zapi config set env-file <path>` or export `ZOHO_CLIENT_ID`. |
+| `SCOPE_FILE_NOT_CONFIGURED` | 1 | No scopes resolved from `--scope` or the configured scope-file. | Pass `--scope <SCOPES>` or run `zapi config set scope-file <path>`. |
 | `INTERNAL_ERROR` | 1 | An unhandled internal exception occurred. | File a bug report with the full stderr output. |
-| `SESSION_NOT_FOUND` | 1 | The specified session `--id` or `--name` does not exist in the sessions index. | Run `trace session list` to enumerate valid sessions. |
-| `SESSION_AMBIGUOUS` | 1 | Multiple sessions share the specified `--name`; cannot resolve to a unique session. | Use `--id` with the specific `unique_id` from `trace session list`. |
-| `EXPORT_PATH_NOT_SET` | 1 | `trace session start` had no `--export-path` and no default is configured. | Run `trace config set --default-export-path <PATH>` or pass `--export-path` explicitly. |
-| `REGISTRY_ENTRY_NOT_FOUND` | 1 | The specified `--id` does not match any entry in the local API registry. | Run `api registry list` to enumerate valid ids. |
-| `REGISTRY_ENTRY_ALREADY_EXISTS` | 1 | `api registry add` was called with an `--id` that already exists in the registry. | Use `api registry update --id <ID>` to modify the existing entry, or choose a different id. |
+| `SESSION_NOT_FOUND` | 1 | The specified session `--id` or `--name` does not exist in the sessions index. | Run `trace list` to enumerate valid sessions. |
+| `SESSION_AMBIGUOUS` | 1 | Multiple sessions share the specified `--name`; cannot resolve to a unique session. | Use `--id` with the specific `unique_id` from `trace list`. |
+| `EXPORT_PATH_NOT_SET` | 1 | `trace start` had no `--export-path` and no default is configured. | Run `trace config set --default-export-path <PATH>` or pass `--export-path` explicitly. |
+| `ENDPOINT_NOT_FOUND` | 1 | The specified `--id` does not match any entry in the local API endpoint registry. | Run `api endpoints list` to enumerate valid ids. |
+| `ENDPOINT_ALREADY_EXISTS` | 1 | `api endpoints add` was called with an `--id` that already exists in the registry. | Use `api endpoints update --id <ID>` to modify the existing entry, or choose a different id. |
+
+---
+
+## Deprecated Commands
+
+The following commands and flags have been renamed. The old names are still accepted but emit a deprecation warning to **stderr**. They will be removed in a future major version.
+
+> When a deprecated form is invoked, the CLI prints to stderr:
+> ```
+> Deprecation: '<old>' is deprecated; use '<new>' instead.
+> ```
+> Exit code and stdout output are identical to the canonical form.
+
+### Deprecated command names
+
+| Deprecated form | Current canonical form | Changed in |
+|---|---|---|
+| `zapi-cli` (binary) | `zapi` | Story 26 |
+| `zapi api call` | `zapi api request` | Story 28 |
+| `zapi trace session start` | `zapi trace start` | Story 29 |
+| `zapi trace session list` | `zapi trace list` | Story 29 |
+| `zapi trace session export` | `zapi trace export` | Story 29 |
+| `zapi trace session close` | `zapi trace close` | Story 29 |
+| `zapi trace session reopen` | `zapi trace reopen` | Story 29 |
+| `zapi trace session remove` | `zapi trace remove` | Story 29 |
+| `zapi scope add` | `zapi account scope add` | Story 30 |
+| `zapi scope list` | `zapi account scope list` | Story 30 |
+| `zapi account re-auth` | `zapi account refresh` | Story 32 |
+| `zapi api registry list` | `zapi api endpoints list` | Story 33 |
+| `zapi api registry add` | `zapi api endpoints add` | Story 33 |
+| `zapi api registry update` | `zapi api endpoints update` | Story 33 |
+| `zapi api registry show` | `zapi api endpoints show` | Story 33 |
+| `zapi api registry remove` | `zapi api endpoints remove` | Story 33 |
+| `zapi util time-ms` | `zapi util timestamp` | Story 34 |
+| `zapi util time-now` | `zapi util now` | Story 34 |
+
+### Deprecated flag names
+
+| Command | Deprecated flag | Current flag | Changed in |
+|---|---|---|---|
+| `account show` | `--zuidstring` | `--zuid` | Story 35 |
+| `account set-default` | `--zuidstring` | `--zuid` | Story 35 |
+| `account remove` | `--zuidstring` | `--zuid` | Story 35 |
+| `account refresh` | `--zuidstring` | `--zuid` | Story 35 |
+| `account rename` | `--zuidstring` | `--zuid` | Story 35 |
+| `account rename` | `--new-name` | `--to` | Story 35 |
+| `trace close` | `--wait-ms` | `--drain-timeout` | Story 35 |
+
+### Deprecated error codes
+
+| Deprecated code | Current code | Affected command |
+|---|---|---|
+| `REGISTRY_ENTRY_NOT_FOUND` | `ENDPOINT_NOT_FOUND` | `api endpoints show`, `api endpoints update`, `api endpoints remove` |
+| `REGISTRY_ENTRY_ALREADY_EXISTS` | `ENDPOINT_ALREADY_EXISTS` | `api endpoints add` |
+
+### Short command alias
+
+| Command | Alias |
+|---|---|
+| `zapi api request` | `zapi api req` |
 
 ---
 
@@ -1776,14 +1915,14 @@ All error responses are emitted on **stderr** as:
 
 ### Account domain block
 
-All `@zohocorp.*` email addresses are hard-blocked at every entry point — including `account login` and `account re-auth`. This is a compile-time policy that cannot be overridden at runtime.
+All `@zohocorp.*` email addresses are hard-blocked at every entry point — including `account login` and `account refresh`. This is a compile-time policy that cannot be overridden at runtime.
 
 ### Token storage
 
 Tokens (access token + refresh token) are stored **exclusively in the OS keychain**:
 - **macOS:** macOS Keychain Services.
 - **Windows:** Windows Credential Manager.
-- **Linux:** libsecret (GNOME Keyring), with automatic fallback to an AES-256-GCM encrypted file at `~/.config/zapi-cli/credentials.enc`.
+- **Linux:** libsecret (GNOME Keyring), with automatic fallback to an AES-256-GCM encrypted file at `~/.config/zapi/credentials.enc`.
 
 Tokens are **never written to disk in plaintext** and are **never printed to stdout or stderr**.
 
@@ -1793,7 +1932,7 @@ The `account show` command never emits credential fields (`access_token`, `clien
 
 ### Host allowlist
 
-Outgoing HTTP requests from `api call` are restricted to the following domain suffixes. This list is **compile-time fixed** and cannot be overridden with flags or environment variables:
+Outgoing HTTP requests from `api request` are restricted to the following domain suffixes. This list is **compile-time fixed** and cannot be overridden with flags or environment variables:
 
 - `zoho.com`
 - `zoho.eu`
@@ -1819,19 +1958,19 @@ The tool never writes OAuth secrets, access tokens, or refresh tokens to stdout,
 ### macOS
 
 - **Keychain:** macOS Keychain Services via the `security` framework.
-- **Config directory:** `~/Library/Application Support/zapi-cli/`
+- **Config directory:** `~/Library/Application Support/zapi/`
 - **Browser launch:** `open` command is used to open the authorization URL.
 
 ### Windows
 
 - **Keychain:** Windows Credential Manager (`DPAPI`-backed).
-- **Config directory:** `%APPDATA%\zapi-cli\` (typically `C:\Users\<user>\AppData\Roaming\zapi-cli\`)
+- **Config directory:** `%APPDATA%\zapi\` (typically `C:\Users\<user>\AppData\Roaming\zapi\`)
 - **Browser launch:** `start` command is used to open the authorization URL.
 
 ### Linux
 
-- **Keychain:** libsecret (requires GNOME Keyring or compatible secret service). If unavailable, automatically falls back to an AES-256-GCM encrypted credentials file at `~/.config/zapi-cli/credentials.enc`.
-- **Config directory:** `~/.config/zapi-cli/`
+- **Keychain:** libsecret (requires GNOME Keyring or compatible secret service). If unavailable, automatically falls back to an AES-256-GCM encrypted credentials file at `~/.config/zapi/credentials.enc`.
+- **Config directory:** `~/.config/zapi/`
 - **Browser launch:** `xdg-open` is used to open the authorization URL. Ensure a desktop environment or browser is accessible when running `account login` on Linux.
 
 > **Headless Linux note:** On headless servers without a display, `account login` cannot open a browser. Use `account add` (Self-Client grant code) instead, which does not require a browser.
@@ -1840,7 +1979,7 @@ The tool never writes OAuth secrets, access tokens, or refresh tokens to stdout,
 
 | Platform | Binary |
 |---|---|
-| macOS, Linux | `zapi-cli` |
-| Windows | `zapi-cli.exe` |
+| macOS, Linux | `zapi` |
+| Windows | `zapi.exe` |
 
-All examples in this document use `zapi-cli`. Substitute `zapi-cli.exe` on Windows.
+All examples in this document use `zapi`. Substitute `zapi.exe` on Windows.

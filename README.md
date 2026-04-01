@@ -1,1 +1,1 @@
-# zapi-cli
+# zapi
