@@ -79,8 +79,6 @@
       "defaultAssumption": "Use a named Mutex keyed by UUID: 'Global\\\\zapi-cli-trace-{sessionUniqueId}'. WaitOne(2000) — if timeout, drop the trace entry silently (do not fail the api call). ReleaseMutex in finally. IncrementEntryCountAsync reads, increments, and writes sessions.json under this Mutex and returns the new value as the seq number.",
       "status": "Open",
       "usedByStories": [8]
-    }
-      "usedByStories": [8]
     },
     {
       "id": "OQ-011",
