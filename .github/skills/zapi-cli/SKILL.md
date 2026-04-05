@@ -1,13 +1,13 @@
 ---
 name: zapi-cli
-description: 'Enables AI agents to interact with any Zoho REST API using the zapi-cli binary. Covers account management, authenticated API calls, API registry, trace sessions, and structured output parsing. Designed for use cases such as API analysis, multi-request exploration, and automated documentation generation.'
+description: 'Enables AI agents to interact with any Zoho REST API using the zapi binary. Covers account management, authenticated API calls, API endpoints registry, trace sessions, and structured output parsing. Designed for use cases such as API analysis, multi-request exploration, and automated documentation generation.'
 ---
 
-# zapi-cli — HTTP API Analysis Skill
+# zapi — HTTP API Analysis Skill
 
 ## Purpose
 
-This skill enables an agent to **execute, validate, document, and understand** a set of HTTP API endpoints using the `zapi-cli` binary. Beyond simple validation, the agent must explore how each API behaves under different inputs and conditions to build a clear picture of the feature's mechanics. It produces two output artefacts:
+This skill enables an agent to **execute, validate, document, and understand** a set of HTTP API endpoints using the `zapi` binary. Beyond simple validation, the agent must explore how each API behaves under different inputs and conditions to build a clear picture of the feature's mechanics. It produces two output artefacts:
 
 | Artefact | Path | Consumer |
 |----------|------|----------|
@@ -22,12 +22,12 @@ The binaries are bundled in the `tools/` subfolder alongside this SKILL.md. Sele
 
 | Platform | Binary path (relative to SKILL.md) |
 |---|---|
-| macOS — Apple Silicon (arm64) | `tools/osx-arm64/zapi-cli` |
-| macOS — Intel (x64) | `tools/osx-x64/zapi-cli` |
-| Linux x64 | `tools/linux-x64/zapi-cli` |
-| Linux arm64 | `tools/linux-arm64/zapi-cli` |
-| Windows x64 | `tools/win-x64/zapi-cli.exe` |
-| Windows arm64 | `tools/win-arm64/zapi-cli.exe` |
+| macOS — Apple Silicon (arm64) | `tools/osx-arm64/zapi` |
+| macOS — Intel (x64) | `tools/osx-x64/zapi` |
+| Linux x64 | `tools/linux-x64/zapi` |
+| Linux arm64 | `tools/linux-arm64/zapi` |
+| Windows x64 | `tools/win-x64/zapi.exe` |
+| Windows arm64 | `tools/win-arm64/zapi.exe` |
 
 ```bash
 # Detect platform and resolve the CLI binary path
@@ -36,17 +36,17 @@ OS=$(uname -s)
 SKILL_DIR="<absolute path to this skill folder>"
 
 if [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
-  CLI="$SKILL_DIR/tools/osx-arm64/zapi-cli"
+  CLI="$SKILL_DIR/tools/osx-arm64/zapi"
 elif [[ "$OS" == "Darwin" ]]; then
-  CLI="$SKILL_DIR/tools/osx-x64/zapi-cli"
+  CLI="$SKILL_DIR/tools/osx-x64/zapi"
 elif [[ "$OS" == "Linux" && "$ARCH" == "aarch64" ]]; then
-  CLI="$SKILL_DIR/tools/linux-arm64/zapi-cli"
+  CLI="$SKILL_DIR/tools/linux-arm64/zapi"
 elif [[ ("$OS" == *"MINGW"* || "$OS" == *"CYGWIN"*) && "$ARCH" == "aarch64" ]]; then
-  CLI="$SKILL_DIR/tools/win-arm64/zapi-cli.exe"
+  CLI="$SKILL_DIR/tools/win-arm64/zapi.exe"
 elif [[ "$OS" == *"MINGW"* || "$OS" == *"CYGWIN"* ]]; then
-  CLI="$SKILL_DIR/tools/win-x64/zapi-cli.exe"
+  CLI="$SKILL_DIR/tools/win-x64/zapi.exe"
 else
-  CLI="$SKILL_DIR/tools/linux-x64/zapi-cli"
+  CLI="$SKILL_DIR/tools/linux-x64/zapi"
 fi
 
 chmod +x "$CLI"
@@ -58,36 +58,37 @@ chmod +x "$CLI"
 
 ## CLI — Available Operations
 
-All requests are made via the `zapi-cli` binary. The following commands are available:
+All requests are made via the `zapi` binary. The following commands are available:
 
 | Command | When to use |
 |---------|-------------|
 | `account list` | **Always call first** to verify which accounts are present and healthy for the session. |
 | `account login` | Authenticate a new account via the Mobile OAuth 2.0 browser flow. `ZOHO_CLIENT_ID` must be set via env-file; scopes come from `--scope` flag or configured scope-file; DC is auto-detected from the callback. |
-| `account show [--name\|--email\|--zuidstring]` | Inspect a specific account's details (email, datacenter, scopes, ZUID). Exactly one identifier required. |
-| `account set-default [--name\|--email\|--zuidstring]` | Set the account to be used when `--account` is not specified on individual commands. |
-| `account remove [--name\|--email\|--zuidstring]` | Remove an account and revoke its OAuth token from the Zoho servers. |
-| `account re-auth [--name\|--email\|--zuidstring]` | Re-authenticate an account using its stored refresh token. Call this when exit code is `2` or after adding new scopes via `scope add`. |
-| `account rename [--name\|--email\|--zuidstring] --new-name <NEW>` | Rename an account alias; the keychain entry is also updated to the new name. |
-| `api call --url <URL> -X <METHOD>` | Fire an HTTP request against a Zoho endpoint. The OAuth token is injected automatically. |
-| `api registry add / list / show / update / remove` | Manage the local registry of named API endpoints for reuse across sessions. |
-| `trace session start` | Begin recording all `api call` requests/responses to a structured JSON file. |
-| `trace session list` | List all known trace sessions with their current status and entry counts. |
-| `trace session export` | Read back the recorded trace entries, with optional type filtering and body truncation. |
-| `trace session close` | Seal a trace session after draining in-flight writes. |
-| `trace session reopen` | Re-activate a closed trace session to append new entries. |
-| `trace session remove` | Remove a session from the sessions index (trace file is preserved). |
+| `account show [--name\|--email\|--zuid]` | Inspect a specific account's details (email, datacenter, scopes, ZUID). Exactly one identifier required. |
+| `account set-default [--name\|--email\|--zuid]` | Set the account to be used when `--account` is not specified on individual commands. |
+| `account use <NAME>` | Set the default account by positional name argument — shorthand for `account set-default --name <NAME>`. |
+| `account remove [--name\|--email\|--zuid]` | Remove an account and revoke its OAuth token from the Zoho servers. |
+| `account refresh [--name\|--email\|--zuid]` | Re-authenticate an account using its stored refresh token. Call this when exit code is `2` or after adding new scopes via `account scope add`. |
+| `account rename [--name\|--email\|--zuid] --to <NEW>` | Rename an account alias; the keychain entry is also updated to the new name. |
+| `api request --url <URL> -X <METHOD>` | Fire an HTTP request against a Zoho endpoint. The OAuth token is injected automatically. Alias: `api req`. (`api call` is deprecated.) |
+| `api endpoints add / list / show / update / remove` | Manage the local registry of named API endpoints for reuse across sessions. (`api registry *` is deprecated.) |
+| `trace start` | Begin recording all `api request` requests/responses to a structured JSON file. (`trace session start` is deprecated.) |
+| `trace list` | List all known trace sessions with their current status and entry counts. (`trace session list` is deprecated.) |
+| `trace export` | Read back the recorded trace entries, with optional type filtering and body truncation. (`trace session export` is deprecated.) |
+| `trace close` | Seal a trace session after draining in-flight writes. (`trace session close` is deprecated.) |
+| `trace reopen` | Re-activate a closed trace session to append new entries. (`trace session reopen` is deprecated.) |
+| `trace remove` | Remove a session from the sessions index (trace file is preserved). (`trace session remove` is deprecated.) |
 | `trace config set --default-export-path <PATH>` | Persist the default export path for trace sessions. |
 | `trace config show` | Display the current trace configuration. |
-| `scope add --scope <SCOPE> [--port <PORT>]` | Add an OAuth scope to an account via incremental OAuth flow (callback on `--port`, default 8085). |
-| `scope list` | List all OAuth scopes configured for an account. |
+| `account scope add --scope <SCOPE> [--port <PORT>]` | Add an OAuth scope to an account via incremental OAuth flow (callback on `--port`, default 8085). (`scope add` is deprecated.) |
+| `account scope list` | List all OAuth scopes configured for an account. (`scope list` is deprecated.) |
 | `config set env-file <PATH>` | Persist the `.env` file path loaded at every startup (stores `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`). |
 | `config set scope-file <PATH>` | Persist a scope file path automatically read when `account login` resolves scopes. See [Configuration File Formats](#configuration-file-formats) for required format (scopes unquoted, one per line or comma-separated, `#` comments supported). |
 | `config set app-dir <PATH>` | Persist a custom app data directory where `accounts.json` is stored (created if absent). Automatically migrates `accounts.json` from the previous location if the file does not already exist in the new directory. Response includes `migrated: true/false`. |
 | `config show` | Show the current persisted CLI configuration (env_file, scope_file, app_data_dir, trace_default_export_path). |
-| `util time-ms` | Get current Unix milliseconds — useful for time-range query parameters. |
+| `util timestamp` | Get current Unix milliseconds — useful for time-range query parameters. (`util time-ms` is deprecated.) |
 | `util uuid` | Generate a UUID v4 — useful for idempotency keys. |
-| `util time-now` | Get current India Standard Time (IST) as a formatted timestamp. |
+| `util now` | Get current India Standard Time (IST) as a formatted timestamp. (`util time-now` is deprecated.) |
 
 ---
 
@@ -148,9 +149,9 @@ Every command outputs **strict JSON** to stdout. Errors go to **stderr**. The ag
 |---|---|
 | `0` | Success |
 | `1` | General error |
-| `2` | Authentication expired — call `account re-auth` before retrying |
+| `2` | Authentication expired — call `account refresh` before retrying |
 
-> **Agent note:** Always check the exit code first. Exit code `2` means the account needs re-authentication — invoke `$CLI account re-auth --name <ACCOUNT>` before retrying the failed command.
+> **Agent note:** Always check the exit code first. Exit code `2` means the account needs re-authentication — invoke `$CLI account refresh --name <ACCOUNT>` before retrying the failed command.
 
 ---
 
@@ -225,11 +226,11 @@ Every piece of data the agent interacts with must be created fresh at the start 
 3. Ensure the output directories exist: `docs/api-analysis/`. Create them if they do not exist. If the output files already exist, append to them rather than overwriting.
 4. Start a trace session so all API calls during analysis are automatically recorded:
    ```bash
-   SESSION=$($CLI trace session start --name "api-analysis-$(date +%s)" --export-path /tmp/traces/)
+   SESSION=$($CLI trace start --name "api-analysis-$(date +%s)" --export-path /tmp/traces/)
    SESSION_ID=$(echo "$SESSION" | jq -r '.data.unique_id')
    ```
 5. **Identify prerequisite APIs using the resources catalog first.** Before making any prerequisite call (e.g. creating a chat before testing a message API), consult `resources/catalog.md` to find the relevant spec file by description, then read that YAML file for the exact URL, HTTP method, and required parameters to use. If the catalog does not contain a suitable entry, that API has not been catalogued yet.
-6. **Create all test entities needed for this session before executing any API under analysis.** At minimum, create a dedicated group chat (and channel, if channel APIs are being tested). Use `$CLI api call` to make the prerequisite creation calls, using the YAML spec from `resources/` to get the exact request shape.
+6. **Create all test entities needed for this session before executing any API under analysis.** At minimum, create a dedicated group chat (and channel, if channel APIs are being tested). Use `$CLI api request` to make the prerequisite creation calls, using the YAML spec from `resources/` to get the exact request shape.
 
 ### Step 2 — Understand the APIs to Analyse
 
@@ -249,9 +250,9 @@ For each API in the list, the goal is not only to confirm the API works but to *
 
 1. **Resolve the URL** — substitute all `{placeholders}` with real values. All entity IDs must refer to the freshly created test entities from Step 1 — never reference pre-existing server data. If the URL is given as a path only (e.g. `/api/v2/chats`), prepend the appropriate Zoho base domain (e.g. `https://cliq.zoho.com`) unless the user has specified otherwise. If the request body shape is unclear, look up the matching YAML file in `resources/` via `resources/catalog.md`.
 
-2. **Fire the request** using `api call`:
+2. **Fire the request** using `api request`:
    ```bash
-   OUTPUT=$($CLI --no-input api call \
+   OUTPUT=$($CLI --no-input api request \
      --url "<fully resolved URL>" \
      -X <METHOD> \
      --account <ACCOUNT_NAME> \
@@ -266,7 +267,7 @@ For each API in the list, the goal is not only to confirm the API works but to *
 4. **Retry on transient failure** — if the exit code is `1` with error code `API_ERROR` and the HTTP status was `5xx`, or if exit code is `2`, handle accordingly:
    ```bash
    if [ $EXIT_CODE -eq 2 ]; then
-     $CLI account re-auth --name "$ACCOUNT"
+     $CLI account refresh --name "$ACCOUNT"
      # retry the original command once
    fi
    ```
@@ -412,10 +413,10 @@ Append a section for each **failed** API using this template:
 
 ```bash
 # Close the trace session
-$CLI trace session close --id "$SESSION_ID"
+$CLI trace close --id "$SESSION_ID"
 
 # Export and summarise the trace
-$CLI trace session export --id "$SESSION_ID" --type api \
+$CLI trace export --id "$SESSION_ID" --type api \
   | jq '{
       total: length,
       successful: [.[] | select(.error == null)] | length,
@@ -548,19 +549,19 @@ Only proceed once the user explicitly confirms. If they say "yes", apply all. If
 Register endpoints that will be called again in future sessions or by other agents:
 
 ```bash
-$CLI api registry add \
+$CLI api endpoints add \
   --id "<product>-<resource>-<operation>" \
   --url "<URL template>" \
   --method GET \
   --purpose "Brief description of what this endpoint returns"
 ```
 
-Before adding, check if the entry already exists to avoid `REGISTRY_ENTRY_ALREADY_EXISTS`:
+Before adding, check if the entry already exists to avoid `ENDPOINT_ALREADY_EXISTS`:
 
 ```bash
-$CLI api registry list | jq '.[] | select(.id == "<id>")'
+$CLI api endpoints list | jq '.[] | select(.id == "<id>")'
 # If found, use update instead:
-$CLI api registry update --id "<id>" --purpose "Updated description"
+$CLI api endpoints update --id "<id>" --purpose "Updated description"
 ```
 
 ---
@@ -582,10 +583,10 @@ $CLI api registry update --id "<id>" --purpose "Updated description"
 | API requires an entity (e.g. channel ID) that doesn't exist yet | Create it fresh as part of Step 1 test-data setup. Record the ID in a session scratch variable. |
 | API returns `200` with a product-specific error payload (`status: "failure"`) | Treat as failure and record in failure report. |
 | API requires elevated permissions not held by any configured account | Record in failure report with reason "Insufficient permissions — requires manual testing with admin account". |
-| An API was already registered via `api registry add` in a previous session | Call `api registry show --id <ID>` to retrieve the existing definition, validate the URL matches, and skip re-registration. |
+| An API was already registered via `api endpoints add` in a previous session | Call `api endpoints show --id <ID>` to retrieve the existing definition, validate the URL matches, and skip re-registration. |
 | Rate limit hit (HTTP 429 inside `API_ERROR`) | Wait 2 seconds and retry once. If still failing, record as failure with reason "Rate limited". |
 | Placeholder value is ambiguous (e.g. `{channelId}` vs `{chid}`) | Infer from the product's API conventions and note the assumption in the catalog. |
-| Exit code `2` received mid-session | Call `$CLI account re-auth --name <ACCOUNT>` and retry immediately. If re-auth fails with `AUTH_FAILURE`, record all remaining APIs as blocked and stop. |
+| Exit code `2` received mid-session | Call `$CLI account refresh --name <ACCOUNT>` and retry immediately. If refresh fails with `AUTH_FAILURE`, record all remaining APIs as blocked and stop. |
 | A `resources/` YAML spec exists but has wrong field names or types | Note the discrepancy during analysis, complete the session, then include it in the Step 7 update permission prompt before making any changes. |
 | A new API was analysed that has no entry in `resources/catalog.md` | Create the YAML file and add the catalog row directly in Step 7 — no permission needed for new files. |
 
@@ -612,7 +613,7 @@ The CLI only accepts URLs from these Zoho hosts. Any other host returns `HOST_NO
 | `ACCOUNT_ALREADY_EXISTS` | 1 | Choose a different account name or remove the existing account first. |
 | `NO_DEFAULT_ACCOUNT` | 1 | Run `account set-default --name <NAME>` or pass `--account`. |
 | `AUTH_FAILURE` | 2 | Verify credentials; re-add the account if persistent. |
-| `NEEDS_REAUTH` | 2 | Run `account re-auth --name <NAME>` then retry. |
+| `NEEDS_REAUTH` | 2 | Run `account refresh --name <NAME>` then retry. |
 | `API_ERROR` | 1 | Inspect the `data` field in stderr for the Zoho error details. |
 | `HOST_NOT_ALLOWED` | 1 | Use a URL under `zoho.com`, `zohoapis.com`, etc. |
 | `INVALID_ARGS` | 1 | A required flag is missing — run the command with `--help`. |
@@ -623,9 +624,9 @@ The CLI only accepts URLs from these Zoho hosts. Any other host returns `HOST_NO
 | `STATE_MISMATCH` | 1 | Indicates possible CSRF attack; discard and re-run the login command. |
 | `LOGIN_TIMEOUT` | 1 | Browser callback not received within 120 seconds; ensure browser opened and re-run. |
 | `INTERNAL_ERROR` | 1 | Unhandled internal exception; file a bug report with the full stderr output. |
-| `REGISTRY_ENTRY_NOT_FOUND` | 1 | Run `api registry list` to see valid IDs. |
-| `REGISTRY_ENTRY_ALREADY_EXISTS` | 1 | Use `api registry update --id <ID>` instead of `add`. |
-| `SESSION_NOT_FOUND` | 1 | Run `trace session list` to see valid session IDs. |
+| `ENDPOINT_NOT_FOUND` | 1 | Run `api endpoints list` to see valid IDs. |
+| `ENDPOINT_ALREADY_EXISTS` | 1 | Use `api endpoints update --id <ID>` instead of `add`. |
+| `SESSION_NOT_FOUND` | 1 | Run `trace list` to see valid session IDs. |
 | `SESSION_AMBIGUOUS` | 1 | Use `--id` instead of `--name` to target a specific session. |
 | `EXPORT_PATH_NOT_SET` | 1 | Run `trace config set --default-export-path <PATH>`. |
 | `ENV_FILE_NOT_CONFIGURED` | 1 | Run `config set env-file <path>` and ensure `ZOHO_CLIENT_ID` is set in the file, or export the variable. |

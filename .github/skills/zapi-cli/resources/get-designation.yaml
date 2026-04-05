@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Get Designation
+  version: "2.0"
+
+paths:
+  /v2/designations/{designationId}:
+    get:
+      summary: >-
+        Retrieves the details (name and ID) of a single designation by its
+        unique identifier. Returns HTTP 400 with error code
+        "designation_not_exist" when the ID is invalid or the designation
+        has been deleted.
+      parameters:
+        - name: designationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: >-
+            The unique LUID of the designation to retrieve. Obtained from the
+            "id" field in the list-designations or create-designation response.

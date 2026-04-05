@@ -1,0 +1,42 @@
+{
+  "storyId": 35,
+  "title": "Param Renames: --zuidstring \u2192 --zuid, --new-name \u2192 --to, --wait-ms \u2192 --drain-timeout",
+  "description": "Rename three poorly-named flags across the CLI. '--zuidstring' leaks the C# type name; '--new-name' is verbose; '--wait-ms' is a raw implementation unit. Use Spectre.Console.Cli's pipe syntax ([CommandOption(\"--new|--old\")]) to accept both names, maintaining backward compatibility. This is a non-breaking change \u2014 the old flag names continue to work silently (no deprecation warning needed for flags, as they are consumed by scripts not displayed in help).",
+  "status": "Completed",
+  "dependsOn": [
+    27
+  ],
+  "prerequisiteState": "Stories 1\u201327 complete. Multiple commands use --zuidstring, account rename uses --new-name, and trace close uses --wait-ms. Spectre.Console.Cli supports multi-name options via [CommandOption(\"--name1|--name2\")] syntax.",
+  "goal": "After this story: --zuidstring is replaced by --zuid across all account commands that use it. --new-name is replaced by --to in account rename. --wait-ms is replaced by --drain-timeout in trace close. Old flag names still work via the pipe syntax \u2014 no deprecation warning needed for flag aliases (the old names just silently map to the same property). HELP.md and --help output show only the NEW flag names.",
+  "scope": [
+    "Rename --zuidstring \u2192 --zuid in all affected Settings classes. Affected classes: AccountShowSettings, AccountSetDefaultSettings, AccountRemoveSettings, AccountRefreshSettings (formerly AccountReAuthSettings), AccountRenameSettings. Change the CommandOption attribute to [CommandOption(\"--zuid|--zuidstring\")] and rename the backing property from ZuidString to Zuid (or Zuid). Update all usages of the ZuidString property inside ExecuteAsync methods to use the new property name.",
+    "Rename --new-name \u2192 --to in AccountRenameSettings. Change [CommandOption(\"--new-name\")] to [CommandOption(\"--to|--new-name\")]. Rename backing property NewName \u2192 To. Update all usages inside AccountRenameCommand.ExecuteAsync.",
+    "Rename --wait-ms \u2192 --drain-timeout in TraceCloseSettings (or TraceSessionCloseSettings depending on class name). Change [CommandOption(\"--wait-ms\")] to [CommandOption(\"--drain-timeout|--wait-ms\")]. Rename backing property WaitMs \u2192 DrainTimeout. Update all usages in TraceCloseCommand.ExecuteAsync.",
+    "Ensure --help output for affected commands shows the primary (new) flag names. Spectre.Console.Cli typically shows only the first option in the pipe as the primary and the rest as hidden aliases \u2014 verify this is the case by running --help.",
+    "Update docs/HELP.md (or defer to story 36) to show new flag names. If deferring to story 36, add a TODO comment here.",
+    "Update any tests that pass --zuidstring, --new-name, or --wait-ms flags to use the new names. Also verify that tests using old names still pass (backward compat test)."
+  ],
+  "acceptanceCriteria": [
+    "'zapi account show --zuidstring <id>' continues to work (backward compat)",
+    "'zapi account show --zuid <id>' works with the new flag name",
+    "'zapi account rename --name old --to newname' works",
+    "'zapi account rename --name old --new-name newname' still works (backward compat)",
+    "'zapi trace close --drain-timeout 5000' works",
+    "'zapi trace close --wait-ms 5000' still works (backward compat)",
+    "'zapi account show --help' shows --zuid as the primary flag (not --zuidstring)",
+    "'zapi trace close --help' shows --drain-timeout as the primary flag",
+    "All tests pass"
+  ],
+  "contextForAgent": "Read AccountCommands.cs to find all five Settings classes that use --zuidstring. Search for 'zuidstring' and 'new-name' and 'wait-ms' strings across the Commands folder. The Spectre.Console.Cli pipe syntax [CommandOption(\"--primary|--alias\")] makes the first name the displayed one and the second a hidden alias \u2014 no extra code needed for the backward compat behavior. Verify by building and running '--help' after the changes.",
+  "openItems": [
+    "Verify Spectre.Console.Cli pipe syntax behavior: does the --help output show only the first option name, or all names? If it shows all names, the HELP.md update in story 36 must manually exclude the old names."
+  ],
+  "sourceReferences": [
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli/Commands/TraceCommands.cs",
+    "tests/ZapiCli.Tests/",
+    "tech_spec/docs/command-reference.md"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-04-01"
+}

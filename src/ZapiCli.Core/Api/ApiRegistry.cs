@@ -59,8 +59,8 @@ public sealed class ApiRegistry : IApiRegistry
         var root = await LoadAsync(ct).ConfigureAwait(false);
         if (root.Apis.Any(e => e.Id.Equals(entry.Id, StringComparison.Ordinal)))
             throw new ZapiCliException(
-                $"API registry entry '{entry.Id}' already exists. Use 'api registry update --id {entry.Id}' to modify it.",
-                ErrorCodes.REGISTRY_ENTRY_ALREADY_EXISTS);
+                $"API registry entry '{entry.Id}' already exists. Use 'api endpoints update --id {entry.Id}' to modify it.",
+                ErrorCodes.ENDPOINT_ALREADY_EXISTS);
 
         root.Apis.Add(entry);
         await SaveAsync(root, ct).ConfigureAwait(false);
@@ -73,7 +73,7 @@ public sealed class ApiRegistry : IApiRegistry
         if (idx < 0)
             throw new ZapiCliException(
                 $"API registry entry '{entry.Id}' not found.",
-                ErrorCodes.REGISTRY_ENTRY_NOT_FOUND);
+                ErrorCodes.ENDPOINT_NOT_FOUND);
 
         root.Apis[idx] = entry;
         await SaveAsync(root, ct).ConfigureAwait(false);
@@ -86,7 +86,7 @@ public sealed class ApiRegistry : IApiRegistry
         if (idx < 0)
             throw new ZapiCliException(
                 $"API registry entry '{id}' not found.",
-                ErrorCodes.REGISTRY_ENTRY_NOT_FOUND);
+                ErrorCodes.ENDPOINT_NOT_FOUND);
 
         root.Apis.RemoveAt(idx);
         await SaveAsync(root, ct).ConfigureAwait(false);

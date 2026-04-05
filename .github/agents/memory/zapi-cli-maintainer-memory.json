@@ -1,5 +1,5 @@
 {
-  "lastSyncedHelpMd": "2026-03-26",
+  "lastSyncedHelpMd": "2026-04-02",
   "syncedItems": [
     {
       "type": "new-command",
@@ -216,7 +216,7 @@
     },
     {
       "type": "changed-behaviour",
-      "subject": "account add — removed from HELP.md",
+      "subject": "account add \u2014 removed from HELP.md",
       "syncedDate": "2026-03-26",
       "artefactsModified": [
         "SKILL.md"
@@ -272,7 +272,7 @@
     },
     {
       "type": "changed-behaviour",
-      "subject": "Datacenters section — DC auto-detected from callback, no --dc flag",
+      "subject": "Datacenters section \u2014 DC auto-detected from callback, no --dc flag",
       "syncedDate": "2026-03-26",
       "artefactsModified": [
         "SKILL.md"
@@ -312,10 +312,149 @@
     },
     {
       "type": "changed-output",
-      "subject": "config show — now returns 4 fields (env_file, scope_file, app_data_dir, trace_default_export_path)",
+      "subject": "config show \u2014 now returns 4 fields (env_file, scope_file, app_data_dir, trace_default_export_path)",
       "syncedDate": "2026-03-26",
       "artefactsModified": [
         "SKILL.md"
+      ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "binary renamed zapi-cli to zapi",
+      "syncedDate": "2026-03-26",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "updated-binary",
+      "subject": "osx-arm64/zapi (renamed from zapi-cli)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "osx-x64/zapi (renamed from zapi-cli)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "linux-arm64/zapi (renamed from zapi-cli)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "linux-x64/zapi (renamed from zapi-cli)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "win-arm64/zapi.exe (renamed from zapi-cli.exe)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "win-x64/zapi.exe (renamed from zapi-cli.exe)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": []
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "account re-auth -> account refresh",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
+      ]
+    },
+    {
+      "type": "new-command",
+      "subject": "account use",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "scope add/list -> account scope add/list",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
+      ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "api call -> api request (alias api req)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
+      ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "api registry * -> api endpoints *",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
+      ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "trace session * -> trace * (flattened)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
+      ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "util time-ms -> util timestamp; util time-now -> util now",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-flag",
+      "subject": "account show/set-default/remove/refresh/rename --zuidstring -> --zuid",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-flag",
+      "subject": "account rename --new-name -> --to",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "ENDPOINT_NOT_FOUND (replaces REGISTRY_ENTRY_NOT_FOUND)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
+      ]
+    },
+    {
+      "type": "new-error-code",
+      "subject": "ENDPOINT_ALREADY_EXISTS (replaces REGISTRY_ENTRY_ALREADY_EXISTS)",
+      "syncedDate": "2026-04-02",
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md"
       ]
     }
   ],
@@ -327,7 +466,7 @@
       "artefactsModified": [
         "SKILL.md"
       ],
-      "summary": "Added 10 missing commands to CLI — Available Operations table from HELP.md documentation."
+      "summary": "Added 10 missing commands to CLI \u2014 Available Operations table from HELP.md documentation."
     },
     {
       "date": "2026-03-23",
@@ -398,38 +537,58 @@
         "SKILL.md"
       ],
       "summary": "Synced SKILL.md with HELP.md changes from stories 21-25: removed account add row; updated account login to env-based/scope-file flow; updated account show/set-default/remove/re-auth to accept --email/--zuidstring; added account rename row; added --port to scope add; added config set scope-file and app-dir rows; updated Datacenters section to reflect DC auto-detection; added 4 new error codes (ENV_FILE_NOT_CONFIGURED, SCOPE_FILE_NOT_CONFIGURED, DUPLICATE_IDENTIFIER, ACCOUNT_RENAME_FAILED). http-api-analysis.agent.md required no changes."
+    },
+    {
+      "date": "2026-03-26",
+      "deltaType": "changed-behaviour",
+      "subject": "binary renamed zapi-cli to zapi",
+      "artefactsModified": [
+        "SKILL.md"
+      ],
+      "summary": "Story 26: CLI binary renamed from zapi-cli to zapi; updated SKILL.md frontmatter description, heading, intro prose, Tool Location table (6 rows), bash platform-detection script (6 CLI= assignments), and Available Operations intro. http-api-analysis.agent.md unchanged - all zapi-cli refs are skill-folder paths. Note: actual binaries in build/ and tools/ still named zapi-cli; binary file renaming is a separate build artefact task."
+    },
+    {
+      "date": "2026-04-02",
+      "deltaType": "changed-behaviour",
+      "subject": "Stories 26-36: binary rename, command renames, flag renames, error code renames, new account use command",
+      "artefactsModified": [
+        "SKILL.md",
+        "http-api-analysis.agent.md",
+        "tools/ (6 platform binaries)"
+      ],
+      "summary": "Synced all story 26-36 changes: (1) binary tools/ updated - old zapi-cli renamed to zapi across all 6 platforms; (2) SKILL.md ops table updated for account refresh/use, account scope add/list, api request, api endpoints *, trace *, util timestamp/now, --zuid/--to flags; exit codes, error table, and step bash snippets updated; (3) http-api-analysis.agent.md updated for scope commands, api request, trace close/export, refresh, and rules sections; ENDPOINT_NOT_FOUND and ENDPOINT_ALREADY_EXISTS replace REGISTRY_ENTRY_* codes."
     }
   ],
   "syncedBinaries": [
     {
       "platform": "linux-arm64",
-      "file": "zapi-cli",
-      "syncedDate": "2026-03-26"
+      "file": "zapi",
+      "syncedDate": "2026-04-02"
     },
     {
       "platform": "linux-x64",
-      "file": "zapi-cli",
-      "syncedDate": "2026-03-26"
+      "file": "zapi",
+      "syncedDate": "2026-04-02"
     },
     {
       "platform": "osx-arm64",
-      "file": "zapi-cli",
-      "syncedDate": "2026-03-26"
+      "file": "zapi",
+      "syncedDate": "2026-04-02"
     },
     {
       "platform": "osx-x64",
-      "file": "zapi-cli",
-      "syncedDate": "2026-03-26"
+      "file": "zapi",
+      "syncedDate": "2026-04-02"
     },
     {
       "platform": "win-arm64",
-      "file": "zapi-cli.exe",
-      "syncedDate": "2026-03-26"
+      "file": "zapi.exe",
+      "syncedDate": "2026-04-02"
     },
     {
       "platform": "win-x64",
-      "file": "zapi-cli.exe",
-      "syncedDate": "2026-03-26"
+      "file": "zapi.exe",
+      "syncedDate": "2026-04-02"
     }
   ]
 }

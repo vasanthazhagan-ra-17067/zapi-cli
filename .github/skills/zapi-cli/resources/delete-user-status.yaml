@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info:
+  title: Delete User Status
+  version: "2.0"
+
+servers:
+  - url: https://cliq.zoho.com
+
+paths:
+  /api/v2/statuses/{statusId}:
+    delete:
+      summary: Permanently delete a custom status entry by its ID.
+      parameters:
+        - name: statusId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique ID of the status entry to delete. Obtained from the POST response or GET list.
+          example: "5129211000003397017"
+      responses:
+        "204":
+          description: Status deleted successfully. Response body is empty.

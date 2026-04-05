@@ -1,0 +1,35 @@
+{
+  "storyId": 27,
+  "title": "Deprecation Warning Infrastructure",
+  "description": "Create the shared deprecation warning mechanism used by all command-rename stories (28–35). When a user invokes a deprecated command alias (old name), a warning is printed to stderr before the command executes normally. This keeps the CLI non-breaking while steering users toward the new names.",
+  "status": "Completed",
+  "dependsOn": [26],
+  "prerequisiteState": "Story 26 complete. Binary is named 'zapi'. No deprecation mechanism exists — there is no standardised way to warn users about renamed commands.",
+  "goal": "After this story: a static DeprecationHelper.Warn() method exists and can be called from any Command's ExecuteAsync. A Settings base class or marker interface allows an implementing command to flag itself as 'deprecated-invocation'. The approach is documented so all subsequent stories use the same pattern consistently.",
+  "scope": [
+    "Create src/ZapiCli/Commands/DeprecationHelper.cs with a static method: public static void Warn(string oldCommand, string newCommand). The method writes to Console.Error: 'Warning: \\'{oldCommand}\\' is deprecated and will be removed in a future version. Use \\'{newCommand}\\' instead.' No exit code change — the command still executes normally after the warning.",
+    "Decide and document the pattern for how a deprecated registration detects that it is the deprecated alias. The recommended approach: create a marker Settings base class 'DeprecatedCommandSettings : CommandSettings' with a boolean property 'IsDeprecatedAlias { get; init; }' defaulting to false. When registering the deprecated alias, the command class's Settings override sets 'IsDeprecatedAlias = true' via a protected or overridden property — OR — create a separate thin wrapper command class for each deprecated alias that sets the flag. Document which approach is chosen in a file-level comment in DeprecationHelper.cs.",
+    "The simpler alternate approach (preferred if the above is complex): Create a second command class for each deprecated alias (e.g., ApiCallCommand next to ApiRequestCommand) that simply sets IsDeprecated = true in its Settings and delegates to the same ExecuteAsync logic. Since Spectre.Console.Cli does not have built-in alias support at the command level, two separate registrations with separate Settings classes is the cleanest solution.",
+    "Add a unit test in ZapiCli.Tests confirming that DeprecationHelper.Warn writes to Console.Error and not Console.Out, and that it produces output containing both oldCommand and newCommand strings.",
+    "Do NOT implement any actual command renames in this story — only the infrastructure."
+  ],
+  "acceptanceCriteria": [
+    "DeprecationHelper.cs exists at src/ZapiCli/Commands/DeprecationHelper.cs",
+    "DeprecationHelper.Warn(string, string) writes a deprecation warning to Console.Error",
+    "The deprecation warning message contains the old name and the new name",
+    "The deprecation warning does NOT affect the command exit code (still 0 on success)",
+    "A unit test verifies stderr output contains both command names",
+    "All existing tests still pass"
+  ],
+  "contextForAgent": "Spectre.Console.Cli does not support command-level aliases natively (only option aliases via the pipe syntax in CommandOption). To support deprecated command name aliases, register the same (or a thin wrapper) command class twice under two names. The Warn() method is then called at the top of ExecuteAsync when IsDeprecated is set. Read src/ZapiCli/Commands/ to understand existing command class structure before creating the helper. The commands inherit from Command<TSettings> or AsyncCommand<TSettings>.",
+  "openItems": [
+    "Confirm whether commands use Command<T> or AsyncCommand<T> — the ExecuteAsync signature differs. Check AccountLoginCommand as a reference."
+  ],
+  "sourceReferences": [
+    "src/ZapiCli/Commands/",
+    "src/ZapiCli/Program.cs",
+    "tests/ZapiCli.Tests/"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-04-01"
+}

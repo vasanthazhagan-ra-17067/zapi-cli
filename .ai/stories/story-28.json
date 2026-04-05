@@ -1,0 +1,34 @@
+{
+  "storyId": 28,
+  "title": "Rename 'api call' → 'api request' (alias 'req')",
+  "description": "Rename the 'api call' command to 'api request' and add the short alias 'api req'. Keep 'api call' registered as a deprecated alias that emits a DeprecationHelper.Warn() warning before executing. This is the most-used command in the CLI and the rename aligns with industry conventions (gh api, az rest, stripe post).",
+  "status": "Completed",
+  "dependsOn": [27],
+  "prerequisiteState": "Stories 1–27 complete. Command is registered as 'api call'. Deprecation infrastructure (DeprecationHelper.Warn) is available from story 27.",
+  "goal": "After this story: 'zapi api request --url https://...' works identically to the old 'zapi api call --url https://...'. 'zapi api req --url https://...' also works. 'zapi api call --url https://...' still works but prints a deprecation warning to stderr. All output, flags, and error codes are unchanged.",
+  "scope": [
+    "In src/ZapiCli/Commands/ApiCommands.cs (or the equivalent file containing ApiCallCommand): rename the class to ApiRequestCommand. Update all internal references (constructor, method signatures) to use the new name. The Settings class 'ApiCallSettings' should be renamed to 'ApiRequestSettings'.",
+    "In src/ZapiCli/Program.cs: change config.AddCommand<ApiCallCommand>(\"call\") (inside the api branch) to config.AddCommand<ApiRequestCommand>(\"request\"). Also add config.AddCommand<ApiRequestCommand>(\"req\") for the short alias — both 'request' and 'req' register the same command class.",
+    "Create a deprecated shim command class 'ApiCallDeprecatedCommand' (or inline as a subclass) in ApiCommands.cs that inherits from ApiRequestCommand (or duplicates its Execute method). In its ExecuteAsync, call DeprecationHelper.Warn(\"api call\", \"api request\") before delegating to the actual implementation. Register this shim in Program.cs under the 'api' branch as config.AddCommand<ApiCallDeprecatedCommand>(\"call\").",
+    "Alternatively (simpler): ApiCallCommand becomes an alias command class that only overrides a bool IsDeprecated = true and calls DeprecationHelper.Warn at the top of Execute before calling base. Choose the approach that avoids code duplication.",
+    "Update any references to ApiCallCommand in tests or integration code to use ApiRequestCommand.",
+    "Do NOT change the --url, --method, --body, --header flags or any output format."
+  ],
+  "acceptanceCriteria": [
+    "'zapi api request --url https://cliq.zoho.in/api/v2/channels' executes identically to old 'zapi api call'",
+    "'zapi api req --url ...' also works (short alias)",
+    "'zapi api call --url ...' still works, exits 0 on success, outputs correct JSON, AND prints a deprecation warning to stderr",
+    "The deprecation warning message references both 'api call' and 'api request'",
+    "No --url, --method, --body, --header behaviour changes",
+    "All existing unit tests updated where class names changed, all tests pass"
+  ],
+  "contextForAgent": "Read src/ZapiCli/Commands/ to find the current ApiCallCommand class and its Settings. Read Program.cs to find the api branch registrations. The api branch currently has 'call' and a 'registry' sub-branch. After this story it should have 'request', 'req', 'call' (deprecated), and 'registry' (or 'endpoints' — that is story 33). Do story 28 before story 33 to keep changes isolated.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli/Commands/ApiCommands.cs",
+    "src/ZapiCli/Program.cs",
+    "tech_spec/docs/command-reference.md"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-04-01"
+}

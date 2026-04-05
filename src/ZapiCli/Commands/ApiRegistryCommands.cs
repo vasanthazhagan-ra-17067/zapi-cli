@@ -6,7 +6,7 @@ using ZapiCli.Core.Api;
 namespace ZapiCli.Commands;
 
 /// <summary>
-/// The <c>api registry</c> command group: list, add, update, show, remove.
+/// The <c>api endpoints</c> command group: list, add, update, show, remove.
 /// Registry operations are purely local — no active account required.
 /// The host allowlist (ADR-0004) is enforced on any --url argument.
 /// </summary>
@@ -15,22 +15,22 @@ internal static class ApiRegistryCommands
     private static readonly HashSet<string> ValidMethods =
         ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
-    // ─── api registry list ────────────────────────────────────────────────────
+    // ─── api endpoints list ───────────────────────────────────────────────────
 
-    public sealed class ApiRegistryListSettings : GlobalSettings { }
+    public sealed class ApiEndpointListSettings : GlobalSettings { }
 
-    public sealed class ApiRegistryListCommand : AsyncCommand<ApiRegistryListSettings>
+    public sealed class ApiEndpointListCommand : AsyncCommand<ApiEndpointListSettings>
     {
         private readonly IApiRegistry _registry;
         private readonly IOutputWriter _output;
 
-        public ApiRegistryListCommand(IApiRegistry registry, IOutputWriter output)
+        public ApiEndpointListCommand(IApiRegistry registry, IOutputWriter output)
         {
             _registry = registry;
             _output = output;
         }
 
-        public override async Task<int> ExecuteAsync(CommandContext context, ApiRegistryListSettings settings)
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointListSettings settings)
         {
             var root = await _registry.LoadAsync().ConfigureAwait(false);
             _output.WriteJson(root.Apis);
@@ -38,9 +38,9 @@ internal static class ApiRegistryCommands
         }
     }
 
-    // ─── api registry add ─────────────────────────────────────────────────────
+    // ─── api endpoints add ────────────────────────────────────────────────────
 
-    public sealed class ApiRegistryAddSettings : GlobalSettings
+    public sealed class ApiEndpointAddSettings : GlobalSettings
     {
         [CommandOption("--id <ID>")]
         public string? Id { get; init; }
@@ -76,18 +76,18 @@ internal static class ApiRegistryCommands
         }
     }
 
-    public sealed class ApiRegistryAddCommand : AsyncCommand<ApiRegistryAddSettings>
+    public sealed class ApiEndpointAddCommand : AsyncCommand<ApiEndpointAddSettings>
     {
         private readonly IApiRegistry _registry;
         private readonly IOutputWriter _output;
 
-        public ApiRegistryAddCommand(IApiRegistry registry, IOutputWriter output)
+        public ApiEndpointAddCommand(IApiRegistry registry, IOutputWriter output)
         {
             _registry = registry;
             _output = output;
         }
 
-        public override async Task<int> ExecuteAsync(CommandContext context, ApiRegistryAddSettings settings)
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointAddSettings settings)
         {
             // Host allowlist check (ADR-0004) — must yield HOST_NOT_ALLOWED, not INVALID_ARGS.
             Uri uri;
@@ -118,9 +118,9 @@ internal static class ApiRegistryCommands
         }
     }
 
-    // ─── api registry update ──────────────────────────────────────────────────
+    // ─── api endpoints update ─────────────────────────────────────────────────
 
-    public sealed class ApiRegistryUpdateSettings : GlobalSettings
+    public sealed class ApiEndpointUpdateSettings : GlobalSettings
     {
         [CommandOption("--id <ID>")]
         public string? Id { get; init; }
@@ -151,18 +151,18 @@ internal static class ApiRegistryCommands
         }
     }
 
-    public sealed class ApiRegistryUpdateCommand : AsyncCommand<ApiRegistryUpdateSettings>
+    public sealed class ApiEndpointUpdateCommand : AsyncCommand<ApiEndpointUpdateSettings>
     {
         private readonly IApiRegistry _registry;
         private readonly IOutputWriter _output;
 
-        public ApiRegistryUpdateCommand(IApiRegistry registry, IOutputWriter output)
+        public ApiEndpointUpdateCommand(IApiRegistry registry, IOutputWriter output)
         {
             _registry = registry;
             _output = output;
         }
 
-        public override async Task<int> ExecuteAsync(CommandContext context, ApiRegistryUpdateSettings settings)
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointUpdateSettings settings)
         {
             // Host allowlist check for --url if provided (ADR-0004).
             if (settings.Url is not null)
@@ -184,8 +184,8 @@ internal static class ApiRegistryCommands
 
             var existing = await _registry.FindByIdAsync(settings.Id!).ConfigureAwait(false)
                 ?? throw new ZapiCliException(
-                    $"API registry entry '{settings.Id}' not found.",
-                    ErrorCodes.REGISTRY_ENTRY_NOT_FOUND);
+                    $"API endpoint '{settings.Id}' not found.",
+                    ErrorCodes.ENDPOINT_NOT_FOUND);
 
             // Apply only the provided fields; keep existing values for omitted fields.
             var updated = existing with
@@ -203,9 +203,9 @@ internal static class ApiRegistryCommands
         }
     }
 
-    // ─── api registry show ────────────────────────────────────────────────────
+    // ─── api endpoints show ───────────────────────────────────────────────────
 
-    public sealed class ApiRegistryShowSettings : GlobalSettings
+    public sealed class ApiEndpointShowSettings : GlobalSettings
     {
         [CommandOption("--id <ID>")]
         public string? Id { get; init; }
@@ -218,7 +218,123 @@ internal static class ApiRegistryCommands
         }
     }
 
-    public sealed class ApiRegistryShowCommand : AsyncCommand<ApiRegistryShowSettings>
+    public sealed class ApiEndpointShowCommand : AsyncCommand<ApiEndpointShowSettings>
+    {
+        private readonly IApiRegistry _registry;
+        private readonly IOutputWriter _output;
+
+        public ApiEndpointShowCommand(IApiRegistry registry, IOutputWriter output)
+        {
+            _registry = registry;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointShowSettings settings)
+        {
+            var entry = await _registry.FindByIdAsync(settings.Id!).ConfigureAwait(false)
+                ?? throw new ZapiCliException(
+                    $"API endpoint '{settings.Id}' not found.",
+                    ErrorCodes.ENDPOINT_NOT_FOUND);
+
+            _output.WriteJson(entry);
+            return 0;
+        }
+    }
+
+    // ─── api endpoints remove ─────────────────────────────────────────────────
+
+    public sealed class ApiEndpointRemoveSettings : GlobalSettings
+    {
+        [CommandOption("--id <ID>")]
+        public string? Id { get; init; }
+
+        public override ValidationResult Validate()
+        {
+            if (string.IsNullOrWhiteSpace(Id))
+                return ValidationResult.Error("--id is required.");
+            return ValidationResult.Success();
+        }
+    }
+
+    public sealed class ApiEndpointRemoveCommand : AsyncCommand<ApiEndpointRemoveSettings>
+    {
+        private readonly IApiRegistry _registry;
+        private readonly IOutputWriter _output;
+
+        public ApiEndpointRemoveCommand(IApiRegistry registry, IOutputWriter output)
+        {
+            _registry = registry;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointRemoveSettings settings)
+        {
+            await _registry.RemoveAsync(settings.Id!).ConfigureAwait(false);
+            _output.WriteJson(new { status = "ok", data = new { id = settings.Id } });
+            return 0;
+        }
+    }
+
+    // ─── deprecated shims for 'api registry *' ────────────────────────────────
+
+    public sealed class ApiRegistryListCommand : AsyncCommand<ApiEndpointListSettings>
+    {
+        private readonly IApiRegistry _registry;
+        private readonly IOutputWriter _output;
+
+        public ApiRegistryListCommand(IApiRegistry registry, IOutputWriter output)
+        {
+            _registry = registry;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointListSettings settings)
+        {
+            DeprecationHelper.Warn("api registry list", "api endpoints list");
+            return await new ApiEndpointListCommand(_registry, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
+        }
+    }
+
+    public sealed class ApiRegistryAddCommand : AsyncCommand<ApiEndpointAddSettings>
+    {
+        private readonly IApiRegistry _registry;
+        private readonly IOutputWriter _output;
+
+        public ApiRegistryAddCommand(IApiRegistry registry, IOutputWriter output)
+        {
+            _registry = registry;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointAddSettings settings)
+        {
+            DeprecationHelper.Warn("api registry add", "api endpoints add");
+            return await new ApiEndpointAddCommand(_registry, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
+        }
+    }
+
+    public sealed class ApiRegistryUpdateCommand : AsyncCommand<ApiEndpointUpdateSettings>
+    {
+        private readonly IApiRegistry _registry;
+        private readonly IOutputWriter _output;
+
+        public ApiRegistryUpdateCommand(IApiRegistry registry, IOutputWriter output)
+        {
+            _registry = registry;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointUpdateSettings settings)
+        {
+            DeprecationHelper.Warn("api registry update", "api endpoints update");
+            return await new ApiEndpointUpdateCommand(_registry, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
+        }
+    }
+
+    public sealed class ApiRegistryShowCommand : AsyncCommand<ApiEndpointShowSettings>
     {
         private readonly IApiRegistry _registry;
         private readonly IOutputWriter _output;
@@ -229,34 +345,15 @@ internal static class ApiRegistryCommands
             _output = output;
         }
 
-        public override async Task<int> ExecuteAsync(CommandContext context, ApiRegistryShowSettings settings)
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointShowSettings settings)
         {
-            var entry = await _registry.FindByIdAsync(settings.Id!).ConfigureAwait(false)
-                ?? throw new ZapiCliException(
-                    $"API registry entry '{settings.Id}' not found.",
-                    ErrorCodes.REGISTRY_ENTRY_NOT_FOUND);
-
-            _output.WriteJson(entry);
-            return 0;
+            DeprecationHelper.Warn("api registry show", "api endpoints show");
+            return await new ApiEndpointShowCommand(_registry, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
         }
     }
 
-    // ─── api registry remove ──────────────────────────────────────────────────
-
-    public sealed class ApiRegistryRemoveSettings : GlobalSettings
-    {
-        [CommandOption("--id <ID>")]
-        public string? Id { get; init; }
-
-        public override ValidationResult Validate()
-        {
-            if (string.IsNullOrWhiteSpace(Id))
-                return ValidationResult.Error("--id is required.");
-            return ValidationResult.Success();
-        }
-    }
-
-    public sealed class ApiRegistryRemoveCommand : AsyncCommand<ApiRegistryRemoveSettings>
+    public sealed class ApiRegistryRemoveCommand : AsyncCommand<ApiEndpointRemoveSettings>
     {
         private readonly IApiRegistry _registry;
         private readonly IOutputWriter _output;
@@ -267,11 +364,11 @@ internal static class ApiRegistryCommands
             _output = output;
         }
 
-        public override async Task<int> ExecuteAsync(CommandContext context, ApiRegistryRemoveSettings settings)
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiEndpointRemoveSettings settings)
         {
-            await _registry.RemoveAsync(settings.Id!).ConfigureAwait(false);
-            _output.WriteJson(new { status = "ok", data = new { id = settings.Id } });
-            return 0;
+            DeprecationHelper.Warn("api registry remove", "api endpoints remove");
+            return await new ApiEndpointRemoveCommand(_registry, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
         }
     }
 }

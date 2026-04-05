@@ -1,0 +1,9 @@
+{
+  "url": "/api/v2/designations",
+  "data": [
+    {
+      "name": "CEO",
+      "id": "5129211000000789007"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "zapi-cli",
-    "binaryName": "zapi-cli",
+    "binaryName": "zapi-cli (pending rename to 'zapi' — see stories 26–36 and plan/refactor-cli-naming-1.md)",
     "description": "Standalone cross-platform CLI binary providing a scriptable interface to any Zoho product's REST APIs. Primary consumer is AI agents (GitHub Copilot CLI Skills, Claude Agent Skills). Manages multiple Zoho accounts via OAuth Self-Client authentication and exposes a general-purpose HTTP API invoker where the caller supplies the full URL at invocation time.",
     "repository": "zapi-cli",
     "language": "C# 13+",

@@ -45,14 +45,14 @@ internal static class AccountCommands
         [CommandOption("--email <EMAIL>")]
         public string? Email { get; init; }
 
-        [CommandOption("--zuidstring <ZUIDSTRING>")]
-        public string? ZuidString { get; init; }
+        [CommandOption("--Zuid|--zuidstring <ZUIDSTRING>")]
+        public string? Zuid { get; init; }
 
         public override ValidationResult Validate()
         {
             var count = (string.IsNullOrWhiteSpace(Name) ? 0 : 1)
                       + (string.IsNullOrWhiteSpace(Email) ? 0 : 1)
-                      + (string.IsNullOrWhiteSpace(ZuidString) ? 0 : 1);
+                      + (string.IsNullOrWhiteSpace(Zuid) ? 0 : 1);
             if (count == 0)
                 return ValidationResult.Error("One of --name, --email, or --zuidstring is required.");
             if (count > 1)
@@ -76,7 +76,7 @@ internal static class AccountCommands
             CommandContext context,
             AccountShowSettings settings)
         {
-            var view = await _service.ShowAccountAsync(settings.Name, settings.Email, settings.ZuidString);
+            var view = await _service.ShowAccountAsync(settings.Name, settings.Email, settings.Zuid);
             _output.WriteJson(view);
             return 0;
         }
@@ -92,14 +92,14 @@ internal static class AccountCommands
         [CommandOption("--email <EMAIL>")]
         public string? Email { get; init; }
 
-        [CommandOption("--zuidstring <ZUIDSTRING>")]
-        public string? ZuidString { get; init; }
+        [CommandOption("--Zuid|--zuidstring <ZUIDSTRING>")]
+        public string? Zuid { get; init; }
 
         public override ValidationResult Validate()
         {
             var count = (string.IsNullOrWhiteSpace(Name) ? 0 : 1)
                       + (string.IsNullOrWhiteSpace(Email) ? 0 : 1)
-                      + (string.IsNullOrWhiteSpace(ZuidString) ? 0 : 1);
+                      + (string.IsNullOrWhiteSpace(Zuid) ? 0 : 1);
             if (count == 0)
                 return ValidationResult.Error("One of --name, --email, or --zuidstring is required.");
             if (count > 1)
@@ -123,8 +123,8 @@ internal static class AccountCommands
             CommandContext context,
             AccountSetDefaultSettings settings)
         {
-            await _service.SetDefaultAsync(settings.Name, settings.Email, settings.ZuidString);
-            _output.WriteJson(new { status = "ok", data = new { name = settings.Name ?? settings.Email ?? settings.ZuidString } });
+            await _service.SetDefaultAsync(settings.Name, settings.Email, settings.Zuid);
+            _output.WriteJson(new { status = "ok", data = new { name = settings.Name ?? settings.Email ?? settings.Zuid } });
             return 0;
         }
     }
@@ -139,14 +139,14 @@ internal static class AccountCommands
         [CommandOption("--email <EMAIL>")]
         public string? Email { get; init; }
 
-        [CommandOption("--zuidstring <ZUIDSTRING>")]
-        public string? ZuidString { get; init; }
+        [CommandOption("--Zuid|--zuidstring <ZUIDSTRING>")]
+        public string? Zuid { get; init; }
 
         public override ValidationResult Validate()
         {
             var count = (string.IsNullOrWhiteSpace(Name) ? 0 : 1)
                       + (string.IsNullOrWhiteSpace(Email) ? 0 : 1)
-                      + (string.IsNullOrWhiteSpace(ZuidString) ? 0 : 1);
+                      + (string.IsNullOrWhiteSpace(Zuid) ? 0 : 1);
             if (count == 0)
                 return ValidationResult.Error("One of --name, --email, or --zuidstring is required.");
             if (count > 1)
@@ -170,15 +170,15 @@ internal static class AccountCommands
             CommandContext context,
             AccountRemoveSettings settings)
         {
-            await _service.RemoveAccountAsync(settings.Name, settings.Email, settings.ZuidString);
-            _output.WriteJson(new { status = "ok", data = new { name = settings.Name ?? settings.Email ?? settings.ZuidString } });
+            await _service.RemoveAccountAsync(settings.Name, settings.Email, settings.Zuid);
+            _output.WriteJson(new { status = "ok", data = new { name = settings.Name ?? settings.Email ?? settings.Zuid } });
             return 0;
         }
     }
 
-    // ─── account re-auth ──────────────────────────────────────────────────────
+    // ─── account refresh (was re-auth) ────────────────────────────────────────
 
-    public sealed class AccountReAuthSettings : GlobalSettings
+    public sealed class AccountRefreshSettings : GlobalSettings
     {
         [CommandOption("--name <NAME>")]
         public string? Name { get; init; }
@@ -186,14 +186,14 @@ internal static class AccountCommands
         [CommandOption("--email <EMAIL>")]
         public string? Email { get; init; }
 
-        [CommandOption("--zuidstring <ZUIDSTRING>")]
-        public string? ZuidString { get; init; }
+        [CommandOption("--Zuid|--zuidstring <ZUIDSTRING>")]
+        public string? Zuid { get; init; }
 
         public override ValidationResult Validate()
         {
             var count = (string.IsNullOrWhiteSpace(Name) ? 0 : 1)
                       + (string.IsNullOrWhiteSpace(Email) ? 0 : 1)
-                      + (string.IsNullOrWhiteSpace(ZuidString) ? 0 : 1);
+                      + (string.IsNullOrWhiteSpace(Zuid) ? 0 : 1);
             if (count == 0)
                 return ValidationResult.Error("One of --name, --email, or --zuidstring is required.");
             if (count > 1)
@@ -202,12 +202,12 @@ internal static class AccountCommands
         }
     }
 
-    public sealed class AccountReAuthCommand : AsyncCommand<AccountReAuthSettings>
+    public sealed class AccountRefreshCommand : AsyncCommand<AccountRefreshSettings>
     {
         private readonly IAccountService _service;
         private readonly IOutputWriter _output;
 
-        public AccountReAuthCommand(IAccountService service, IOutputWriter output)
+        public AccountRefreshCommand(IAccountService service, IOutputWriter output)
         {
             _service = service;
             _output = output;
@@ -215,11 +215,31 @@ internal static class AccountCommands
 
         public override async Task<int> ExecuteAsync(
             CommandContext context,
-            AccountReAuthSettings settings)
+            AccountRefreshSettings settings)
         {
-            await _service.ReAuthAsync(settings.Name, settings.Email, settings.ZuidString);
-            _output.WriteJson(new { status = "ok", data = new { name = settings.Name ?? settings.Email ?? settings.ZuidString } });
+            await _service.ReAuthAsync(settings.Name, settings.Email, settings.Zuid);
+            _output.WriteJson(new { status = "ok", data = new { name = settings.Name ?? settings.Email ?? settings.Zuid } });
             return 0;
+        }
+    }
+
+    /// <summary>[Deprecated] Use 'account refresh' instead.</summary>
+    public sealed class AccountReAuthDeprecatedCommand : AsyncCommand<AccountRefreshSettings>
+    {
+        private readonly IAccountService _service;
+        private readonly IOutputWriter _output;
+
+        public AccountReAuthDeprecatedCommand(IAccountService service, IOutputWriter output)
+        {
+            _service = service;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, AccountRefreshSettings settings)
+        {
+            DeprecationHelper.Warn("account re-auth", "account refresh");
+            return await new AccountRefreshCommand(_service, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
         }
     }
 
@@ -233,24 +253,24 @@ internal static class AccountCommands
         [CommandOption("--email <EMAIL>")]
         public string? Email { get; init; }
 
-        [CommandOption("--zuidstring <ZUIDSTRING>")]
-        public string? ZuidString { get; init; }
+        [CommandOption("--Zuid|--zuidstring <ZUIDSTRING>")]
+        public string? Zuid { get; init; }
 
-        [CommandOption("--new-name <NEW_NAME>")]
-        public string? NewName { get; init; }
+        [CommandOption("--to|--new-name <NEW_NAME>")]
+        public string? To { get; init; }
 
         public override ValidationResult Validate()
         {
             var count = (string.IsNullOrWhiteSpace(Name) ? 0 : 1)
                       + (string.IsNullOrWhiteSpace(Email) ? 0 : 1)
-                      + (string.IsNullOrWhiteSpace(ZuidString) ? 0 : 1);
+                      + (string.IsNullOrWhiteSpace(Zuid) ? 0 : 1);
             if (count == 0)
                 return ValidationResult.Error("One of --name, --email, or --zuidstring is required.");
             if (count > 1)
                 return ValidationResult.Error("Only one of --name, --email, or --zuidstring may be specified.");
-            if (string.IsNullOrWhiteSpace(NewName))
+            if (string.IsNullOrWhiteSpace(To))
                 return ValidationResult.Error("--new-name is required.");
-            if (NewName.IndexOfAny(['/', '\\', ':', '*', '?']) >= 0)
+            if (To.IndexOfAny(['/', '\\', ':', '*', '?']) >= 0)
                 return ValidationResult.Error("--new-name must not contain / \\ : * ? characters.");
             return ValidationResult.Success();
         }
@@ -270,8 +290,42 @@ internal static class AccountCommands
         public override async Task<int> ExecuteAsync(CommandContext context, AccountRenameSettings settings)
         {
             var (oldName, newName) = await _service.RenameAccountAsync(
-                settings.Name, settings.Email, settings.ZuidString, settings.NewName!);
+                settings.Name, settings.Email, settings.Zuid, settings.To!);
             _output.WriteJson(new { status = "ok", data = new { old_name = oldName, new_name = newName } });
+            return 0;
+        }
+    }
+
+    // ─── account use <NAME> ───────────────────────────────────────────────────
+
+    public sealed class AccountUseSettings : CommandSettings
+    {
+        [CommandArgument(0, "<NAME>")]
+        public string? Name { get; set; }
+
+        public override ValidationResult Validate()
+        {
+            if (string.IsNullOrWhiteSpace(Name))
+                return ValidationResult.Error("<NAME> is required.");
+            return ValidationResult.Success();
+        }
+    }
+
+    public sealed class AccountUseCommand : AsyncCommand<AccountUseSettings>
+    {
+        private readonly IAccountService _service;
+        private readonly IOutputWriter _output;
+
+        public AccountUseCommand(IAccountService service, IOutputWriter output)
+        {
+            _service = service;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, AccountUseSettings settings)
+        {
+            await _service.SetDefaultAsync(settings.Name);
+            _output.WriteJson(new { status = "ok", data = new { name = settings.Name } });
             return 0;
         }
     }

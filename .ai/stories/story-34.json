@@ -1,0 +1,34 @@
+{
+  "storyId": 34,
+  "title": "Rename 'util time-ms' \u2192 'util timestamp' and 'util time-now' \u2192 'util now'",
+  "description": "Rename 'util time-ms' to 'util timestamp' and 'util time-now' to 'util now'. Both old names are opaque ('time-ms' leaks the implementation detail that it returns milliseconds) or inconsistent with common conventions. Keep the old names as deprecated aliases.",
+  "status": "Completed",
+  "dependsOn": [
+    27
+  ],
+  "prerequisiteState": "Stories 1\u201327 complete. Commands registered as 'util time-ms' and 'util time-now'. The uuid command is unchanged and remains as-is.",
+  "goal": "After this story: 'zapi util timestamp' returns epoch milliseconds as { \"ts\": 1742256000000 }. 'zapi util now' returns the formatted time string as { \"now\": \"20/03/26 21:15:30.427\" }. Old names 'util time-ms' and 'util time-now' still work with deprecation warnings.",
+  "scope": [
+    "In src/ZapiCli/Commands/UtilCommands.cs: rename class 'UtilTimeMsCommand' \u2192 'UtilTimestampCommand'. Rename 'UtilTimeNowCommand' \u2192 'UtilNowCommand'. Update Settings class names analogously. Keep the 'UtilUuidCommand' class unchanged.",
+    "In src/ZapiCli/Program.cs, inside the 'util' branch: change AddCommand registrations from 'time-ms'/'time-now' to 'timestamp'/'now'. Keep 'uuid' unchanged.",
+    "Register deprecated shims: 'UtilTimeMsDeprecatedCommand' calling DeprecationHelper.Warn(\"util time-ms\", \"util timestamp\") and 'UtilTimeNowDeprecatedCommand' calling DeprecationHelper.Warn(\"util time-now\", \"util now\"). Register under the old names 'time-ms' and 'time-now' in the util branch.",
+    "Do NOT change the output JSON fields or format: 'util timestamp' still outputs { \"ts\": <epoch_ms> } and 'util now' still outputs { \"now\": \"<formatted_time>\" }."
+  ],
+  "acceptanceCriteria": [
+    "'zapi util timestamp' outputs { \"ts\": <epoch_ms> } \u2014 same JSON as old 'util time-ms'",
+    "'zapi util now' outputs { \"now\": \"<formatted>\" } \u2014 same JSON as old 'util time-now'",
+    "'zapi util time-ms' still works with a deprecation warning",
+    "'zapi util time-now' still works with a deprecation warning",
+    "'zapi util uuid' is completely unchanged",
+    "All tests pass"
+  ],
+  "contextForAgent": "This is the same pattern as story 32 \u2014 straightforward class rename + deprecated shim. Read UtilCommands.cs to confirm the class structure. Confirm the output JSON key names (ts vs timestamp vs milliseconds) by reading the current implementation \u2014 do NOT change the JSON key names, only the command names.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli/Commands/UtilCommands.cs",
+    "src/ZapiCli/Program.cs",
+    "tech_spec/docs/command-reference.md"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-04-01"
+}

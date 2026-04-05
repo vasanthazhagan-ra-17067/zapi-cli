@@ -188,8 +188,8 @@ internal static class TraceCommands
         [CommandOption("--name <NAME>")]
         public string? Name { get; init; }
 
-        [CommandOption("--wait-ms <MS>")]
-        public int WaitMs { get; init; } = 5000;
+        [CommandOption("--drain-timeout|--wait-ms <MS>")]
+        public int DrainTimeout { get; init; } = 5000;
 
         public override ValidationResult Validate()
         {
@@ -217,7 +217,7 @@ internal static class TraceCommands
             var (sessionId, sessionName) = await ResolveSessionAsync(_traceSession, settings.Id, settings.Name)
                 .ConfigureAwait(false);
 
-            await _traceSession.CloseSessionAsync(sessionId, settings.WaitMs).ConfigureAwait(false);
+            await _traceSession.CloseSessionAsync(sessionId, settings.DrainTimeout).ConfigureAwait(false);
 
             _output.WriteJson(new
             {
@@ -384,6 +384,123 @@ internal static class TraceCommands
             var config = await _settingsStore.LoadAsync().ConfigureAwait(false);
             _output.WriteJson(new { trace_default_export_path = config.TraceDefaultExportPath });
             return 0;
+        }
+    }
+
+    // ─── Deprecated 'trace session *' shims ──────────────────────────────────
+    // Each shim emits a deprecation warning then delegates to the canonical command.
+
+    public sealed class DeprecatedSessionStartCommand : AsyncCommand<StartSessionSettings>
+    {
+        private readonly ITraceSession _traceSession;
+        private readonly IOutputWriter _output;
+
+        public DeprecatedSessionStartCommand(ITraceSession traceSession, IOutputWriter output)
+        {
+            _traceSession = traceSession;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, StartSessionSettings settings)
+        {
+            DeprecationHelper.Warn("trace session start", "trace start");
+            return await new StartSessionCommand(_traceSession, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
+        }
+    }
+
+    public sealed class DeprecatedSessionListCommand : AsyncCommand<ListSessionsSettings>
+    {
+        private readonly ITraceSession _traceSession;
+        private readonly IOutputWriter _output;
+
+        public DeprecatedSessionListCommand(ITraceSession traceSession, IOutputWriter output)
+        {
+            _traceSession = traceSession;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ListSessionsSettings settings)
+        {
+            DeprecationHelper.Warn("trace session list", "trace list");
+            return await new ListSessionsCommand(_traceSession, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
+        }
+    }
+
+    public sealed class DeprecatedSessionExportCommand : AsyncCommand<ExportSessionSettings>
+    {
+        private readonly TraceExporter _exporter;
+        private readonly IOutputWriter _output;
+
+        public DeprecatedSessionExportCommand(TraceExporter exporter, IOutputWriter output)
+        {
+            _exporter = exporter;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ExportSessionSettings settings)
+        {
+            DeprecationHelper.Warn("trace session export", "trace export");
+            return await new ExportSessionCommand(_exporter, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
+        }
+    }
+
+    public sealed class DeprecatedSessionCloseCommand : AsyncCommand<CloseSessionSettings>
+    {
+        private readonly ITraceSession _traceSession;
+        private readonly IOutputWriter _output;
+
+        public DeprecatedSessionCloseCommand(ITraceSession traceSession, IOutputWriter output)
+        {
+            _traceSession = traceSession;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, CloseSessionSettings settings)
+        {
+            DeprecationHelper.Warn("trace session close", "trace close");
+            return await new CloseSessionCommand(_traceSession, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
+        }
+    }
+
+    public sealed class DeprecatedSessionReopenCommand : AsyncCommand<ReopenSessionSettings>
+    {
+        private readonly ITraceSession _traceSession;
+        private readonly IOutputWriter _output;
+
+        public DeprecatedSessionReopenCommand(ITraceSession traceSession, IOutputWriter output)
+        {
+            _traceSession = traceSession;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ReopenSessionSettings settings)
+        {
+            DeprecationHelper.Warn("trace session reopen", "trace reopen");
+            return await new ReopenSessionCommand(_traceSession, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
+        }
+    }
+
+    public sealed class DeprecatedSessionRemoveCommand : AsyncCommand<RemoveSessionSettings>
+    {
+        private readonly ITraceSession _traceSession;
+        private readonly IOutputWriter _output;
+
+        public DeprecatedSessionRemoveCommand(ITraceSession traceSession, IOutputWriter output)
+        {
+            _traceSession = traceSession;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, RemoveSessionSettings settings)
+        {
+            DeprecationHelper.Warn("trace session remove", "trace remove");
+            return await new RemoveSessionCommand(_traceSession, _output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
         }
     }
 }

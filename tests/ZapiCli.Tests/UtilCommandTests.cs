@@ -12,10 +12,10 @@ public sealed class UtilCommandTests
     public async Task UtilTimeMsCommand_WritesPositiveLong()
     {
         var writer = new InMemoryOutputWriter();
-        var cmd = new UtilCommands.UtilTimeMsCommand(writer);
+        var cmd = new UtilCommands.UtilTimestampCommand(writer);
 
         var beforeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var exitCode = await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimeMsSettings());
+        var exitCode = await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimestampSettings());
         var afterMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         Assert.Equal(0, exitCode);
@@ -35,9 +35,9 @@ public sealed class UtilCommandTests
     public async Task UtilTimeMsCommand_ValueIsWithin5SecondsOfNow()
     {
         var writer = new InMemoryOutputWriter();
-        var cmd = new UtilCommands.UtilTimeMsCommand(writer);
+        var cmd = new UtilCommands.UtilTimestampCommand(writer);
 
-        await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimeMsSettings());
+        await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimestampSettings());
 
         using var doc = JsonDocument.Parse(writer.LastSuccessJson!);
         var ts = doc.RootElement.GetProperty("ts").GetInt64();
@@ -96,9 +96,9 @@ public sealed class UtilCommandTests
     public async Task UtilTimeNowCommand_WritesNonEmptyNowField()
     {
         var writer = new InMemoryOutputWriter();
-        var cmd = new UtilCommands.UtilTimeNowCommand(writer);
+        var cmd = new UtilCommands.UtilNowCommand(writer);
 
-        var exitCode = await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimeNowSettings());
+        var exitCode = await cmd.ExecuteAsync(null!, new UtilCommands.UtilNowSettings());
 
         Assert.Equal(0, exitCode);
         var json = writer.LastSuccessJson;
@@ -112,9 +112,9 @@ public sealed class UtilCommandTests
     public async Task UtilTimeNowCommand_FormatMatchesIndianPattern()
     {
         var writer = new InMemoryOutputWriter();
-        var cmd = new UtilCommands.UtilTimeNowCommand(writer);
+        var cmd = new UtilCommands.UtilNowCommand(writer);
 
-        await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimeNowSettings());
+        await cmd.ExecuteAsync(null!, new UtilCommands.UtilNowSettings());
 
         using var doc = JsonDocument.Parse(writer.LastSuccessJson!);
         var nowStr = doc.RootElement.GetProperty("now").GetString()!;
@@ -128,9 +128,9 @@ public sealed class UtilCommandTests
     {
         var before = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Ist);
         var writer = new InMemoryOutputWriter();
-        var cmd = new UtilCommands.UtilTimeNowCommand(writer);
+        var cmd = new UtilCommands.UtilNowCommand(writer);
 
-        await cmd.ExecuteAsync(null!, new UtilCommands.UtilTimeNowSettings());
+        await cmd.ExecuteAsync(null!, new UtilCommands.UtilNowSettings());
 
         var after = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Ist);
 

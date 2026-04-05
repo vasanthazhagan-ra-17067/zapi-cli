@@ -60,7 +60,7 @@ public sealed class ApiRegistryTests : IDisposable
         var ex = await Assert.ThrowsAsync<ZapiCliException>(() =>
             _registry.AddAsync(MakeEntry()));
 
-        Assert.Equal(ErrorCodes.REGISTRY_ENTRY_ALREADY_EXISTS, ex.Code);
+        Assert.Equal(ErrorCodes.ENDPOINT_ALREADY_EXISTS, ex.Code);
         Assert.Equal(1, ex.ExitCode);
     }
 
@@ -147,7 +147,7 @@ public sealed class ApiRegistryTests : IDisposable
         var ex = await Assert.ThrowsAsync<ZapiCliException>(() =>
             _registry.UpdateAsync(entry));
 
-        Assert.Equal(ErrorCodes.REGISTRY_ENTRY_NOT_FOUND, ex.Code);
+        Assert.Equal(ErrorCodes.ENDPOINT_NOT_FOUND, ex.Code);
         Assert.Equal(1, ex.ExitCode);
     }
 
@@ -169,7 +169,7 @@ public sealed class ApiRegistryTests : IDisposable
         var ex = await Assert.ThrowsAsync<ZapiCliException>(() =>
             _registry.RemoveAsync("nonexistent"));
 
-        Assert.Equal(ErrorCodes.REGISTRY_ENTRY_NOT_FOUND, ex.Code);
+        Assert.Equal(ErrorCodes.ENDPOINT_NOT_FOUND, ex.Code);
         Assert.Equal(1, ex.ExitCode);
     }
 

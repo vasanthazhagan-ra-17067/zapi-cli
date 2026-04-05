@@ -91,22 +91,22 @@ At the start of Phase 2:
 - Load the zapi-cli skill: read `.github/skills/zapi-cli/SKILL.md` and detect the correct binary for the current platform.
 - Run `chmod +x "$CLI"` on the resolved binary.
 - Call `$CLI account list` to confirm available accounts and health.
-- **Check required OAuth scopes.** For each account to be used, list the currently configured scopes and compare against every scope required by the APIs under analysis. Add **all missing scopes in a single command** (comma-separated) and re-auth the account so the new scopes take effect:
+- **Check required OAuth scopes.** For each account to be used, list the currently configured scopes and compare against every scope required by the APIs under analysis. Add **all missing scopes in a single command** (comma-separated) and refresh the account so the new scopes take effect:
   ```bash
   # List current scopes for the account
-  CURRENT_SCOPES=$($CLI scope list --account <ACCOUNT_NAME> 2>&1)
-  # Add ALL missing scopes in one call — never loop or call scope add per scope
-  $CLI scope add --scope "scope1,scope2,scope3" --account <ACCOUNT_NAME> 2>&1
+  CURRENT_SCOPES=$($CLI account scope list --account <ACCOUNT_NAME> 2>&1)
+  # Add ALL missing scopes in one call — never loop or call account scope add per scope
+  $CLI account scope add --scope "scope1,scope2,scope3" --account <ACCOUNT_NAME> 2>&1
   # ALWAYS verify the scope was actually added before proceeding — never assume success
-  $CLI scope list --account <ACCOUNT_NAME> 2>&1
+  $CLI account scope list --account <ACCOUNT_NAME> 2>&1
   # Re-auth the account to activate the newly added scopes
-  $CLI account re-auth --name <ACCOUNT_NAME> 2>&1
+  $CLI account refresh --name <ACCOUNT_NAME> 2>&1
   ```
-- **After `scope add`, always call `scope list` to confirm the scope is present** before re-authing or proceeding. Never retry `scope add` without first checking `scope list` — the scope may have been added even if the terminal output appeared incomplete.
+- **After `account scope add`, always call `account scope list` to confirm the scope is present** before re-authing or proceeding. Never retry `account scope add` without first checking `account scope list` — the scope may have been added even if the terminal output appeared incomplete.
 - Ensure `docs/api-analysis/` exists; create it if not. If the output files already exist, append rather than overwrite.
 - **Start a trace session** (mandatory — every analysis session must have one):
   ```bash
-  SESSION=$($CLI trace session start --name "api-analysis-$(date +%s)")
+  SESSION=$($CLI trace start --name "api-analysis-$(date +%s)")
   SESSION_ID=$(echo "$SESSION" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['unique_id'])")
   ```
   Record the `SESSION_ID` — it is printed in the summary and referenced in the catalog entries so developers can look up the raw trace later.
@@ -120,7 +120,7 @@ For each API:
 1. **Resolve the URL** — substitute placeholders with real values from the freshly created test entities. If a path-only URL (e.g. `/api/v2/chats`), prepend the appropriate Zoho base domain (e.g. `https://cliq.zoho.com`) unless specified otherwise.
 2. **Fire the request:**
    ```bash
-   OUTPUT=$($CLI --no-input api call \
+   OUTPUT=$($CLI --no-input api request \
      --url "<fully resolved URL>" \
      -X <METHOD> \
      --account <ACCOUNT_NAME> \
@@ -132,7 +132,7 @@ For each API:
 3. **Handle exit code `2`** — re-authenticate and retry once:
    ```bash
    if [ $EXIT_CODE -eq 2 ]; then
-     $CLI account re-auth --name "$ACCOUNT"
+     $CLI account refresh --name "$ACCOUNT"
      # retry the original command once
    fi
    ```
@@ -279,14 +279,14 @@ Append a section for each **failed** API using this template:
 
 ### Step 6 — Close Trace and Print Summary
 
-Close the trace session to seal it, then export for the summary. **Do NOT call `trace session remove`** — the session and its recorded data must be preserved permanently for developer tracking.
+Close the trace session to seal it, then export for the summary. **Do NOT call `trace remove`** — the session and its recorded data must be preserved permanently for developer tracking.
 
 ```bash
 # Close the trace session (seals it; does NOT delete it)
-$CLI trace session close --id "$SESSION_ID"
+$CLI trace close --id "$SESSION_ID"
 
 # Export and summarise the trace
-TRACE=$($CLI trace session export --id "$SESSION_ID" --type api)
+TRACE=$($CLI trace export --id "$SESSION_ID" --type api)
 echo "$TRACE" | python3 -c "
 import sys, json
 calls = json.load(sys.stdin)
@@ -333,8 +333,8 @@ In summary:
 ## Rules
 
 1. **Two-phase execution is mandatory.** Always complete Phase 1 (plan + user approval) before starting Phase 2 (execution). Never fire any API call before the plan is approved.
-2. **Trace session is mandatory.** Every Phase 2 execution must start a trace session as its very first action. Never skip this step. Never call `trace session remove` — sessions are preserved permanently for developer tracking. Closing the session (`trace session close`) is required at the end; deletion is not.
-3. **Scope check is mandatory.** Before starting any API calls, verify that all OAuth scopes required by the APIs under analysis are configured for each account. Add **all missing scopes in a single `scope add` call** (comma-separated list) and re-auth the account before proceeding. Never call `scope add` once per scope — this causes API timeouts. After calling `scope add`, always call `scope list` to confirm the scope is present before proceeding — never retry `scope add` without first verifying via `scope list` (the scope may already have been added even if terminal output appeared incomplete).
+2. **Trace session is mandatory.** Every Phase 2 execution must start a trace session as its very first action. Never skip this step. Never call `trace remove` — sessions are preserved permanently for developer tracking. Closing the session (`trace close`) is required at the end; deletion is not.
+3. **Scope check is mandatory.** Before starting any API calls, verify that all OAuth scopes required by the APIs under analysis are configured for each account. Add **all missing scopes in a single `account scope add` call** (comma-separated list) and refresh the account before proceeding. Never call `account scope add` once per scope — this causes API timeouts. After calling `account scope add`, always call `account scope list` to confirm the scope is present before proceeding — never retry `account scope add` without first verifying via `account scope list` (the scope may already have been added even if terminal output appeared incomplete).
 4. **Never use pre-existing server data.** All test data must be created fresh at session start.
 5. **Retry once on 5xx/network errors** before marking as failed.
 4. **Verify behaviour variations, not just the happy path.** The catalog must reflect real parameter semantics.

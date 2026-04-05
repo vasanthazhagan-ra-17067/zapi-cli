@@ -222,7 +222,9 @@ Index of all OpenAPI specs in the [`resources/`]() folder, grouped by domain.
 
 | File | Description |
 |------|-------------|
+| [add-user-status.yaml](add-user-status.yaml) | Create a new custom status entry (code + message) for the authenticated user |
 | [clear-all-custom-user-status.yaml](clear-all-custom-user-status.yaml) | Clear all custom statuses set for the specified user, resetting them to default |
+| [delete-user-status.yaml](delete-user-status.yaml) | Delete a custom status entry by its ID (returns 204 empty body) |
 | [get-current-status.yaml](get-current-status.yaml) | Retrieve the current effective status (ephemeral or persistent) for the authenticated user |
 | [get-custom-statuses.yaml](get-custom-statuses.yaml) | Retrieve the list of custom statuses configured by the authenticated user |
 | [get-user-statuses.yaml](get-user-statuses.yaml) | Retrieve the list of user status modules available for the authenticated user |
@@ -243,6 +245,20 @@ Index of all OpenAPI specs in the [`resources/`]() folder, grouped by domain.
 | [get-organisation.yaml](get-organisation.yaml) | Retrieve the organisation details for the authenticated user |
 | [get-teams.yaml](get-teams.yaml) | Retrieve the list of teams available to the authenticated user, optionally filtered to joined teams |
 | [get-wms-domain-info.yaml](get-wms-domain-info.yaml) | Retrieve the WMS domain and subdomain information for the authenticated user |
+
+---
+
+## Designations
+
+> **Note:** All write operations (create, update, add/remove members, delete) require org-admin
+> role at the Zoho application layer. Scope `ZohoCliq.Designations.ALL` is required but not
+> sufficient — the user must also hold org-admin rights.
+
+| File | Description |
+|------|-------------|
+| [get-designation.yaml](get-designation.yaml) | Retrieve the name and ID of a single designation by its LUID; returns HTTP 400 with `designation_not_exist` for invalid IDs |
+| [list-designation-members.yaml](list-designation-members.yaml) | Retrieve the list of users assigned to a specific designation; returns an empty array when no members are assigned |
+| [list-designations.yaml](list-designations.yaml) | Retrieve all designations in the organisation, with optional case-insensitive name search and limit-based pagination |
 
 ---
 

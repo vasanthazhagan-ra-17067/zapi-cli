@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: List Designations
+  version: "2.0"
+
+paths:
+  /v2/designations:
+    get:
+      summary: >-
+        Retrieves all designations in the organisation, optionally filtered by
+        name. Returns an empty array when no designations match the query.
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            Case-insensitive prefix/substring filter on designation name.
+            Returns an empty data array when no designations match; omit to
+            return all designations.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: >-
+            Maximum number of designations to return. Pagination cursor
+            (next_token) behaviour was not observed in testing; may only
+            activate with larger datasets.
+        - name: next_token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            Pagination cursor returned by a previous response; omit for the
+            first page.

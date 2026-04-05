@@ -1,0 +1,38 @@
+{
+  "storyId": 29,
+  "title": "Flatten 'trace session *' \u2192 'trace *'",
+  "description": "Promote the six trace session sub-commands (start, list, export, close, reopen, remove) from the 'trace session' sub-branch directly under the 'trace' branch. Keep 'trace session *' as deprecated aliases. The 'trace config' sub-branch is unchanged. This removes the unnecessary nesting and aligns with CLIG: prefer shallow nesting.",
+  "status": "Completed",
+  "dependsOn": [
+    27
+  ],
+  "prerequisiteState": "Stories 1\u201327 complete. Trace commands are registered as 'trace session start|list|export|close|reopen|remove' and 'trace config set|show'. Deprecation infrastructure available.",
+  "goal": "After this story: 'zapi trace start', 'zapi trace list', 'zapi trace export', 'zapi trace close', 'zapi trace reopen', 'zapi trace remove' all work. 'zapi trace session start' etc. still work but print deprecation warnings. 'zapi trace config set|show' is unchanged.",
+  "scope": [
+    "In src/ZapiCli/Program.cs, within the 'trace' branch lambda: move the six session command registrations (TraceSessionStartCommand, TraceSessionListCommand, TraceSessionExportCommand, TraceSessionCloseCommand, TraceSessionReopenCommand, TraceSessionRemoveCommand) from inside the 'session' sub-branch to directly on the trace branch. E.g., trace.AddCommand<TraceSessionStartCommand>(\"start\").",
+    "Keep the 'trace config' sub-branch unchanged.",
+    "Re-add a deprecated 'session' sub-branch: trace.AddBranch(\"session\", session => { session.AddCommand<TraceSessionStartDeprecatedCommand>(\"start\"); ... }). Each deprecated shim calls DeprecationHelper.Warn(\"trace session <verb>\", \"trace <verb>\") before delegating.",
+    "Verify that Spectre.Console.Cli allows a branch to have both direct leaf commands ('trace start') and a named sub-branch ('trace config') at the same level. This is the same structure as 'config' which has 'config set *' (sub-branch) and 'config show' (leaf). It should work \u2014 verify by running 'zapi trace --help' after the change.",
+    "Do NOT rename any of the six commands themselves \u2014 only the nesting changes. Class names (TraceSessionStartCommand etc.) may be kept as-is or renamed to TraceStartCommand \u2014 both are acceptable. If renaming classes, update all references.",
+    "Do NOT change any flags, output formats, or error codes for trace commands."
+  ],
+  "acceptanceCriteria": [
+    "'zapi trace start --name mysession' works at the new path",
+    "'zapi trace list', 'zapi trace export', 'zapi trace close', 'zapi trace reopen', 'zapi trace remove' all work",
+    "'zapi trace session start' still works and prints a deprecation warning to stderr",
+    "'zapi trace config set --env-file ...' is unchanged and still works",
+    "'zapi trace --help' lists 'start, list, export, close, reopen, remove, config, session' (or similar)",
+    "All existing tests pass"
+  ],
+  "contextForAgent": "Before editing Program.cs, read the current trace branch registration code in detail. Spectre.Console.Cli AddBranch callbacks receive an IConfigurator<CommandSettings> or similar; confirm the exact type from the existing account branch which already mixes leaf commands with optional sub-branches. The key concern is whether a branch can contain both leaf commands and a named sub-branch \u2014 look at the 'config' branch (config show + config set sub-branch) as a known-working example of this pattern.",
+  "openItems": [
+    "Confirm Spectre.Console.Cli mixed leaf + sub-branch pattern works correctly by checking existing 'config' or 'api' branch registrations in Program.cs."
+  ],
+  "sourceReferences": [
+    "src/ZapiCli/Program.cs",
+    "src/ZapiCli/Commands/TraceCommands.cs",
+    "tech_spec/docs/command-reference.md"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2026-04-01"
+}

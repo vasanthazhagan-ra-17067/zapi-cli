@@ -8,26 +8,44 @@ namespace ZapiCli.Commands;
 /// </summary>
 internal static class UtilCommands
 {
-    // ─── util time-ms ────────────────────────────────────────────────────────
+    // ─── util timestamp ──────────────────────────────────────────────────────
 
-    public sealed class UtilTimeMsSettings : GlobalSettings { }
+    public sealed class UtilTimestampSettings : GlobalSettings { }
 
-    public sealed class UtilTimeMsCommand : AsyncCommand<UtilTimeMsSettings>
+    public sealed class UtilTimestampCommand : AsyncCommand<UtilTimestampSettings>
     {
         private readonly IOutputWriter _output;
 
-        public UtilTimeMsCommand(IOutputWriter output)
+        public UtilTimestampCommand(IOutputWriter output)
         {
             _output = output;
         }
 
         public override Task<int> ExecuteAsync(
             CommandContext context,
-            UtilTimeMsSettings settings)
+            UtilTimestampSettings settings)
         {
             var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _output.WriteJson(new { ts });
             return Task.FromResult(0);
+        }
+    }
+
+    /// <summary>[Deprecated] Use 'util timestamp' instead.</summary>
+    public sealed class UtilTimeMsDeprecatedCommand : AsyncCommand<UtilTimestampSettings>
+    {
+        private readonly IOutputWriter _output;
+
+        public UtilTimeMsDeprecatedCommand(IOutputWriter output)
+        {
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, UtilTimestampSettings settings)
+        {
+            DeprecationHelper.Warn("util time-ms", "util timestamp");
+            return await new UtilTimestampCommand(_output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
         }
     }
 
@@ -54,31 +72,49 @@ internal static class UtilCommands
         }
     }
 
-    // ─── util time-now ───────────────────────────────────────────────────────
+    // ─── util now ────────────────────────────────────────────────────────────
 
     private static readonly TimeZoneInfo Ist =
         TimeZoneInfo.CreateCustomTimeZone("IST", TimeSpan.FromHours(5.5),
             "India Standard Time", "India Standard Time");
 
-    public sealed class UtilTimeNowSettings : GlobalSettings { }
+    public sealed class UtilNowSettings : GlobalSettings { }
 
-    public sealed class UtilTimeNowCommand : AsyncCommand<UtilTimeNowSettings>
+    public sealed class UtilNowCommand : AsyncCommand<UtilNowSettings>
     {
         private readonly IOutputWriter _output;
 
-        public UtilTimeNowCommand(IOutputWriter output)
+        public UtilNowCommand(IOutputWriter output)
         {
             _output = output;
         }
 
         public override Task<int> ExecuteAsync(
             CommandContext context,
-            UtilTimeNowSettings settings)
+            UtilNowSettings settings)
         {
             var istNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Ist);
             var now = istNow.ToString("dd/MM/yy HH:mm:ss.fff");
             _output.WriteJson(new { now });
             return Task.FromResult(0);
+        }
+    }
+
+    /// <summary>[Deprecated] Use 'util now' instead.</summary>
+    public sealed class UtilTimeNowDeprecatedCommand : AsyncCommand<UtilNowSettings>
+    {
+        private readonly IOutputWriter _output;
+
+        public UtilTimeNowDeprecatedCommand(IOutputWriter output)
+        {
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, UtilNowSettings settings)
+        {
+            DeprecationHelper.Warn("util time-now", "util now");
+            return await new UtilNowCommand(_output)
+                .ExecuteAsync(context, settings).ConfigureAwait(false);
         }
     }
 }

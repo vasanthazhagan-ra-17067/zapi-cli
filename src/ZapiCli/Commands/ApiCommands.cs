@@ -7,16 +7,17 @@ using ZapiCli.Core.Api;
 namespace ZapiCli.Commands;
 
 /// <summary>
-/// The <c>api</c> command group. Currently exposes only <c>api call</c>.
+/// The <c>api</c> command group. Exposes <c>api request</c> (canonical),
+/// <c>api req</c> (short alias), and <c>api call</c> (deprecated alias).
 /// Command class is thin: validates flags, builds <see cref="ApiRequest"/>,
 /// delegates to <see cref="ApiClient"/>, writes output via <see cref="IOutputWriter"/>.
 /// No domain logic here (ADR-0007).
 /// </summary>
 internal static class ApiCommands
 {
-    // ─── api call ─────────────────────────────────────────────────────────────
+    // ─── api request / api req ────────────────────────────────────────────────
 
-    public sealed class ApiCallSettings : GlobalSettings
+    public sealed class ApiRequestSettings : GlobalSettings
     {
         /// <summary>Full endpoint URL. Required (ADR-0006 — no base-URL construction).</summary>
         [CommandOption("--url <URL>")]
@@ -68,20 +69,20 @@ internal static class ApiCommands
         }
     }
 
-    public sealed class ApiCallCommand : AsyncCommand<ApiCallSettings>
+    public sealed class ApiRequestCommand : AsyncCommand<ApiRequestSettings>
     {
         private readonly ApiClient _apiClient;
         private readonly IAccountStore _accountStore;
         private readonly IOutputWriter _output;
 
-        public ApiCallCommand(ApiClient apiClient, IAccountStore accountStore, IOutputWriter output)
+        public ApiRequestCommand(ApiClient apiClient, IAccountStore accountStore, IOutputWriter output)
         {
             _apiClient = apiClient;
             _accountStore = accountStore;
             _output = output;
         }
 
-        public override async Task<int> ExecuteAsync(CommandContext context, ApiCallSettings settings)
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiRequestSettings settings)
         {
             // Parse extra headers from --header list (split on first ':' only).
             var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -180,6 +181,37 @@ internal static class ApiCommands
             }
 
             return 0;
+        }
+    }
+
+    // ─── api call (deprecated alias for api request) ──────────────────────────
+
+    /// <summary>
+    /// Thin deprecated wrapper for <c>api call</c>. Emits a deprecation warning via
+    /// <see cref="DeprecationHelper.Warn"/> before delegating to <see cref="ApiRequestCommand"/>.
+    /// Registered in Program.cs under the name <c>"call"</c> inside the <c>api</c> branch.
+    /// </summary>
+    public sealed class ApiCallCommand : AsyncCommand<ApiRequestSettings>
+    {
+        private readonly ApiClient _apiClient;
+        private readonly IAccountStore _accountStore;
+        private readonly IOutputWriter _output;
+
+        public ApiCallCommand(ApiClient apiClient, IAccountStore accountStore, IOutputWriter output)
+        {
+            _apiClient = apiClient;
+            _accountStore = accountStore;
+            _output = output;
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, ApiRequestSettings settings)
+        {
+            DeprecationHelper.Warn("api call", "api request");
+
+            // Delegate to ApiRequestCommand logic via a shared helper.
+            // Re-use the same implementation inline to avoid code duplication through composition.
+            var delegate_ = new ApiRequestCommand(_apiClient, _accountStore, _output);
+            return await delegate_.ExecuteAsync(context, settings).ConfigureAwait(false);
         }
     }
 }

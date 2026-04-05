@@ -49,6 +49,12 @@ public static class ErrorCodes
     /// <summary>Thrown by <c>api registry add</c> when the specified id already exists in the registry.</summary>
     public static readonly string REGISTRY_ENTRY_ALREADY_EXISTS = "REGISTRY_ENTRY_ALREADY_EXISTS";
 
+    /// <summary>Thrown when an api endpoints operation targets an id that does not exist.</summary>
+    public static readonly string ENDPOINT_NOT_FOUND = "ENDPOINT_NOT_FOUND";
+
+    /// <summary>Thrown by <c>api endpoints add</c> when the specified id already exists.</summary>
+    public static readonly string ENDPOINT_ALREADY_EXISTS = "ENDPOINT_ALREADY_EXISTS";
+
     /// <summary>
     /// Thrown by <c>scope add</c> when the user rejects the scope enhancement consent,
     /// or when the callback returns an unexpected state.

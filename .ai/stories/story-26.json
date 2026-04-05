@@ -1,0 +1,36 @@
+{
+  "storyId": 26,
+  "title": "Binary and Application Name: zapi-cli → zapi",
+  "description": "Rename the published binary from 'zapi-cli' to 'zapi' by updating the AssemblyName in ZapiCli.csproj, changing SetApplicationName in Program.cs, and updating all references in publish-all.sh, README.md, and docs/HELP.md. This is the foundation rename — all downstream stories depend on the binary name being 'zapi'.",
+  "status": "Completed",
+  "dependsOn": [],
+  "prerequisiteState": "Stories 1–25 complete. The CLI binary is currently published as 'zapi-cli'. All doc references and the publish script use 'zapi-cli'. Spectre.Console has ApplicationName set to 'zapi-cli'.",
+  "goal": "After this story: dotnet publish produces a binary named 'zapi'. Running './zapi --help' works. HELP.md and README.md installation instructions reference 'zapi', not 'zapi-cli'. The publish script produces 'zapi' outputs under each build/*/platform/ folder.",
+  "scope": [
+    "In src/ZapiCli/ZapiCli.csproj: change <AssemblyName>zapi-cli</AssemblyName> to <AssemblyName>zapi</AssemblyName>. If <AssemblyName> is not explicitly set, add it. Also change <RootNamespace> only if it matches 'zapi-cli' (it likely does not — keep 'ZapiCli' as the namespace).",
+    "In src/ZapiCli/Program.cs: change config.SetApplicationName(\"zapi-cli\") to config.SetApplicationName(\"zapi\").",
+    "In publish-all.sh: update all output binary reference strings from 'zapi-cli' to 'zapi' — specifically every platform output path like 'build/osx-arm64/zapi-cli' should become 'build/osx-arm64/zapi'. Review the full script to catch chmod, cp, or rename operations that reference the old name.",
+    "In docs/HELP.md: find-and-replace all occurrences of 'zapi-cli' with 'zapi' in command-line examples, usage blocks, and installation instructions. Do NOT replace prose text that says 'the CLI' or 'Zapi CLI' — only replace the literal command name in code spans and usage blocks.",
+    "In README.md: same find-and-replace as HELP.md — update all command examples and installation instructions. Keep any prose references to 'zapi-cli' as the *project name* if they distinguish the project from the binary, but change all runnable command examples to 'zapi'.",
+    "Do NOT rename the .csproj file itself (keep ZapiCli.csproj), the solution file, or the namespace. Do NOT change the assembly's NuGet package ID if one exists — this is not a library."
+  ],
+  "acceptanceCriteria": [
+    "dotnet publish -r osx-arm64 /p:PublishSingleFile=true --self-contained true produces a binary named 'zapi' (not 'zapi-cli')",
+    "'./zapi --help' output shows 'zapi' in the usage line, not 'zapi-cli'",
+    "publish-all.sh contains no remaining 'zapi-cli' binary references",
+    "docs/HELP.md command examples all use 'zapi' not 'zapi-cli'",
+    "README.md installation instructions use 'zapi'",
+    "All existing unit tests still pass (no functional change)"
+  ],
+  "contextForAgent": "Read the full publish-all.sh before making changes — it may contain build/ folder paths, chmod commands, or packaging steps that reference the binary name in multiple forms. Read Program.cs around the SetApplicationName call (it's in the config lambda, approximately line 100-120). The csproj AssemblyName element may not be explicitly present — in that case add it. The namespace (ZapiCli) and project name (ZapiCli.csproj) should NOT change. Only the output binary name changes.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli/ZapiCli.csproj",
+    "src/ZapiCli/Program.cs",
+    "publish-all.sh",
+    "docs/HELP.md",
+    "README.md"
+  ],
+  "relevantOpenQuestions": [],
+  "completedDate": "2025-01-31"
+}

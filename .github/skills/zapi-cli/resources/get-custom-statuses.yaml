@@ -3,8 +3,45 @@ info:
   title: Get Custom Statuses
   version: "2.0"
 
+servers:
+  - url: https://cliq.zoho.com
+
 paths:
   /api/v2/statuses:
     get:
       summary: Retrieves the list of custom statuses configured by the authenticated user.
       parameters: []
+      responses:
+        "200":
+          description: List of custom statuses.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: The endpoint path that was called.
+                    example: /api/v2/statuses
+                  type:
+                    type: string
+                    description: Response type identifier.
+                    example: status_message
+                  data:
+                    type: array
+                    description: >
+                      Array of custom status entries. Note: the `code` field
+                      (busy/available/invisible) is NOT returned here — only
+                      `message` and `id` are present. Use the POST response to
+                      capture the code at creation time.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique ID of the status entry. Use for DELETE.
+                          example: "5129211000003397017"
+                        message:
+                          type: string
+                          description: Display text of the status.
+                          example: In a Meeting

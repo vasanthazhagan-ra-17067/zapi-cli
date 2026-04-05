@@ -1,0 +1,65 @@
+openapi: 3.1.0
+info:
+  title: Add User Status
+  version: "2.0"
+
+servers:
+  - url: https://cliq.zoho.com
+
+paths:
+  /api/v2/statuses:
+    post:
+      summary: Create a new custom status entry for the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - message
+              properties:
+                code:
+                  type: string
+                  description: The status category. Determines the presence icon shown to others.
+                  enum:
+                    - busy
+                    - available
+                    - invisible
+                  example: busy
+                message:
+                  type: string
+                  description: The display text for the status.
+                  example: In a Meeting
+      responses:
+        "200":
+          description: Status created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: The endpoint path that was called.
+                    example: /api/v2/statuses
+                  type:
+                    type: string
+                    description: Response type identifier.
+                    example: status_message
+                  data:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The status category value that was set.
+                        example: busy
+                      message:
+                        type: string
+                        description: The display text for the status.
+                        example: In a Meeting
+                      id:
+                        type: string
+                        description: Unique ID of the created status entry. Use this ID for DELETE.
+                        example: "5129211000003397017"

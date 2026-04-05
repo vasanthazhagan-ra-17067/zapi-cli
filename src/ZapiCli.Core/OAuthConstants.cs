@@ -10,7 +10,7 @@ public static class OAuthConstants
     /// Zoho profile scope that must be included in every login request to guarantee
     /// that the user-info endpoint returns the account email and ZUID.
     /// </summary>
-    public const string RequiredProfileScope = "aaaServer.profile.READ";
+    public const string RequiredProfileScope = "AaaServer.profile.READ";
 
     /// <summary>
     /// Fixed local TCP port for the OAuth callback HTTP server.

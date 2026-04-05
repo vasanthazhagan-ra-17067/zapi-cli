@@ -1,0 +1,9 @@
+{
+  "url": "/api/v2/statuses",
+  "type": "status_message",
+  "data": {
+    "code": "busy",
+    "message": "Second busy status",
+    "id": "5129211000003398021"
+  }
+}
