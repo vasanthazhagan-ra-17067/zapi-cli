@@ -23,12 +23,7 @@
 
 ## Deprecation Contract
 
-All removed/renamed commands and flags must remain wired as **deprecated aliases**.
-When a deprecated alias is invoked, the CLI:
-
-1. Prints to **stderr** (before any stdout): `Deprecation: '<old>' is deprecated; use '<new>' instead.`
-2. Executes the command normally — exit code and stdout are identical to the canonical form.
-3. Does **not** appear in `--help` output.
+All previously deprecated aliases have been removed. Old command names no longer exist and will return an "unknown command" error.
 
 ---
 
@@ -91,9 +86,9 @@ zapi account show (--name | --email | --zuid) <VALUE>
 |---|---|
 | `--name <NAME>` | Account alias |
 | `--email <EMAIL>` | Identify by email |
-| `--zuid <ZUID>` | Identify by Zoho User ID *(was: `--zuidstring`)* |
+| `--zuid <Zuid>` | Identify by Zoho User ID |
 
-Exactly one identifier required. Deprecated alias: `--zuidstring` (emits deprecation warning).
+Exactly one identifier required.
 
 **Example:**
 ```bash
@@ -110,7 +105,7 @@ zapi account show --zuid 123456789
 zapi account set-default (--name | --email | --zuid) <VALUE>
 ```
 
-Exactly one identifier required. `--zuidstring` is a deprecated alias for `--zuid`.
+Exactly one identifier required.
 
 **Example:**
 ```bash
@@ -144,7 +139,7 @@ zapi account use work
 zapi account remove (--name | --email | --zuid) <VALUE>
 ```
 
-Exactly one identifier required. `--zuidstring` is a deprecated alias for `--zuid`.
+Exactly one identifier required.
 
 **Example:**
 ```bash
@@ -153,13 +148,13 @@ zapi account remove --name myaccount
 
 ---
 
-### `account refresh` *(was: `account re-auth`)*
+### `account refresh`
 
 ```
 zapi account refresh (--name | --email | --zuid) <VALUE>
 ```
 
-Re-authenticates using stored refresh token. Deprecated alias: `re-auth` (command name).
+Re-authenticates using stored refresh token.
 
 **Example:**
 ```bash
@@ -177,9 +172,7 @@ zapi account rename (--name | --email | --zuid) <VALUE> --to <NEW_NAME>
 | Flag | Required | Description |
 |---|---|---|
 | `--name / --email / --zuid` | Yes (one) | Identify account to rename |
-| `--to <NEW_NAME>` | Yes | New alias *(was: `--new-name`)* |
-
-Deprecated alias: `--new-name` (flag name).
+| `--to <NEW_NAME>` | Yes | New alias |
 
 **Example:**
 ```bash
@@ -189,7 +182,7 @@ zapi account rename --email user@example.com --to personal
 
 ---
 
-### `account scope add` *(was: top-level `scope add`)*
+### `account scope add`
 
 ```
 zapi account scope add --scope <SCOPES> [-a <ACCOUNT>] [--port <PORT>]
@@ -201,8 +194,6 @@ zapi account scope add --scope <SCOPES> [-a <ACCOUNT>] [--port <PORT>]
 | `--account / -a <ACCOUNT>` | No | Target account (uses default if omitted) |
 | `--port <PORT>` | No | Callback port for incremental auth (default: 8085) |
 
-Deprecated alias: top-level `scope add` (command path).
-
 **Example:**
 ```bash
 zapi account scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
@@ -211,13 +202,11 @@ zapi account scope add --scope "ZohoMail.messages.READ" --account eu-staging
 
 ---
 
-### `account scope list` *(was: top-level `scope list`)*
+### `account scope list`
 
 ```
 zapi account scope list [-a <ACCOUNT>]
 ```
-
-Deprecated alias: top-level `scope list` (command path).
 
 **Example:**
 ```bash
@@ -229,7 +218,7 @@ zapi account scope list --account eu-staging
 
 ## `api` group
 
-### `api request` *(was: `api call`)*
+### `api request`
 
 ```
 zapi api request --url <URL> -X <METHOD>
@@ -248,7 +237,7 @@ zapi api request --url <URL> -X <METHOD>
 | `--query <k=v>` | | No | Repeatable: add query parameter |
 | `--account <ACCOUNT>` | `-a` | No | Override default account |
 
-Short alias: `req`. Deprecated command alias: `call`.
+Short alias: `req`.
 
 **Examples:**
 ```bash
@@ -274,13 +263,11 @@ zapi api request \
 
 ---
 
-### `api endpoints list` *(was: `api registry list`)*
+### `api endpoints list`
 
 ```
 zapi api endpoints list
 ```
-
-Deprecated alias branch: `api registry`.
 
 **Example:**
 ```bash
@@ -289,7 +276,7 @@ zapi api endpoints list
 
 ---
 
-### `api endpoints add` *(was: `api registry add`)*
+### `api endpoints add`
 
 ```
 zapi api endpoints add --id <ID> --url <URL> --method <METHOD> --purpose <TEXT>
@@ -313,7 +300,7 @@ zapi api endpoints add \
 
 ---
 
-### `api endpoints update` *(was: `api registry update`)*
+### `api endpoints update`
 
 ```
 zapi api endpoints update --id <ID> [--url <URL>] [--method <METHOD>] [--purpose <TEXT>]
@@ -328,7 +315,7 @@ zapi api endpoints update --id cliq-channels --purpose "Fetch all Cliq channels"
 
 ---
 
-### `api endpoints show` *(was: `api registry show`)*
+### `api endpoints show`
 
 ```
 zapi api endpoints show --id <ID>
@@ -341,7 +328,7 @@ zapi api endpoints show --id cliq-channels
 
 ---
 
-### `api endpoints remove` *(was: `api registry remove`)*
+### `api endpoints remove`
 
 ```
 zapi api endpoints remove --id <ID>
@@ -356,10 +343,10 @@ zapi api endpoints remove --id cliq-channels
 
 ## `trace` group
 
-> The intermediate `session` nesting level is removed. All session commands sit directly
-> under `trace`. The `trace session <cmd>` path remains as a deprecated alias.
+> All session commands sit directly
+> under `trace`. The intermediate `session` nesting level has been removed.
 
-### `trace start` *(was: `trace session start`)*
+### `trace start`
 
 ```
 zapi trace start --name <NAME> [--export-path <PATH>]
@@ -378,7 +365,7 @@ zapi trace start --name api-audit --export-path /tmp/traces/audit.json
 
 ---
 
-### `trace list` *(was: `trace session list`)*
+### `trace list`
 
 ```
 zapi trace list
@@ -391,7 +378,7 @@ zapi trace list
 
 ---
 
-### `trace export` *(was: `trace session export`)*
+### `trace export`
 
 ```
 zapi trace export (--id <UUID> | --name <NAME>) [--type api|pex] [--truncate-body <N>]
@@ -412,7 +399,7 @@ zapi trace export --name my-session --type api --truncate-body 200
 
 ---
 
-### `trace close` *(was: `trace session close`)*
+### `trace close`
 
 ```
 zapi trace close (--id <UUID> | --name <NAME>) [--drain-timeout <MS>]
@@ -422,9 +409,7 @@ zapi trace close (--id <UUID> | --name <NAME>) [--drain-timeout <MS>]
 |---|---|---|
 | `--id <UUID>` | One of | Session UUID |
 | `--name <NAME>` | One of | Session name |
-| `--drain-timeout <MS>` | No | Drain window before sealing, milliseconds (default: 5000) *(was: `--wait-ms`)* |
-
-Deprecated alias: `--wait-ms` (flag name).
+| `--drain-timeout <MS>` | No | Drain window before sealing, milliseconds (default: 5000) |
 
 **Example:**
 ```bash
@@ -434,7 +419,7 @@ zapi trace close --name my-session --drain-timeout 3000
 
 ---
 
-### `trace reopen` *(was: `trace session reopen`)*
+### `trace reopen`
 
 ```
 zapi trace reopen (--id <UUID> | --name <NAME>)
@@ -447,7 +432,7 @@ zapi trace reopen --id 550e8400-e29b-41d4-a716-446655440000
 
 ---
 
-### `trace remove` *(was: `trace session remove`)*
+### `trace remove`
 
 ```
 zapi trace remove (--id <UUID> | --name <NAME>)
@@ -554,13 +539,13 @@ zapi config show
 
 ## `util` group
 
-### `util timestamp` *(was: `util time-ms`)*
+### `util timestamp`
 
 ```
 zapi util timestamp
 ```
 
-Outputs current UTC time as Unix milliseconds. Deprecated alias: `time-ms`.
+Outputs current UTC time as Unix milliseconds.
 
 **Example:**
 ```bash
@@ -570,13 +555,13 @@ zapi util timestamp
 
 ---
 
-### `util now` *(was: `util time-now`)*
+### `util now`
 
 ```
 zapi util now
 ```
 
-Outputs current IST time as `DD/MM/YY HH:mm:ss.fff`. Deprecated alias: `time-now`.
+Outputs current IST time as `DD/MM/YY HH:mm:ss.fff`.
 
 **Example:**
 ```bash
@@ -599,33 +584,3 @@ zapi util uuid
 zapi util uuid
 # → {"uuid": "550e8400-e29b-41d4-a716-446655440000"}
 ```
-
----
-
-## Error Code Changes
-
-| Old | New | Scope |
-|---|---|---|
-| `REGISTRY_ENTRY_ALREADY_EXISTS` | `ENDPOINT_ALREADY_EXISTS` | `api endpoints add` |
-| `REGISTRY_ENTRY_NOT_FOUND` | `ENDPOINT_NOT_FOUND` | `api endpoints show / update / remove` |
-
----
-
-## Full Rename Map
-
-| Old | New | Category |
-|---|---|---|
-| `zapi-cli` (binary) | `zapi` | Binary |
-| `api call` | `api request` (alias: `req`) | Command |
-| `api registry *` | `api endpoints *` | Branch |
-| `trace session *` | `trace *` | Nesting flattened |
-| `scope add/list` (top-level) | `account scope add/list` | Branch moved |
-| `account set-default` | `account use <NAME>` | Shorthand added |
-| `account re-auth` | `account refresh` | Command renamed |
-| `util time-ms` | `util timestamp` | Command renamed |
-| `util time-now` | `util now` | Command renamed |
-| `--zuidstring` | `--zuid` | Flag on 5 account commands |
-| `--new-name` | `--to` (on `account rename`) | Flag renamed |
-| `--wait-ms` | `--drain-timeout` (on `trace close`) | Flag renamed |
-| `REGISTRY_ENTRY_ALREADY_EXISTS` | `ENDPOINT_ALREADY_EXISTS` | Error code |
-| `REGISTRY_ENTRY_NOT_FOUND` | `ENDPOINT_NOT_FOUND` | Error code |

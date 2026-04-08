@@ -222,7 +222,7 @@ public sealed class AccountCommandTests : IDisposable
         Assert.Equal(ErrorCodes.ACCOUNT_NOT_FOUND, ex.Code);
     }
 
-    // ── account re-auth ───────────────────────────────────────────────────────
+    // ── account refresh ───────────────────────────────────────────────────────
 
     [Fact]
     public async Task AccountReAuth_CallsRefreshToken()

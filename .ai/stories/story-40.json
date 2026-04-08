@@ -1,0 +1,38 @@
+{
+  "storyId": 40,
+  "title": "Update Stale Test Section Comments to Match Current Command Names",
+  "description": "Update 6 section-header comments across 4 test files that still reference old deprecated command names. The tests themselves already exercise the canonical command classes — only the comment labels are wrong. This is Phase 4 of the remove-deprecated-commands-1 plan. A cosmetic-only change: no test logic changes, no assertions change.",
+  "status": "Completed",
+  "completedDate": "2026-04-08",
+  "dependsOn": [39],
+  "prerequisiteState": "Stories 37–39 are complete. No deprecated command classes, DeprecationHelper, or deprecated registrations remain in the codebase. dotnet test passes.",
+  "goal": "After this story: all test section comments accurately describe the command under test using the current canonical command name. No comment in any test file references a deprecated command name.",
+  "scope": [
+    "In tests/ZapiCli.Tests/UtilCommandTests.cs at the section divider around line 9: rename comment '// ── util time-ms ...' to '// ── util timestamp ...'. Preserve the trailing line-filler dashes to maintain visual alignment with adjacent section comments.",
+    "In tests/ZapiCli.Tests/UtilCommandTests.cs at the section divider around line 89: rename comment '// ── util time-now ...' to '// ── util now ...'. Preserve the trailing line-filler dashes.",
+    "In tests/ZapiCli.Tests/AccountCommandTests.cs at the section divider around line 225: rename comment '// ── account re-auth ...' to '// ── account refresh ...'. Preserve the trailing line-filler dashes.",
+    "In tests/ZapiCli.Tests/ScopeCommandTests.cs at the section divider around line 63: rename comment '// ── scope add ...' to '// ── account scope add ...'. Preserve the trailing line-filler dashes.",
+    "In tests/ZapiCli.Tests/ScopeCommandTests.cs at the section divider around line 215: rename comment '// ── scope list ...' to '// ── account scope list ...'. Preserve the trailing line-filler dashes.",
+    "In tests/ZapiCli.Tests/ApiRegistryTests.cs at the file-level XML summary comment (around line 10): change 'the <c>api registry</c> command group' to 'the <c>api endpoints</c> command group'.",
+    "Run 'dotnet test src/zapi-cli.sln' to confirm all tests still pass after the comment edits."
+  ],
+  "acceptanceCriteria": [
+    "UtilCommandTests.cs contains no comment referencing 'util time-ms' or 'util time-now'",
+    "AccountCommandTests.cs contains no comment referencing 'account re-auth'",
+    "ScopeCommandTests.cs contains no comment referencing 'scope add' or 'scope list' (top-level, without 'account')",
+    "ApiRegistryTests.cs file summary references 'api endpoints' not 'api registry'",
+    "dotnet test src/zapi-cli.sln exits 0 with all tests passing",
+    "No test logic, assertion, or command class reference has changed — only comment text"
+  ],
+  "contextForAgent": "These are pure comment edits. The tests already instantiate the canonical command classes (UtilTimestampCommand, UtilNowCommand, AccountRefreshCommand, ScopeAddCommand, etc.) — this was done as part of the refactor stories (27–36). Only the section header comment strings need updating. Match the dash-filler width of adjacent section comments in the same file for consistency.",
+  "openItems": [],
+  "sourceReferences": [
+    "tests/ZapiCli.Tests/UtilCommandTests.cs",
+    "tests/ZapiCli.Tests/AccountCommandTests.cs",
+    "tests/ZapiCli.Tests/ScopeCommandTests.cs",
+    "tests/ZapiCli.Tests/ApiRegistryTests.cs",
+    "plan/remove-deprecated-commands-1.md"
+  ],
+  "planReference": ".ai/plans/remove-deprecated-commands-1.md",
+  "planTasks": ["TASK-017", "TASK-018", "TASK-019", "TASK-020", "TASK-021"]
+}

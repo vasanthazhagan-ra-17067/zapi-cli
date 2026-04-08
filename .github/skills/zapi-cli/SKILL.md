@@ -70,25 +70,25 @@ All requests are made via the `zapi` binary. The following commands are availabl
 | `account remove [--name\|--email\|--zuid]` | Remove an account and revoke its OAuth token from the Zoho servers. |
 | `account refresh [--name\|--email\|--zuid]` | Re-authenticate an account using its stored refresh token. Call this when exit code is `2` or after adding new scopes via `account scope add`. |
 | `account rename [--name\|--email\|--zuid] --to <NEW>` | Rename an account alias; the keychain entry is also updated to the new name. |
-| `api request --url <URL> -X <METHOD>` | Fire an HTTP request against a Zoho endpoint. The OAuth token is injected automatically. Alias: `api req`. (`api call` is deprecated.) |
-| `api endpoints add / list / show / update / remove` | Manage the local registry of named API endpoints for reuse across sessions. (`api registry *` is deprecated.) |
-| `trace start` | Begin recording all `api request` requests/responses to a structured JSON file. (`trace session start` is deprecated.) |
-| `trace list` | List all known trace sessions with their current status and entry counts. (`trace session list` is deprecated.) |
-| `trace export` | Read back the recorded trace entries, with optional type filtering and body truncation. (`trace session export` is deprecated.) |
-| `trace close` | Seal a trace session after draining in-flight writes. (`trace session close` is deprecated.) |
-| `trace reopen` | Re-activate a closed trace session to append new entries. (`trace session reopen` is deprecated.) |
-| `trace remove` | Remove a session from the sessions index (trace file is preserved). (`trace session remove` is deprecated.) |
+| `api request --url <URL> -X <METHOD>` | Fire an HTTP request against a Zoho endpoint. The OAuth token is injected automatically. Alias: `api req`. |
+| `api endpoints add / list / show / update / remove` | Manage the local registry of named API endpoints for reuse across sessions. |
+| `trace start` | Begin recording all `api request` requests/responses to a structured JSON file. |
+| `trace list` | List all known trace sessions with their current status and entry counts. |
+| `trace export` | Read back the recorded trace entries, with optional type filtering and body truncation. |
+| `trace close` | Seal a trace session after draining in-flight writes. |
+| `trace reopen` | Re-activate a closed trace session to append new entries. |
+| `trace remove` | Remove a session from the sessions index (trace file is preserved). |
 | `trace config set --default-export-path <PATH>` | Persist the default export path for trace sessions. |
 | `trace config show` | Display the current trace configuration. |
-| `account scope add --scope <SCOPE> [--port <PORT>]` | Add an OAuth scope to an account via incremental OAuth flow (callback on `--port`, default 8085). (`scope add` is deprecated.) |
-| `account scope list` | List all OAuth scopes configured for an account. (`scope list` is deprecated.) |
+| `account scope add --scope <SCOPE> [--port <PORT>]` | Add an OAuth scope to an account via incremental OAuth flow (callback on `--port`, default 8085). |
+| `account scope list` | List all OAuth scopes configured for an account. |
 | `config set env-file <PATH>` | Persist the `.env` file path loaded at every startup (stores `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`). |
 | `config set scope-file <PATH>` | Persist a scope file path automatically read when `account login` resolves scopes. See [Configuration File Formats](#configuration-file-formats) for required format (scopes unquoted, one per line or comma-separated, `#` comments supported). |
 | `config set app-dir <PATH>` | Persist a custom app data directory where `accounts.json` is stored (created if absent). Automatically migrates `accounts.json` from the previous location if the file does not already exist in the new directory. Response includes `migrated: true/false`. |
 | `config show` | Show the current persisted CLI configuration (env_file, scope_file, app_data_dir, trace_default_export_path). |
-| `util timestamp` | Get current Unix milliseconds — useful for time-range query parameters. (`util time-ms` is deprecated.) |
+| `util timestamp` | Get current Unix milliseconds — useful for time-range query parameters. |
 | `util uuid` | Generate a UUID v4 — useful for idempotency keys. |
-| `util now` | Get current India Standard Time (IST) as a formatted timestamp. (`util time-now` is deprecated.) |
+| `util now` | Get current India Standard Time (IST) as a formatted timestamp. |
 
 ---
 

@@ -268,6 +268,102 @@
       ],
       "version": "v1",
       "phase": "Phase 6 - CLI Naming Refactor"
+    },
+    {
+      "storyId": 30,
+      "title": "Move top-level 'scope' → 'account scope'",
+      "status": "Completed",
+      "dependsOn": [27],
+      "phase": "Phase 6 — CLI Naming Refactor",
+      "planReference": ".ai/plans/cli-refactor-naming.md"
+    },
+    {
+      "storyId": 31,
+      "title": "Add 'account use <NAME>' Positional Shorthand",
+      "status": "Completed",
+      "dependsOn": [27],
+      "phase": "Phase 6 — CLI Naming Refactor",
+      "planReference": ".ai/plans/cli-refactor-naming.md"
+    },
+    {
+      "storyId": 32,
+      "title": "Rename 'account re-auth' → 'account refresh'",
+      "status": "Completed",
+      "dependsOn": [27],
+      "phase": "Phase 6 — CLI Naming Refactor",
+      "planReference": ".ai/plans/cli-refactor-naming.md"
+    },
+    {
+      "storyId": 33,
+      "title": "Rename 'api registry' → 'api endpoints'",
+      "status": "Completed",
+      "dependsOn": [27],
+      "phase": "Phase 6 — CLI Naming Refactor",
+      "planReference": ".ai/plans/cli-refactor-naming.md"
+    },
+    {
+      "storyId": 34,
+      "title": "Rename 'util time-ms' → 'util timestamp' and 'util time-now' → 'util now'",
+      "status": "Completed",
+      "dependsOn": [27],
+      "phase": "Phase 6 — CLI Naming Refactor",
+      "planReference": ".ai/plans/cli-refactor-naming.md"
+    },
+    {
+      "storyId": 35,
+      "title": "Param Renames: --zuidstring → --zuid, --new-name → --to, --wait-ms → --drain-timeout",
+      "status": "Completed",
+      "dependsOn": [27],
+      "phase": "Phase 6 — CLI Naming Refactor",
+      "planReference": ".ai/plans/cli-refactor-naming.md"
+    },
+    {
+      "storyId": 36,
+      "title": "HELP.md Full Regeneration and Validation Pass",
+      "status": "Completed",
+      "dependsOn": [26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+      "phase": "Phase 6 — CLI Naming Refactor",
+      "planReference": ".ai/plans/cli-refactor-naming.md"
+    },
+    {
+      "storyId": 37,
+      "title": "Remove Deprecated Command Registrations from Program.cs",
+      "status": "Completed",
+      "dependsOn": [36],
+      "phase": "Phase 7 — Deprecation Removal",
+      "planReference": ".ai/plans/remove-deprecated-commands-1.md"
+    },
+    {
+      "storyId": 38,
+      "title": "Delete Deprecated Command Shim Classes from Source Files",
+      "status": "Completed",
+      "dependsOn": [37],
+      "phase": "Phase 7 — Deprecation Removal",
+      "planReference": ".ai/plans/remove-deprecated-commands-1.md"
+    },
+    {
+      "storyId": 39,
+      "title": "Delete DeprecationHelper and DeprecationHelperTests",
+      "status": "Completed",
+      "dependsOn": [38],
+      "phase": "Phase 7 — Deprecation Removal",
+      "planReference": ".ai/plans/remove-deprecated-commands-1.md"
+    },
+    {
+      "storyId": 40,
+      "title": "Update Stale Test Section Comments to Match Current Command Names",
+      "status": "Completed",
+      "dependsOn": [39],
+      "phase": "Phase 7 — Deprecation Removal",
+      "planReference": ".ai/plans/remove-deprecated-commands-1.md"
+    },
+    {
+      "storyId": 41,
+      "title": "Build, Test & Publish Validation — Deprecated Commands Removal",
+      "status": "Completed",
+      "dependsOn": [40],
+      "phase": "Phase 7 — Deprecation Removal",
+      "planReference": ".ai/plans/remove-deprecated-commands-1.md"
     }
   ],
   "criticalPath": [

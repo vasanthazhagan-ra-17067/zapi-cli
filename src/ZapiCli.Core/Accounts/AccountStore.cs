@@ -65,7 +65,7 @@ public sealed class AccountStore : IAccountStore
 
         if (account is null)
             throw new ZapiCliException(
-                "No default account configured. Run 'zapi-cli account add' first.",
+                "No default account configured. Run 'zapi-cli account login' first.",
                 ErrorCodes.NO_DEFAULT_ACCOUNT);
 
         return account;

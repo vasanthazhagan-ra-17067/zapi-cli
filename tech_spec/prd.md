@@ -69,17 +69,17 @@ zapi-cli ships as a self-contained single binary (`dotnet publish -r <rid> /p:Pu
 **Account management** (Priority: P0)
 
 - Add a new OAuth Self-Client account with `--name`, `--token`, `--client-id`, `--client-secret`, and optional `--dc` (default: `us`).
-- On `account add`, call the Zoho user-info endpoint to fetch and store `email` and `zuidstring`; reject if either is absent.
+- On `account login`, call the Zoho user-info endpoint to fetch and store `email` and `zuid`; reject if either is absent.
 - List all configured accounts with tokens masked.
 - Show details for a specific account with secrets masked as `***`.
-- Set a default/active account (`set-default`).
+- Set a default/active account (`set-default`, alias: `use`).
 - Remove an account: revoke the token via the Zoho OAuth revoke endpoint, clear keychain secrets, and delete the entry.
-- Re-authenticate an account (`re-auth`): refresh the stored access token using saved `client-id` + `client-secret`.
-- Auto-refresh token transparently on every `api call` when `needs_reauth == true` or a `401` is received — no manual intervention required.
+- Re-authenticate an account (`account refresh`): refresh the stored access token using saved `client-id` + `client-secret`.
+- Auto-refresh token transparently on every `api request` when `needs_reauth == true` or a `401` is received — no manual intervention required.
 
 **General-purpose API invocation** (Priority: P0)
 
-- `api call` requires `--url` (full endpoint URL) and `--method` on every invocation; no URL derivation from the account `dc` field.
+- `api request` requires `--url` (full endpoint URL) and `--method` on every invocation; no URL derivation from the account `dc` field.
 - Support `GET`, `POST`, `PUT`, `PATCH`, `DELETE` methods.
 - Support inline JSON body via `--body` and file-based body via `--body-file` (mutually exclusive).
 - Support repeatable `--header key:value` and `--query key=value` flags.
@@ -96,20 +96,20 @@ zapi-cli ships as a self-contained single binary (`dotnet publish -r <rid> /p:Pu
 **ZohoCorp account restriction** (Priority: P0)
 
 - Hard-block all operations on accounts whose email matches `@zohocorp.<any-tld>` (covers all datacenter variants).
-- Block at the earliest entry point: `account add`, `api call`, and any `scope` command.
+- Block at the earliest entry point: `account login`, `api request`, and any `account scope` command.
 - The block is not bypassable via flags, environment variables, or config files.
 - If `account add` returns no email from the user-info API, abort with `EMAIL_REQUIRED` (exit 1).
 
 **Utility commands** (Priority: P1)
 
-- `util time-ms`: output current UTC time as a Unix millisecond timestamp as `{"ts": <value>}`.
+- `util timestamp`: output current UTC time as a Unix millisecond timestamp as `{"ts": <value>}`.
 - `util uuid`: generate and output a random UUID v4.
 
 **Output contract** (Priority: P0)
 
 - All successful output to `stdout` is plain JSON — no wrappers or envelopes.
-  - `api call`, `account add/remove/re-auth`: raw Zoho API response body.
-  - Local commands (`account list/show/set-default`, `util`, `api registry`): plain JSON object or array.
+  - `api request`, `account login/remove/refresh`: raw Zoho API response body.
+  - Local commands (`account list/show/set-default`, `util`, `api endpoints`): plain JSON object or array.
 - All pre-call errors go to `stderr` as a JSON envelope: `{ "error": "...", "code": "...", "exitCode": N }`.
 - Exit codes: `0` = success, `1` = general / HTTP error, `2` = auth failure.
 - `--json` flag defaults to `true`; `--no-input` flag prevents interactive prompts (always fail instead).
@@ -127,14 +127,14 @@ zapi-cli ships as a self-contained single binary (`dotnet publish -r <rid> /p:Pu
 
 ### 5.1 Entry points & first-time user flow
 
-- User installs the single binary and runs `zapi-cli account add` to configure their first account.
-- The tool fetches the user-info from Zoho to validate the token and store `email`/`zuidstring` automatically.
-- After adding an account, `zapi-cli api call --url <url> --method GET` works immediately.
+- User installs the single binary and runs `zapi account login` to configure their first account.
+- The tool fetches the user-info from Zoho to validate the token and store `email`/`zuid` automatically.
+- After adding an account, `zapi api request --url <url> --method GET` works immediately.
 
 ### 5.2 Core experience
 
 - **Account setup**: `zapi-cli account add --name "work" --token "xxx" --client-id "yyy" --client-secret "zzz"` — validates token against Zoho, stores secrets in keychain, persists metadata to `accounts.json`.
-- **API invocation**: `zapi-cli api call --url "https://cliq.zoho.com/api/v2/channels" --method GET` — resolves active account, injects auth, returns raw Zoho JSON to stdout.
+- **API invocation**: `zapi api request --url "https://cliq.zoho.com/api/v2/channels" --method GET` — resolves active account, injects auth, returns raw Zoho JSON to stdout.
 - **Token refresh**: On `401` or `needs_reauth == true`, the token is refreshed silently and the call is retried — the agent receives the result without any interruption.
 - **Account switching**: `zapi-cli account set-default --name "personal"` or `--account <name>` on any individual call.
 
@@ -156,7 +156,7 @@ zapi-cli ships as a self-contained single binary (`dotnet publish -r <rid> /p:Pu
 
 ## 6. Narrative
 
-An AI agent working in a GitHub Copilot session needs to fetch open support tickets from Zoho Desk while also pulling related Cliq channel messages. The agent invokes `zapi-cli api call` twice — once for each product — using the pre-configured `work` account. No browser window opens, no token is typed, and no product-specific SDK is needed. The agent receives clean JSON it can reason over immediately. When the token silently expires mid-session, zapi-cli refreshes it automatically and the agent never notices. The developer who set up the account months earlier never has to touch it again.
+An AI agent working in a GitHub Copilot session needs to fetch open support tickets from Zoho Desk while also pulling related Cliq channel messages. The agent invokes `zapi api request` twice — once for each product — using the pre-configured `work` account. No browser window opens, no token is typed, and no product-specific SDK is needed. The agent receives clean JSON it can reason over immediately. When the token silently expires mid-session, zapi refreshes it automatically and the agent never notices. The developer who set up the account months earlier never has to touch it again.
 
 ---
 
@@ -164,7 +164,7 @@ An AI agent working in a GitHub Copilot session needs to fetch open support tick
 
 ### 7.1 User-centric metrics
 
-- Time from binary install to first successful `api call` < 3 minutes.
+- Time from binary install to first successful `api request` < 3 minutes.
 - Zero interactive prompts needed during agent-driven workflows (`--no-input` safe by default).
 - Token refresh succeeds transparently on `401` with no agent-visible failure.
 
@@ -176,7 +176,7 @@ An AI agent working in a GitHub Copilot session needs to fetch open support tick
 ### 7.3 Technical metrics
 
 - Binary size: self-contained single-file publish under 100 MB per platform.
-- `api call` round-trip overhead (excluding network): < 50 ms.
+- `api request` round-trip overhead (excluding network): < 50 ms.
 - Zero secrets written to disk in plaintext, confirmed by test suite.
 - 100% of `HOST_NOT_ALLOWED` and `ACCOUNT_DOMAIN_BLOCKED` cases caught before network I/O.
 
@@ -187,14 +187,14 @@ An AI agent working in a GitHub Copilot session needs to fetch open support tick
 ### 8.1 Integration points
 
 - Zoho OAuth 2.0 token endpoint (per datacenter) for token storage and refresh.
-- Zoho user-info endpoint (`GET /oauth/user/info`) used at `account add` time to validate identity and fetch `email` + `zuidstring`.
+- Zoho user-info endpoint (`GET /oauth/user/info`) used at `account login` time to validate identity and fetch `email` + `zuid`.
 - Zoho OAuth revoke endpoint called on `account remove`.
 - OS keychain APIs: macOS Security.framework, Windows Credential Manager, Linux libsecret — via P/Invoke.
 
 ### 8.2 Data storage & privacy
 
-- `accounts.json` stored at `~/Library/Application Support/zapi-cli/` (macOS), `%LOCALAPPDATA%\zapi-cli\` (Windows), `~/.config/zapi-cli/` (Linux) with `0600` / ACL permissions.
-- Secrets (access token, `client-id`, `client-secret`) stored exclusively in the OS keychain under key `zapi-cli:<accountName>:oauth`.
+- `accounts.json` stored at `~/Library/Application Support/zapi/` (macOS), `%LOCALAPPDATA%\zapi\` (Windows), `~/.config/zapi/` (Linux) with `0600` / ACL permissions.
+- Secrets (access token, `client-id`, `client-secret`) stored exclusively in the OS keychain under key `zapi:<accountName>:oauth`.
 - No token values are ever present in stdout, stderr, log files, or error messages.
 
 ### 8.3 Scalability & performance
@@ -206,7 +206,7 @@ An AI agent working in a GitHub Copilot session needs to fetch open support tick
 ### 8.4 Potential challenges
 
 - OS keychain availability varies (headless CI, containers, WSL); fallback AES-256-GCM encrypted file keychain mitigates this.
-- Zoho user-info endpoint requires `AaaServer.profile.READ` scope to return both `email` and `zuidstring`; token validation at `account add` must account for this.
+- Zoho user-info endpoint requires `AaaServer.profile.READ` scope to return both `email` and `zuid`; token validation at `account login` must account for this.
 - Atomic `accounts.json` write must prevent data corruption on concurrent invocations.
 
 ---
@@ -223,16 +223,16 @@ An AI agent working in a GitHub Copilot session needs to fetch open support tick
 
 ### 9.3 Suggested phases
 
-- **Phase 1** (v1 — this PRD): Account management, `api call`, utility commands, host allowlist, ZohoCorp block (2–4 weeks)
+- **Phase 1** (v1 — this PRD): Account management, `api request`, utility commands, host allowlist, ZohoCorp block (2–4 weeks)
   - Account CRUD + keychain integration
-  - `api call` with auto token-refresh
+  - `api request` with auto token-refresh
   - Host allowlist enforcement
   - ZohoCorp domain block
-  - Utility commands (`time-ms`, `uuid`)
+  - Utility commands (`timestamp`, `uuid`)
   - Output contract + exit codes
   - Unit tests for `AccountStore`, `OAuthProvider`, `ApiClient`
 
-- **Phase 2** (future): Scope management (`scope add/remove/list`), trace sessions (`trace session start/list/export/close/reopen/remove` + `trace config set/show`), API registry (`api registry list/add/show/remove`)
+- **Phase 2** (future): Scope management (`account scope add/list`), trace sessions (`trace start/list/export/close/reopen/remove` + `trace config set/show`), API endpoints (`api endpoints list/add/show/remove`)
 
 - **Phase 3** (future): Generic WebSocket connections (`ws` group), Pex/WMS real-time protocol (`pex` group)
 

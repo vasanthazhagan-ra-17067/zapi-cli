@@ -125,7 +125,7 @@ public sealed class ApiClient
                 await _traceWriter.AppendApiEntryAsync(authFailEntry, CancellationToken.None).ConfigureAwait(false);
 
                 throw new ZapiCliException(
-                    "Authentication failed after token refresh. Run 'zapi-cli account re-auth' to re-authenticate.",
+                    "Authentication failed after token refresh. Run 'zapi-cli account refresh' to re-authenticate.",
                     ErrorCodes.AUTH_FAILURE,
                     exitCode: 2);
             }

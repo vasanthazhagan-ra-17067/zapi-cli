@@ -184,34 +184,4 @@ internal static class ApiCommands
         }
     }
 
-    // ─── api call (deprecated alias for api request) ──────────────────────────
-
-    /// <summary>
-    /// Thin deprecated wrapper for <c>api call</c>. Emits a deprecation warning via
-    /// <see cref="DeprecationHelper.Warn"/> before delegating to <see cref="ApiRequestCommand"/>.
-    /// Registered in Program.cs under the name <c>"call"</c> inside the <c>api</c> branch.
-    /// </summary>
-    public sealed class ApiCallCommand : AsyncCommand<ApiRequestSettings>
-    {
-        private readonly ApiClient _apiClient;
-        private readonly IAccountStore _accountStore;
-        private readonly IOutputWriter _output;
-
-        public ApiCallCommand(ApiClient apiClient, IAccountStore accountStore, IOutputWriter output)
-        {
-            _apiClient = apiClient;
-            _accountStore = accountStore;
-            _output = output;
-        }
-
-        public override async Task<int> ExecuteAsync(CommandContext context, ApiRequestSettings settings)
-        {
-            DeprecationHelper.Warn("api call", "api request");
-
-            // Delegate to ApiRequestCommand logic via a shared helper.
-            // Re-use the same implementation inline to avoid code duplication through composition.
-            var delegate_ = new ApiRequestCommand(_apiClient, _accountStore, _output);
-            return await delegate_.ExecuteAsync(context, settings).ConfigureAwait(false);
-        }
-    }
 }

@@ -60,7 +60,7 @@ public sealed class ScopeCommandTests : IDisposable
     private ScopeCommands.ScopeListCommand MakeListCommand(IOutputWriter? writer = null)
         => new(_store, _service, writer ?? new InMemoryOutputWriter());
 
-    // ── scope add ─────────────────────────────────────────────────────────────
+    // ── account scope add ─────────────────────────────────────────────────────
 
     [Fact]
     public async Task ScopeAdd_SingleScope_AddsScopeToEntry()
@@ -212,7 +212,7 @@ public sealed class ScopeCommandTests : IDisposable
         Assert.False(result.Successful);
     }
 
-    // ── scope list ────────────────────────────────────────────────────────────
+    // ── account scope list ────────────────────────────────────────────────────
 
     [Fact]
     public async Task ScopeList_ReturnsPlainJsonArrayOfScopes()

@@ -1,5 +1,5 @@
 {
-  "lastSyncedHelpMd": "2026-04-02",
+  "lastSyncedHelpMd": "2026-04-08",
   "syncedItems": [
     {
       "type": "new-command",
@@ -456,6 +456,50 @@
         "SKILL.md",
         "http-api-analysis.agent.md"
       ]
+    },
+    {
+      "type": "changed-behaviour",
+      "subject": "removal of deprecated command footnotes — api call, api registry *, trace session *, scope add/list, util time-ms, util time-now",
+      "syncedDate": "2026-04-08",
+      "artefactsModified": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "type": "updated-binary",
+      "subject": "osx-arm64/zapi (stories 37-41 rebuild)",
+      "syncedDate": "2026-04-08",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "osx-x64/zapi (stories 37-41 rebuild)",
+      "syncedDate": "2026-04-08",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "linux-arm64/zapi (stories 37-41 rebuild)",
+      "syncedDate": "2026-04-08",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "linux-x64/zapi (stories 37-41 rebuild)",
+      "syncedDate": "2026-04-08",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "win-arm64/zapi.exe (stories 37-41 rebuild)",
+      "syncedDate": "2026-04-08",
+      "artefactsModified": []
+    },
+    {
+      "type": "updated-binary",
+      "subject": "win-x64/zapi.exe (stories 37-41 rebuild)",
+      "syncedDate": "2026-04-08",
+      "artefactsModified": []
     }
   ],
   "sessionLog": [
@@ -556,39 +600,53 @@
         "http-api-analysis.agent.md",
         "tools/ (6 platform binaries)"
       ],
-      "summary": "Synced all story 26-36 changes: (1) binary tools/ updated - old zapi-cli renamed to zapi across all 6 platforms; (2) SKILL.md ops table updated for account refresh/use, account scope add/list, api request, api endpoints *, trace *, util timestamp/now, --zuid/--to flags; exit codes, error table, and step bash snippets updated; (3) http-api-analysis.agent.md updated for scope commands, api request, trace close/export, refresh, and rules sections; ENDPOINT_NOT_FOUND and ENDPOINT_ALREADY_EXISTS replace REGISTRY_ENTRY_* codes."
+      "summary": "Synced all story 26-36 changes: (1) binary tools/ updated - old zapi-cli renamed to zapi across all 6 platforms; (2) SKILL.md ops table updated for account refresh/use, account scope add/list, api request, api endpoints *, trace *, util timestamp/now, --zuid/--to flags; exit codes, error table, and step bash snippets updated; (3) http-api-analysis.agent.md updated for scope commands, api request, trace close/export, refresh, and rules sections; ENDPOINT_NOT_FOUND and ENDPOINT_ALREADY_EXISTS replace REGISTRY_ENTRY_* codes."    },
+    {
+      "date": "2026-04-08",
+      "deltaType": "changed-behaviour",
+      "subject": "Stories 37-41: removal of deprecated command footnotes from SKILL.md operations table",
+      "artefactsModified": [
+        "SKILL.md"
+      ],
+      "summary": "Removed 12 parenthetical deprecated-command notes from SKILL.md CLI operations table. Commands api call, api registry *, trace session *, scope add, scope list, util time-ms, and util time-now are now fully removed from the CLI (not just deprecated), so their footnotes in the operations table were stripped. http-api-analysis.agent.md required no changes as it already used only canonical command names."    },
+    {
+      "date": "2026-04-08",
+      "deltaType": "updated-binary",
+      "subject": "all 6 platform binaries rebuilt after stories 37-41 deprecation removal",
+      "artefactsModified": [],
+      "summary": "Overwrote all 6 platform binaries in tools/ after publish-all.sh rebuilt them from the clean post-deprecation-removal source (stories 37-41). All checksums verified matching after copy. No deprecated command classes remain in the compiled output."
     }
   ],
   "syncedBinaries": [
     {
       "platform": "linux-arm64",
       "file": "zapi",
-      "syncedDate": "2026-04-02"
+      "syncedDate": "2026-04-08"
     },
     {
       "platform": "linux-x64",
       "file": "zapi",
-      "syncedDate": "2026-04-02"
+      "syncedDate": "2026-04-08"
     },
     {
       "platform": "osx-arm64",
       "file": "zapi",
-      "syncedDate": "2026-04-02"
+      "syncedDate": "2026-04-08"
     },
     {
       "platform": "osx-x64",
       "file": "zapi",
-      "syncedDate": "2026-04-02"
+      "syncedDate": "2026-04-08"
     },
     {
       "platform": "win-arm64",
       "file": "zapi.exe",
-      "syncedDate": "2026-04-02"
+      "syncedDate": "2026-04-08"
     },
     {
       "platform": "win-x64",
       "file": "zapi.exe",
-      "syncedDate": "2026-04-02"
+      "syncedDate": "2026-04-08"
     }
   ]
 }

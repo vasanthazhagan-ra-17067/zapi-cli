@@ -155,54 +155,5 @@ internal static class ScopeCommands
         }
     }
 
-    // ─── deprecated shims (top-level 'scope' kept for backward compatibility) ─
-
-    public sealed class ScopeAddDeprecatedCommand : AsyncCommand<ScopeAddSettings>
-    {
-        private readonly IAccountStore _accountStore;
-        private readonly IAccountService _accountService;
-        private readonly IOutputWriter _output;
-
-        public ScopeAddDeprecatedCommand(
-            IAccountStore accountStore,
-            IAccountService accountService,
-            IOutputWriter output)
-        {
-            _accountStore = accountStore;
-            _accountService = accountService;
-            _output = output;
-        }
-
-        public override async Task<int> ExecuteAsync(CommandContext context, ScopeAddSettings settings)
-        {
-            DeprecationHelper.Warn("scope add", "account scope add");
-            return await new ScopeAddCommand(_accountStore, _accountService, _output)
-                .ExecuteAsync(context, settings).ConfigureAwait(false);
-        }
-    }
-
-    public sealed class ScopeListDeprecatedCommand : AsyncCommand<ScopeListSettings>
-    {
-        private readonly IAccountStore _accountStore;
-        private readonly IAccountService _accountService;
-        private readonly IOutputWriter _output;
-
-        public ScopeListDeprecatedCommand(
-            IAccountStore accountStore,
-            IAccountService accountService,
-            IOutputWriter output)
-        {
-            _accountStore = accountStore;
-            _accountService = accountService;
-            _output = output;
-        }
-
-        public override async Task<int> ExecuteAsync(CommandContext context, ScopeListSettings settings)
-        {
-            DeprecationHelper.Warn("scope list", "account scope list");
-            return await new ScopeListCommand(_accountStore, _accountService, _output)
-                .ExecuteAsync(context, settings).ConfigureAwait(false);
-        }
-    }
 }
 

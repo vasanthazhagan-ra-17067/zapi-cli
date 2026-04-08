@@ -19,25 +19,25 @@ Ships as a single self-contained binary — no runtime, no dependencies, no inst
    - [account set-default](#account-set-default)
    - [account remove](#account-remove)
    - [account use](#account-use)
-   - [account refresh](#account-refresh) *(was: `account re-auth`)*
+   - [account refresh](#account-refresh)
    - [account rename](#account-rename)
-   - [account scope add](#account-scope-add) *(was: `scope add`)*
-   - [account scope list](#account-scope-list) *(was: `scope list`)*
-   - [api request](#api-request) (alias: `api req`; `api call` is deprecated)
-   - [api endpoints list](#api-endpoints-list) *(was: `api registry list`)*
-   - [api endpoints add](#api-endpoints-add) *(was: `api registry add`)*
-   - [api endpoints update](#api-endpoints-update) *(was: `api registry update`)*
-   - [api endpoints show](#api-endpoints-show) *(was: `api registry show`)*
-   - [api endpoints remove](#api-endpoints-remove) *(was: `api registry remove`)*
-   - [util timestamp](#util-timestamp) *(was: `util time-ms`)*
+   - [account scope add](#account-scope-add)
+   - [account scope list](#account-scope-list)
+   - [api request](#api-request) (alias: `api req`)
+   - [api endpoints list](#api-endpoints-list)
+   - [api endpoints add](#api-endpoints-add)
+   - [api endpoints update](#api-endpoints-update)
+   - [api endpoints show](#api-endpoints-show)
+   - [api endpoints remove](#api-endpoints-remove)
+   - [util timestamp](#util-timestamp)
    - [util uuid](#util-uuid)
-   - [util now](#util-now) *(was: `util time-now`)*
-   - [trace start](#trace-start) *(was: `trace session start`)*
-   - [trace list](#trace-list) *(was: `trace session list`)*
-   - [trace export](#trace-export) *(was: `trace session export`)*
-   - [trace close](#trace-close) *(was: `trace session close`)*
-   - [trace reopen](#trace-reopen) *(was: `trace session reopen`)*
-   - [trace remove](#trace-remove) *(was: `trace session remove`)*
+   - [util now](#util-now)
+   - [trace start](#trace-start)
+   - [trace list](#trace-list)
+   - [trace export](#trace-export)
+   - [trace close](#trace-close)
+   - [trace reopen](#trace-reopen)
+   - [trace remove](#trace-remove)
    - [trace config set](#trace-config-set)
    - [trace config show](#trace-config-show)
    - [config set env-file](#config-set-env-file)
@@ -371,7 +371,7 @@ USAGE:
 OPTIONS:
     --name <NAME>       Account alias
     --email <EMAIL>     Identify account by email address
-    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
+    --zuid <ZUID>       Identify account by Zoho User ID
 
 ```
 
@@ -420,7 +420,7 @@ USAGE:
 OPTIONS:
     --name <NAME>       Account alias
     --email <EMAIL>     Identify account by email address
-    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
+    --zuid <ZUID>       Identify account by Zoho User ID
 ```
 
 Exactly one of `--name`, `--email`, or `--zuid` is required.
@@ -536,7 +536,7 @@ zapi account remove --name myaccount
 
 | Error code | Cause | Resolution |
 |---|---|---|
-| `ACCOUNT_NOT_FOUND` | No account with that name/email/zuidstring exists. | Run `account list` to verify. |
+| `ACCOUNT_NOT_FOUND` | No account with that name/email/zuid exists. | Run `account list` to verify. |
 | `INVALID_ARGS` | None or more than one identifier was provided. | Pass exactly one of `--name`, `--email`, `--zuid`. |
 | `DUPLICATE_IDENTIFIER` | More than one account matched the given email or ZUID. | Use `--name` to identify the account unambiguously. |
 | `KEYCHAIN_ERROR` | Failed to delete credentials from the OS keychain. | Check keychain permissions and retry. |
@@ -544,8 +544,6 @@ zapi account remove --name myaccount
 ---
 
 ### account refresh
-
-*(was: `account re-auth` — deprecated alias still accepted)*
 
 Re-authenticate an existing account using its stored `client-id` and `client-secret` to obtain a fresh access token.
 
@@ -556,7 +554,7 @@ USAGE:
 OPTIONS:
     --name <NAME>       Account alias
     --email <EMAIL>     Identify account by email address
-    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
+    --zuid <ZUID>       Identify account by Zoho User ID
 ```
 
 Exactly one of `--name`, `--email`, or `--zuid` is required.
@@ -605,8 +603,8 @@ USAGE:
 OPTIONS:
     --name <NAME>       Current account alias
     --email <EMAIL>     Identify account by email address
-    --zuid <ZUID>       Identify account by Zoho User ID *(deprecated alias: `--zuidstring`)*
-    --to <NEW_NAME>     New account alias (required) *(deprecated alias: `--new-name`)*
+    --zuid <ZUID>       Identify account by Zoho User ID
+    --to <NEW_NAME>     New account alias (required)
 ```
 
 Exactly one of `--name`, `--email`, or `--zuid` is required to identify the account to rename. `--to` is always required.
@@ -650,7 +648,7 @@ zapi account rename --email user@example.com --to personal
 
 ### api request
 
-Aliases: **`api req`** (short alias), **`api call`** (deprecated — see note below).
+Alias: **`api req`** (short form).
 
 Invoke a Zoho API endpoint and return the raw JSON response.
 
@@ -668,12 +666,6 @@ OPTIONS:
     --query <PARAM>          Add a query parameter (repeatable, format: key=value)
     -a, --account <ACCOUNT>  Use a specific account (overrides default)
 ```
-
-> **Deprecation notice:** The legacy alias `api call` is still accepted but emits the following warning to **stderr**:
-> ```
-> Warning: 'api call' is deprecated and will be removed in a future version. Use 'api request' instead.
-> ```
-> Update scripts to use `api request` or `api req`. The warning does not affect exit codes or stdout output.
 
 **Authentication is automatic.** zapi injects `Authorization: Zoho-oauthtoken <token>` on every request. You do not need to pass auth headers manually.
 
@@ -775,8 +767,6 @@ The `data` field contains the raw Zoho API response body parsed as JSON:
 
 ### api endpoints list
 
-*(was: `api registry list` — deprecated alias still accepted)*
-
 List all entries in the local API endpoint registry. No account required.
 
 ```
@@ -802,8 +792,6 @@ Returns an empty array `[]` if no entries have been registered.
 ---
 
 ### api endpoints add
-
-*(was: `api registry add` — deprecated alias still accepted)*
 
 Add a new named API endpoint to the local endpoint registry. No account required. The `--url` is validated against the host allowlist (ADR-0004).
 
@@ -847,8 +835,6 @@ zapi api endpoints add \
 
 ### api endpoints update
 
-*(was: `api registry update` — deprecated alias still accepted)*
-
 Update one or more fields of an existing endpoint entry. Only the supplied flags are changed; omitted flags retain their existing values.
 
 ```
@@ -890,8 +876,6 @@ zapi api endpoints update --id cliq-channels --purpose "Fetch all Cliq channels"
 
 ### api endpoints show
 
-*(was: `api registry show` — deprecated alias still accepted)*
-
 Show a single endpoint entry by its id.
 
 ```
@@ -931,8 +915,6 @@ zapi api endpoints show --id cliq-channels
 
 ### api endpoints remove
 
-*(was: `api registry remove` — deprecated alias still accepted)*
-
 Remove an entry from the local API endpoint registry by its id.
 
 ```
@@ -966,8 +948,6 @@ zapi api endpoints remove --id cliq-channels
 ---
 
 ### account scope add
-
-*(was: `scope add` — deprecated alias still accepted)*
 
 Add one or more OAuth scopes to an existing account. After adding scopes, run `account refresh` to obtain a new access token that includes the updated scopes.
 
@@ -1020,8 +1000,6 @@ zapi account scope add --scope "ZohoDesk.Tickets.READ,ZohoDesk.Reports.READ"
 
 ### account scope list
 
-*(was: `scope list` — deprecated alias still accepted)*
-
 List all OAuth scopes configured for an account.
 
 ```
@@ -1061,8 +1039,6 @@ zapi account scope list --account myaccount
 ---
 
 ### util timestamp
-
-*(was: `util time-ms` — deprecated alias still accepted)*
 
 Output the current UTC time as a Unix millisecond timestamp.
 
@@ -1137,8 +1113,6 @@ zapi api request \
 
 ### util now
 
-*(was: `util time-now` — deprecated alias still accepted)*
-
 Output the current India Standard Time (IST, GMT+5:30) as a formatted timestamp.
 
 ```
@@ -1172,8 +1146,6 @@ echo "Current IST time: $NOW_IST"
 ---
 
 ### trace start
-
-*(was: `trace session start` — deprecated alias still accepted)*
 
 Start a named trace session. All subsequent `api request` invocations will write trace entries live to the resolved export file until the session is closed.
 
@@ -1226,8 +1198,6 @@ zapi trace start --name my-session --export-path /tmp/traces/
 
 ### trace list
 
-*(was: `trace session list` — deprecated alias still accepted)*
-
 List all known trace sessions with their current status and entry counts.
 
 ```
@@ -1267,8 +1237,6 @@ zapi trace list
 ---
 
 ### trace export
-
-*(was: `trace session export` — deprecated alias still accepted)*
 
 Read and return the entries from a trace file, with optional type filtering and body truncation.
 
@@ -1332,8 +1300,6 @@ zapi trace export --id 550e8400-e29b-41d4-a716-446655440000 --type api --truncat
 
 ### trace close
 
-*(was: `trace session close` — deprecated alias still accepted)*
-
 Seal a trace session. In-flight `api request` writes are drained for `--drain-timeout` milliseconds, then the session is marked `closed` and no further entries are accepted.
 
 ```
@@ -1343,7 +1309,7 @@ USAGE:
 OPTIONS:
     --id <ID>                  Session UUID (mutually exclusive with --name)
     --name <NAME>              Session name (mutually exclusive with --id)
-    --drain-timeout <MS>       Drain window before sealing, in milliseconds (default: 5000) *(deprecated alias: `--wait-ms`)*
+    --drain-timeout <MS>       Drain window before sealing, in milliseconds (default: 5000)
 ```
 
 #### Example
@@ -1374,8 +1340,6 @@ zapi trace close --id 550e8400-e29b-41d4-a716-446655440000
 ---
 
 ### trace reopen
-
-*(was: `trace session reopen` — deprecated alias still accepted)*
 
 Re-activate a closed session. Subsequent `api request` invocations append entries to the existing trace file, with sequence numbers continuing from the last `entry_count`.
 
@@ -1417,8 +1381,6 @@ zapi trace reopen --id 550e8400-e29b-41d4-a716-446655440000
 ---
 
 ### trace remove
-
-*(was: `trace session remove` — deprecated alias still accepted)*
 
 Remove a session from the sessions index. The trace file at `export_path` is **preserved** on disk.
 
@@ -1848,66 +1810,6 @@ All error responses are emitted on **stderr** as:
 | `EXPORT_PATH_NOT_SET` | 1 | `trace start` had no `--export-path` and no default is configured. | Run `trace config set --default-export-path <PATH>` or pass `--export-path` explicitly. |
 | `ENDPOINT_NOT_FOUND` | 1 | The specified `--id` does not match any entry in the local API endpoint registry. | Run `api endpoints list` to enumerate valid ids. |
 | `ENDPOINT_ALREADY_EXISTS` | 1 | `api endpoints add` was called with an `--id` that already exists in the registry. | Use `api endpoints update --id <ID>` to modify the existing entry, or choose a different id. |
-
----
-
-## Deprecated Commands
-
-The following commands and flags have been renamed. The old names are still accepted but emit a deprecation warning to **stderr**. They will be removed in a future major version.
-
-> When a deprecated form is invoked, the CLI prints to stderr:
-> ```
-> Deprecation: '<old>' is deprecated; use '<new>' instead.
-> ```
-> Exit code and stdout output are identical to the canonical form.
-
-### Deprecated command names
-
-| Deprecated form | Current canonical form | Changed in |
-|---|---|---|
-| `zapi-cli` (binary) | `zapi` | Story 26 |
-| `zapi api call` | `zapi api request` | Story 28 |
-| `zapi trace session start` | `zapi trace start` | Story 29 |
-| `zapi trace session list` | `zapi trace list` | Story 29 |
-| `zapi trace session export` | `zapi trace export` | Story 29 |
-| `zapi trace session close` | `zapi trace close` | Story 29 |
-| `zapi trace session reopen` | `zapi trace reopen` | Story 29 |
-| `zapi trace session remove` | `zapi trace remove` | Story 29 |
-| `zapi scope add` | `zapi account scope add` | Story 30 |
-| `zapi scope list` | `zapi account scope list` | Story 30 |
-| `zapi account re-auth` | `zapi account refresh` | Story 32 |
-| `zapi api registry list` | `zapi api endpoints list` | Story 33 |
-| `zapi api registry add` | `zapi api endpoints add` | Story 33 |
-| `zapi api registry update` | `zapi api endpoints update` | Story 33 |
-| `zapi api registry show` | `zapi api endpoints show` | Story 33 |
-| `zapi api registry remove` | `zapi api endpoints remove` | Story 33 |
-| `zapi util time-ms` | `zapi util timestamp` | Story 34 |
-| `zapi util time-now` | `zapi util now` | Story 34 |
-
-### Deprecated flag names
-
-| Command | Deprecated flag | Current flag | Changed in |
-|---|---|---|---|
-| `account show` | `--zuidstring` | `--zuid` | Story 35 |
-| `account set-default` | `--zuidstring` | `--zuid` | Story 35 |
-| `account remove` | `--zuidstring` | `--zuid` | Story 35 |
-| `account refresh` | `--zuidstring` | `--zuid` | Story 35 |
-| `account rename` | `--zuidstring` | `--zuid` | Story 35 |
-| `account rename` | `--new-name` | `--to` | Story 35 |
-| `trace close` | `--wait-ms` | `--drain-timeout` | Story 35 |
-
-### Deprecated error codes
-
-| Deprecated code | Current code | Affected command |
-|---|---|---|
-| `REGISTRY_ENTRY_NOT_FOUND` | `ENDPOINT_NOT_FOUND` | `api endpoints show`, `api endpoints update`, `api endpoints remove` |
-| `REGISTRY_ENTRY_ALREADY_EXISTS` | `ENDPOINT_ALREADY_EXISTS` | `api endpoints add` |
-
-### Short command alias
-
-| Command | Alias |
-|---|---|
-| `zapi api request` | `zapi api req` |
 
 ---
 

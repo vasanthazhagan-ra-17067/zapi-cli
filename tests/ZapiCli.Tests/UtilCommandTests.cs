@@ -6,7 +6,7 @@ namespace ZapiCli.Tests;
 
 public sealed class UtilCommandTests
 {
-    // ── util time-ms ─────────────────────────────────────────────────────────
+    // ── util timestamp ───────────────────────────────────────────────────────
 
     [Fact]
     public async Task UtilTimeMsCommand_WritesPositiveLong()
@@ -86,7 +86,7 @@ public sealed class UtilCommandTests
         Assert.NotEqual(uuid1, uuid2);
     }
 
-    // ── util time-now ──────────────────────────────────────────────────────────────────
+    // ── util now ───────────────────────────────────────────────────────────────────────
 
     private static readonly TimeZoneInfo Ist =
         TimeZoneInfo.CreateCustomTimeZone("IST", TimeSpan.FromHours(5.5),

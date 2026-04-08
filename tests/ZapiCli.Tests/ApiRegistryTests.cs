@@ -7,7 +7,7 @@ using ZapiCli.Core.Accounts;
 namespace ZapiCli.Tests;
 
 /// <summary>
-/// Unit tests for <see cref="ApiRegistry"/> and the <c>api registry</c> command group (Story 9).
+/// Unit tests for <see cref="ApiRegistry"/> and the <c>api endpoints</c> command group (Story 9).
 /// Uses a temporary directory so each test is fully isolated.
 /// </summary>
 public sealed class ApiRegistryTests : IDisposable

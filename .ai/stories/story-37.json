@@ -1,0 +1,39 @@
+{
+  "storyId": 37,
+  "title": "Remove Deprecated Command Registrations from Program.cs",
+  "description": "Remove all 7 deprecated command AddCommand/AddBranch registrations from src/ZapiCli/Program.cs. These are the wiring entries for: account re-auth, api call, the api registry branch (5 commands), util time-ms, util time-now, the top-level scope branch, and the trace session branch (6 commands). Removing them prevents the commands from appearing in help output and stops Spectre.Console.Cli from routing invocations to the deprecated shim classes. This is Phase 1 of the remove-deprecated-commands-1 plan. Must be done before the shim classes are deleted (Story 38) so the build remains green at all intermediate states.",
+  "status": "Completed",
+  "completedDate": "2026-04-08",
+  "dependsOn": [36],
+  "prerequisiteState": "Story 36 is complete. All documentation cleanup (TASK-067 to TASK-082) has been applied. The codebase has deprecated shim classes with their Program.cs wiring in place.",
+  "goal": "After this story: Program.cs contains zero references to deprecated command classes. Running 'dotnet build src/zapi-cli.sln' succeeds with 0 errors and 0 warnings about missing types. The deprecated shim class files still exist (they are removed in Story 38) but are now unreferenced dead code.",
+  "scope": [
+    "Open src/ZapiCli/Program.cs.",
+    "In the 'account' AddBranch block (~line 148): remove the two lines 'account.AddCommand<AccountCommands.AccountReAuthDeprecatedCommand>(\"re-auth\")' and its '.WithDescription(\"[Deprecated] Use 'account refresh' instead.\");' call.",
+    "In the 'api' AddBranch block (~line 167): remove the two lines 'api.AddCommand<ApiCommands.ApiCallCommand>(\"call\")' and its '.WithDescription(\"[Deprecated]...\");' call.",
+    "In the 'api' AddBranch block (~line 184): remove the entire 'api.AddBranch(\"registry\", registry => { ... });' block — this spans ~13 lines containing 5 deprecated registry command registrations (list, add, update, show, remove).",
+    "In the 'util' AddBranch block (~line 203): remove the two lines 'util.AddCommand<UtilCommands.UtilTimeMsDeprecatedCommand>(\"time-ms\")' and its '.WithDescription(...)' call.",
+    "In the 'util' AddBranch block (~line 209): remove the two lines 'util.AddCommand<UtilCommands.UtilTimeNowDeprecatedCommand>(\"time-now\")' and its '.WithDescription(...)' call.",
+    "Remove the entire 'config.AddBranch(\"scope\", scope => { ... });' block (~lines 213–219) — this is the top-level scope branch containing ScopeAddDeprecatedCommand and ScopeListDeprecatedCommand. The canonical 'account scope' sub-branch inside the 'account' AddBranch must NOT be touched.",
+    "In the 'trace' AddBranch block (~line 238): remove the 'trace.AddBranch(\"session\", session => { ... });' block and the comment line above it ('// Deprecated trace session * sub-branch — kept for backwards compatibility.'). This block spans ~10 lines and registers 6 deprecated session command shims.",
+    "Run 'dotnet build src/zapi-cli.sln' and confirm 0 errors. The deprecated classes still exist as unreferenced dead code — this is expected and temporary until Story 38 removes them."
+  ],
+  "acceptanceCriteria": [
+    "Program.cs contains no reference to AccountReAuthDeprecatedCommand",
+    "Program.cs contains no reference to ApiCallCommand",
+    "Program.cs contains no AddBranch(\"registry\", ...) block",
+    "Program.cs contains no reference to UtilTimeMsDeprecatedCommand",
+    "Program.cs contains no reference to UtilTimeNowDeprecatedCommand",
+    "Program.cs contains no top-level AddBranch(\"scope\", ...) block",
+    "Program.cs contains no AddBranch(\"session\", ...) block under 'trace'",
+    "dotnet build src/zapi-cli.sln exits 0 with no errors"
+  ],
+  "contextForAgent": "There are TWO 'scope' branches in Program.cs: one canonical under 'account' (account.AddBranch(\"scope\", ...)) that must be preserved, and one deprecated top-level one (config.AddBranch(\"scope\", ...)) that must be removed. Do NOT remove the canonical account scope branch — only the top-level config.AddBranch(\"scope\", ...) block. Similarly for 'session' under 'trace': only the deprecated trace.AddBranch(\"session\", ...) sub-branch is removed; all the flat canonical trace commands (trace.AddCommand<...>(\"start\"), etc.) are kept.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli/Program.cs",
+    "plan/remove-deprecated-commands-1.md"
+  ],
+  "planReference": ".ai/plans/remove-deprecated-commands-1.md",
+  "planTasks": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007"]
+}

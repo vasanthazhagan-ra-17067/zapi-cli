@@ -31,24 +31,6 @@ internal static class UtilCommands
         }
     }
 
-    /// <summary>[Deprecated] Use 'util timestamp' instead.</summary>
-    public sealed class UtilTimeMsDeprecatedCommand : AsyncCommand<UtilTimestampSettings>
-    {
-        private readonly IOutputWriter _output;
-
-        public UtilTimeMsDeprecatedCommand(IOutputWriter output)
-        {
-            _output = output;
-        }
-
-        public override async Task<int> ExecuteAsync(CommandContext context, UtilTimestampSettings settings)
-        {
-            DeprecationHelper.Warn("util time-ms", "util timestamp");
-            return await new UtilTimestampCommand(_output)
-                .ExecuteAsync(context, settings).ConfigureAwait(false);
-        }
-    }
-
     // ─── util uuid ───────────────────────────────────────────────────────────
 
     public sealed class UtilUuidSettings : GlobalSettings { }
@@ -100,21 +82,4 @@ internal static class UtilCommands
         }
     }
 
-    /// <summary>[Deprecated] Use 'util now' instead.</summary>
-    public sealed class UtilTimeNowDeprecatedCommand : AsyncCommand<UtilNowSettings>
-    {
-        private readonly IOutputWriter _output;
-
-        public UtilTimeNowDeprecatedCommand(IOutputWriter output)
-        {
-            _output = output;
-        }
-
-        public override async Task<int> ExecuteAsync(CommandContext context, UtilNowSettings settings)
-        {
-            DeprecationHelper.Warn("util time-now", "util now");
-            return await new UtilNowCommand(_output)
-                .ExecuteAsync(context, settings).ConfigureAwait(false);
-        }
-    }
 }

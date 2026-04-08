@@ -1,0 +1,43 @@
+{
+  "storyId": 38,
+  "title": "Delete Deprecated Command Shim Classes from Source Files",
+  "description": "Delete all 16 deprecated command shim class bodies from 6 command source files. These classes are now dead code — Story 37 removed their Program.cs registrations. Files affected: AccountCommands.cs (1 class), ApiCommands.cs (1 class + section comment), ApiRegistryCommands.cs (5 classes + section comment), UtilCommands.cs (2 classes), ScopeCommands.cs (2 classes + section comment), TraceCommands.cs (6 classes + section comment). This is Phase 2 of the remove-deprecated-commands-1 plan.",
+  "status": "Completed",
+  "completedDate": "2026-04-08",
+  "dependsOn": [37],
+  "prerequisiteState": "Story 37 is complete. Program.cs has no references to any deprecated command class. All shim classes exist as unreferenced dead code.",
+  "goal": "After this story: all deprecated shim class definitions are removed from the codebase. dotnet build succeeds with 0 errors. No file in src/ contains any deprecated command class body.",
+  "scope": [
+    "In src/ZapiCli/Commands/AccountCommands.cs: locate and delete the AccountReAuthDeprecatedCommand class and its XML summary comment ('/// <summary>[Deprecated] Use account refresh instead.</summary>'). The class starts after the closing brace of AccountRefreshCommand, around line 226.",
+    "In src/ZapiCli/Commands/ApiCommands.cs: delete the '// ─── api call (deprecated alias for api request)' section comment and the entire ApiCallCommand sealed class body (including XML doc comment above it). The canonical ApiRequestCommand must not be touched.",
+    "In src/ZapiCli/Commands/ApiRegistryCommands.cs: delete the '// ─── deprecated shims for api registry *' section comment and all 5 deprecated shim classes: ApiRegistryListCommand, ApiRegistryAddCommand, ApiRegistryUpdateCommand, ApiRegistryShowCommand, ApiRegistryRemoveCommand. Each is a sealed class implementing AsyncCommand<ApiEndpoint*Settings>. The canonical ApiEndpoint*Command classes earlier in the file must not be touched.",
+    "In src/ZapiCli/Commands/UtilCommands.cs: delete the UtilTimeMsDeprecatedCommand sealed class (with its XML summary) and the UtilTimeNowDeprecatedCommand sealed class (with its XML summary). The canonical UtilTimestampCommand and UtilNowCommand must not be touched.",
+    "In src/ZapiCli/Commands/ScopeCommands.cs: delete the '// ─── deprecated shims (top-level scope kept for backward compatibility)' section comment and both ScopeAddDeprecatedCommand and ScopeListDeprecatedCommand sealed classes. The canonical ScopeAddCommand and ScopeListCommand must not be touched.",
+    "In src/ZapiCli/Commands/TraceCommands.cs: delete the '// ─── Deprecated trace session * shims' section comment and all 6 deprecated shim classes: DeprecatedSessionStartCommand, DeprecatedSessionListCommand, DeprecatedSessionExportCommand, DeprecatedSessionCloseCommand, DeprecatedSessionReopenCommand, DeprecatedSessionRemoveCommand. Each is sealed and calls DeprecationHelper.Warn(...) before delegating. The canonical trace commands (StartSessionCommand, ListSessionsCommand, etc.) must not be touched.",
+    "After all deletions, run 'dotnet build src/zapi-cli.sln' and verify 0 errors."
+  ],
+  "acceptanceCriteria": [
+    "AccountCommands.cs contains no AccountReAuthDeprecatedCommand class",
+    "ApiCommands.cs contains no ApiCallCommand class",
+    "ApiRegistryCommands.cs contains no ApiRegistryListCommand, ApiRegistryAddCommand, ApiRegistryUpdateCommand, ApiRegistryShowCommand, or ApiRegistryRemoveCommand classes",
+    "UtilCommands.cs contains no UtilTimeMsDeprecatedCommand or UtilTimeNowDeprecatedCommand classes",
+    "ScopeCommands.cs contains no ScopeAddDeprecatedCommand or ScopeListDeprecatedCommand classes",
+    "TraceCommands.cs contains no DeprecatedSessionStartCommand, DeprecatedSessionListCommand, DeprecatedSessionExportCommand, DeprecatedSessionCloseCommand, DeprecatedSessionReopenCommand, or DeprecatedSessionRemoveCommand classes",
+    "All '// ─── deprecated shims' and '// ─── Deprecated...' section comments are removed",
+    "All canonical command classes (ApiEndpoint*Command, ScopeAddCommand, ScopeListCommand, StartSessionCommand, etc.) remain intact",
+    "dotnet build src/zapi-cli.sln exits 0 with no errors"
+  ],
+  "contextForAgent": "Each deprecated shim class follows an identical pattern: constructor takes the same service dependencies as the canonical command, ExecuteAsync calls DeprecationHelper.Warn(...) then delegates to the canonical command's logic (or re-instantiates the service call). They are all at the bottom of their respective files after a '// ─── deprecated shims' section divider comment. The canonical classes are at the top of the same files — never touch those. After this story, DeprecationHelper.Warn() will have zero callers; DeprecationHelper itself is deleted in Story 39.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli/Commands/AccountCommands.cs",
+    "src/ZapiCli/Commands/ApiCommands.cs",
+    "src/ZapiCli/Commands/ApiRegistryCommands.cs",
+    "src/ZapiCli/Commands/UtilCommands.cs",
+    "src/ZapiCli/Commands/ScopeCommands.cs",
+    "src/ZapiCli/Commands/TraceCommands.cs",
+    "plan/remove-deprecated-commands-1.md"
+  ],
+  "planReference": ".ai/plans/remove-deprecated-commands-1.md",
+  "planTasks": ["TASK-008", "TASK-009", "TASK-010", "TASK-011", "TASK-012", "TASK-013"]
+}

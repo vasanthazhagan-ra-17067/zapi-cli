@@ -1,0 +1,35 @@
+{
+  "storyId": 39,
+  "title": "Delete DeprecationHelper and DeprecationHelperTests",
+  "description": "Delete DeprecationHelper.cs (src/ZapiCli/Commands/DeprecationHelper.cs) and its corresponding test file (tests/ZapiCli.Tests/DeprecationHelperTests.cs). By the time this story runs, Story 38 will have removed all DeprecationHelper.Warn() call sites, leaving DeprecationHelper as pure dead infrastructure. This is Phase 3 of the remove-deprecated-commands-1 plan.",
+  "status": "Completed",
+  "completedDate": "2026-04-08",
+  "dependsOn": [38],
+  "prerequisiteState": "Story 38 is complete. All deprecated shim classes have been deleted. No file in src/ contains a call to DeprecationHelper.Warn(). DeprecationHelper.cs exists but has zero callers.",
+  "goal": "After this story: DeprecationHelper.cs does not exist in the repository. DeprecationHelperTests.cs does not exist in the repository. dotnet build and dotnet test both pass with 0 errors.",
+  "scope": [
+    "Before deleting, run a grep across src/ for 'DeprecationHelper.Warn(' to confirm zero results. If any callers remain, stop and investigate — Story 38 may be incomplete.",
+    "Delete the file src/ZapiCli/Commands/DeprecationHelper.cs.",
+    "Delete the file tests/ZapiCli.Tests/DeprecationHelperTests.cs.",
+    "Scan all remaining *.cs files in src/ and tests/ for any residual 'using' directive or reference to 'DeprecationHelper'. If found, remove the reference.",
+    "Run 'dotnet build src/zapi-cli.sln' — must exit 0 with 0 errors.",
+    "Run 'dotnet test src/zapi-cli.sln' — all tests must pass."
+  ],
+  "acceptanceCriteria": [
+    "src/ZapiCli/Commands/DeprecationHelper.cs does not exist",
+    "tests/ZapiCli.Tests/DeprecationHelperTests.cs does not exist",
+    "grep -r 'DeprecationHelper' src/ returns no results",
+    "grep -r 'DeprecationHelper' tests/ returns no results",
+    "dotnet build src/zapi-cli.sln exits 0 with no errors",
+    "dotnet test src/zapi-cli.sln exits 0 with all tests passing"
+  ],
+  "contextForAgent": "DeprecationHelper is a small internal static class with a single Warn() method that writes to stderr. It lives in src/ZapiCli/Commands/DeprecationHelper.cs. Its only purpose was to support the deprecated command shims deleted in Story 38. The test file DeprecationHelperTests.cs tests only the Warn() behavior — those tests have no value once the helper is gone. There should be no other file that imports or references DeprecationHelper after Story 38.",
+  "openItems": [],
+  "sourceReferences": [
+    "src/ZapiCli/Commands/DeprecationHelper.cs",
+    "tests/ZapiCli.Tests/DeprecationHelperTests.cs",
+    "plan/remove-deprecated-commands-1.md"
+  ],
+  "planReference": ".ai/plans/remove-deprecated-commands-1.md",
+  "planTasks": ["TASK-014", "TASK-015", "TASK-016"]
+}

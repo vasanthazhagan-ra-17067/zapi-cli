@@ -1,0 +1,43 @@
+{
+  "storyId": 41,
+  "title": "Build, Test & Publish Validation — Deprecated Commands Removal",
+  "description": "Final validation gate for the remove-deprecated-commands plan. Run a full build, unit test suite, and binary rebuild. Verify that no deprecated command entry appears in any help output, and that all removed commands return a non-zero exit code rather than a deprecation warning. This is Phase 5 of the remove-deprecated-commands-1 plan.",
+  "status": "Completed",
+  "completedDate": "2026-04-08",
+  "dependsOn": [40],
+  "prerequisiteState": "Stories 37–40 are all complete. No deprecated command classes, no DeprecationHelper, and no stale test comments remain in the codebase.",
+  "goal": "After this story: all platform binaries under build/ are rebuilt from the clean source. 'zapi --help' at every level shows zero deprecated entries. All previously deprecated commands return a non-zero exit code when invoked. dotnet test passes with zero failures.",
+  "scope": [
+    "Run 'dotnet build src/zapi-cli.sln' — must exit 0 with 0 errors and 0 warnings related to missing types or deprecated references.",
+    "Run 'dotnet test src/zapi-cli.sln --logger \"console;verbosity=normal\"' — all tests must pass, 0 failures, 0 skipped.",
+    "Run './publish-all.sh' from the workspace root to rebuild all platform binaries. Confirm the script exits 0.",
+    "Run './build/osx-arm64/zapi -h' and verify: no 'scope' branch in the root command list.",
+    "Run './build/osx-arm64/zapi account -h' and verify: commands shown are login, list, show, set-default, use, remove, refresh, rename, scope — no 're-auth', no '[Deprecated]'.",
+    "Run './build/osx-arm64/zapi api -h' and verify: sub-commands shown are request, req, endpoints — no 'call', no 'registry', no '[Deprecated]'.",
+    "Run './build/osx-arm64/zapi util -h' and verify: sub-commands shown are timestamp, uuid, now — no 'time-ms', no 'time-now', no '[Deprecated]'.",
+    "Run './build/osx-arm64/zapi trace -h' and verify: sub-commands shown are start, list, export, close, reopen, remove, config — no 'session', no '[Deprecated]'.",
+    "Run each removed command and confirm it exits non-zero with an 'unknown command' error (not a deprecation warning): 'zapi account re-auth --name x', 'zapi api call --help', 'zapi api registry list', 'zapi util time-ms', 'zapi util time-now', 'zapi scope add --account x --scope y', 'zapi trace session start --name x'.",
+    "Update plan/remove-deprecated-commands-1.md: mark TASK-022 and TASK-023 completed with today's date, and mark TASK-066 completed."
+  ],
+  "acceptanceCriteria": [
+    "dotnet build src/zapi-cli.sln exits 0 with 0 errors",
+    "dotnet test exits 0 with all tests passing",
+    "./publish-all.sh exits 0",
+    "'zapi -h' shows no top-level 'scope' branch",
+    "'zapi account -h' shows no 're-auth' or '[Deprecated]' entries",
+    "'zapi api -h' shows no 'call', 'registry', or '[Deprecated]' entries",
+    "'zapi util -h' shows no 'time-ms', 'time-now', or '[Deprecated]' entries",
+    "'zapi trace -h' shows no 'session' or '[Deprecated]' entries",
+    "All 7 removed commands return non-zero exit code when invoked (no deprecation warning, no execution)",
+    "plan/remove-deprecated-commands-1.md has TASK-022, TASK-023, TASK-066 marked completed"
+  ],
+  "contextForAgent": "Use './build/osx-arm64/zapi' for all help and smoke checks when running on macOS arm64. The './publish-all.sh' script builds all 5 platform targets (linux-arm64, linux-x64, osx-arm64, osx-x64, win-x64). The smoke checks in 5c (account login, scope add with real OAuth) require live accounts and are outside scope for an autonomous agent — skip those. Focus on the help-output and error-exit checks in 5b and 5d, plus the build/test/publish in 5a and 5e.",
+  "openItems": [],
+  "sourceReferences": [
+    "plan/remove-deprecated-commands-1.md",
+    "publish-all.sh",
+    "src/zapi-cli.sln"
+  ],
+  "planReference": ".ai/plans/remove-deprecated-commands-1.md",
+  "planTasks": ["TASK-022", "TASK-023", "TASK-024", "TASK-025", "TASK-026", "TASK-027", "TASK-028", "TASK-059", "TASK-060", "TASK-061", "TASK-062", "TASK-063", "TASK-064", "TASK-065", "TASK-066"]
+}

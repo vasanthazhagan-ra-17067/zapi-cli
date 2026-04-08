@@ -223,26 +223,6 @@ internal static class AccountCommands
         }
     }
 
-    /// <summary>[Deprecated] Use 'account refresh' instead.</summary>
-    public sealed class AccountReAuthDeprecatedCommand : AsyncCommand<AccountRefreshSettings>
-    {
-        private readonly IAccountService _service;
-        private readonly IOutputWriter _output;
-
-        public AccountReAuthDeprecatedCommand(IAccountService service, IOutputWriter output)
-        {
-            _service = service;
-            _output = output;
-        }
-
-        public override async Task<int> ExecuteAsync(CommandContext context, AccountRefreshSettings settings)
-        {
-            DeprecationHelper.Warn("account re-auth", "account refresh");
-            return await new AccountRefreshCommand(_service, _output)
-                .ExecuteAsync(context, settings).ConfigureAwait(false);
-        }
-    }
-
     // ─── account rename ───────────────────────────────────────────────────────
 
     public sealed class AccountRenameSettings : GlobalSettings

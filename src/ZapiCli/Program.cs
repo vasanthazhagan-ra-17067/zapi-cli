@@ -145,8 +145,6 @@ internal static class Program
                     .WithDescription("Remove an account and revoke its token.");
                 account.AddCommand<AccountCommands.AccountRefreshCommand>("refresh")
                     .WithDescription("Re-authenticate an account using stored credentials.");
-                account.AddCommand<AccountCommands.AccountReAuthDeprecatedCommand>("re-auth")
-                    .WithDescription("[Deprecated] Use 'account refresh' instead.");
                 account.AddCommand<AccountCommands.AccountRenameCommand>("rename")
                     .WithDescription("Rename an account and update its keychain entry.");
                 account.AddBranch("scope", scope =>
@@ -164,8 +162,6 @@ internal static class Program
                     .WithDescription("Invoke a Zoho API endpoint and print the raw response.");
                 api.AddCommand<ApiCommands.ApiRequestCommand>("req")
                     .WithDescription("Invoke a Zoho API endpoint and print the raw response (short alias for 'request').");
-                api.AddCommand<ApiCommands.ApiCallCommand>("call")
-                    .WithDescription("[Deprecated] Use 'api request' instead. Invoke a Zoho API endpoint and print the raw response.");
 
                 api.AddBranch("endpoints", endpoints =>
                 {
@@ -180,42 +176,16 @@ internal static class Program
                     endpoints.AddCommand<ApiRegistryCommands.ApiEndpointRemoveCommand>("remove")
                         .WithDescription("Remove an entry from the local API endpoint registry.");
                 });
-
-                api.AddBranch("registry", registry =>
-                {
-                    registry.AddCommand<ApiRegistryCommands.ApiRegistryListCommand>("list")
-                        .WithDescription("[Deprecated] Use 'api endpoints list' instead.");
-                    registry.AddCommand<ApiRegistryCommands.ApiRegistryAddCommand>("add")
-                        .WithDescription("[Deprecated] Use 'api endpoints add' instead.");
-                    registry.AddCommand<ApiRegistryCommands.ApiRegistryUpdateCommand>("update")
-                        .WithDescription("[Deprecated] Use 'api endpoints update' instead.");
-                    registry.AddCommand<ApiRegistryCommands.ApiRegistryShowCommand>("show")
-                        .WithDescription("[Deprecated] Use 'api endpoints show' instead.");
-                    registry.AddCommand<ApiRegistryCommands.ApiRegistryRemoveCommand>("remove")
-                        .WithDescription("[Deprecated] Use 'api endpoints remove' instead.");
-                });
             });
 
             config.AddBranch("util", util =>
             {
                 util.AddCommand<UtilCommands.UtilTimestampCommand>("timestamp")
                     .WithDescription("Output the current UTC time as a Unix millisecond timestamp.");
-                util.AddCommand<UtilCommands.UtilTimeMsDeprecatedCommand>("time-ms")
-                    .WithDescription("[Deprecated] Use 'util timestamp' instead.");
                 util.AddCommand<UtilCommands.UtilUuidCommand>("uuid")
                     .WithDescription("Generate a random UUID v4.");
                 util.AddCommand<UtilCommands.UtilNowCommand>("now")
                     .WithDescription("Output the current India Standard Time (GMT+5:30) as DD/MM/YY hh:mm:ss AM/PM.");
-                util.AddCommand<UtilCommands.UtilTimeNowDeprecatedCommand>("time-now")
-                    .WithDescription("[Deprecated] Use 'util now' instead.");
-            });
-
-            config.AddBranch("scope", scope =>
-            {
-                scope.AddCommand<ScopeCommands.ScopeAddDeprecatedCommand>("add")
-                    .WithDescription("[Deprecated] Use 'account scope add' instead.");
-                scope.AddCommand<ScopeCommands.ScopeListDeprecatedCommand>("list")
-                    .WithDescription("[Deprecated] Use 'account scope list' instead.");
             });
 
             config.AddBranch("trace", trace =>
@@ -233,23 +203,6 @@ internal static class Program
                     .WithDescription("Reopen a closed session for further tracing.");
                 trace.AddCommand<TraceCommands.RemoveSessionCommand>("remove")
                     .WithDescription("Remove a session entry (trace file is preserved).");
-
-                // Deprecated 'trace session *' sub-branch — kept for backwards compatibility.
-                trace.AddBranch("session", session =>
-                {
-                    session.AddCommand<TraceCommands.DeprecatedSessionStartCommand>("start")
-                        .WithDescription("[Deprecated] Use 'trace start' instead.");
-                    session.AddCommand<TraceCommands.DeprecatedSessionListCommand>("list")
-                        .WithDescription("[Deprecated] Use 'trace list' instead.");
-                    session.AddCommand<TraceCommands.DeprecatedSessionExportCommand>("export")
-                        .WithDescription("[Deprecated] Use 'trace export' instead.");
-                    session.AddCommand<TraceCommands.DeprecatedSessionCloseCommand>("close")
-                        .WithDescription("[Deprecated] Use 'trace close' instead.");
-                    session.AddCommand<TraceCommands.DeprecatedSessionReopenCommand>("reopen")
-                        .WithDescription("[Deprecated] Use 'trace reopen' instead.");
-                    session.AddCommand<TraceCommands.DeprecatedSessionRemoveCommand>("remove")
-                        .WithDescription("[Deprecated] Use 'trace remove' instead.");
-                });
 
                 // Unchanged 'trace config' sub-branch.
                 trace.AddBranch("config", traceConfig =>
