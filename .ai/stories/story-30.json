@@ -1,18 +1,18 @@
 {
   "storyId": 30,
-  "title": "Move top-level 'scope' \u2192 'account scope'",
+  "title": "Move top-level 'scope' → 'account scope'",
   "description": "Move the 'scope add' and 'scope list' commands from the top-level 'scope' branch into a new 'account scope' sub-branch. Scope management is account-scoped, so it belongs under the 'account' group. Keep the top-level 'scope' branch as a deprecated alias. This makes the command hierarchy semantically coherent with the rest of the account group.",
   "status": "Completed",
   "dependsOn": [
     27
   ],
-  "prerequisiteState": "Stories 1\u201327 complete. 'scope add' and 'scope list' are registered at the top level. The 'account' branch has login, list, show, set-default, remove, re-auth, rename commands.",
+  "prerequisiteState": "Stories 1–27 complete. 'scope add' and 'scope list' are registered at the top level. The 'account' branch has login, list, show, set-default, remove, re-auth, rename commands.",
   "goal": "After this story: 'zapi account scope add --scope ZohoCliq.Channels.READ' works. 'zapi account scope list' works. 'zapi scope add' and 'zapi scope list' still work but print deprecation warnings.",
   "scope": [
     "In src/ZapiCli/Program.cs, within the 'account' branch lambda: add account.AddBranch(\"scope\", scope => { scope.AddCommand<ScopeAddCommand>(\"add\"); scope.AddCommand<ScopeListCommand>(\"list\"); });",
     "Verify that the 'account' branch can contain both leaf commands (login, list, show, etc.) and a sub-branch (scope). Use the existing 'config' branch pattern (which has both a 'set' sub-branch and a 'show' leaf) as a reference.",
     "Keep the top-level 'scope' branch but replace its command registrations with deprecated shims: ScopeAddDeprecatedCommand and ScopeListDeprecatedCommand that call DeprecationHelper.Warn(\"scope add\", \"account scope add\") / DeprecationHelper.Warn(\"scope list\", \"account scope list\").",
-    "The ScopeAddCommand and ScopeListCommand classes themselves are unchanged \u2014 they keep their existing flags (including --port if present), output format, and error codes.",
+    "The ScopeAddCommand and ScopeListCommand classes themselves are unchanged — they keep their existing flags (including --port if present), output format, and error codes.",
     "Do NOT rename the ScopeAddCommand or ScopeListCommand classes."
   ],
   "acceptanceCriteria": [

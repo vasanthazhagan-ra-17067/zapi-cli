@@ -1,15 +1,15 @@
 {
   "storyId": 32,
-  "title": "Rename 'account re-auth' \u2192 'account refresh'",
+  "title": "Rename 'account re-auth' → 'account refresh'",
   "description": "Rename the 'account re-auth' command to 'account refresh'. The current name 're-auth' is jargon-heavy and non-standard. 'refresh' clearly communicates that it refreshes an existing account's OAuth tokens using the stored configuration. Keep 'account re-auth' as a deprecated alias.",
   "status": "Completed",
   "dependsOn": [
     27
   ],
-  "prerequisiteState": "Stories 1\u201327 complete. Command is registered as 'account re-auth'. Deprecation infrastructure available.",
+  "prerequisiteState": "Stories 1–27 complete. Command is registered as 'account re-auth'. Deprecation infrastructure available.",
   "goal": "After this story: 'zapi account refresh' works identically to old 'zapi account re-auth'. 'zapi account re-auth' still works but prints a deprecation warning. All flags (--name, --email, --zuidstring) and output format unchanged.",
   "scope": [
-    "In src/ZapiCli/Commands/AccountCommands.cs: rename the class 'AccountReAuthCommand' \u2192 'AccountRefreshCommand'. Rename 'AccountReAuthSettings' \u2192 'AccountRefreshSettings'. Update all internal references.",
+    "In src/ZapiCli/Commands/AccountCommands.cs: rename the class 'AccountReAuthCommand' → 'AccountRefreshCommand'. Rename 'AccountReAuthSettings' → 'AccountRefreshSettings'. Update all internal references.",
     "In src/ZapiCli/Program.cs: change account.AddCommand<AccountReAuthCommand>(\"re-auth\") to account.AddCommand<AccountRefreshCommand>(\"refresh\").",
     "Register a deprecated shim: create 'AccountReAuthDeprecatedCommand' that subclasses AccountRefreshCommand and calls DeprecationHelper.Warn(\"account re-auth\", \"account refresh\") in ExecuteAsync before calling base. Register under config.AddCommand<AccountReAuthDeprecatedCommand>(\"re-auth\") inside the account branch.",
     "Do NOT change any flags (--name, --email, --zuidstring) or output format ({ status: ok, data: { name: '...' } }) or error codes."
@@ -20,7 +20,7 @@
     "Flags --name, --email, --zuidstring all work on both the new and deprecated names",
     "All existing tests pass (update AccountReAuthCommand references to AccountRefreshCommand)"
   ],
-  "contextForAgent": "This is a straightforward rename following the same pattern as story 28. Read AccountReAuthCommand in AccountCommands.cs first. The class rename is the primary concern \u2014 ensure no test file or service still imports 'AccountReAuthCommand' after the rename.",
+  "contextForAgent": "This is a straightforward rename following the same pattern as story 28. Read AccountReAuthCommand in AccountCommands.cs first. The class rename is the primary concern — ensure no test file or service still imports 'AccountReAuthCommand' after the rename.",
   "openItems": [],
   "sourceReferences": [
     "src/ZapiCli/Commands/AccountCommands.cs",

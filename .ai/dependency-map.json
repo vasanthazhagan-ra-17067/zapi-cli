@@ -6,7 +6,7 @@
       "status": "Completed",
       "dependsOn": [],
       "version": "v1",
-      "phase": "Phase 1 \u2014 Foundation"
+      "phase": "Phase 1 — Foundation"
     },
     {
       "storyId": 2,
@@ -16,7 +16,7 @@
         1
       ],
       "version": "v1",
-      "phase": "Phase 1 \u2014 Foundation"
+      "phase": "Phase 1 — Foundation"
     },
     {
       "storyId": 3,
@@ -27,7 +27,7 @@
         2
       ],
       "version": "v1",
-      "phase": "Phase 2 \u2014 Account & API"
+      "phase": "Phase 2 — Account & API"
     },
     {
       "storyId": 4,
@@ -37,7 +37,7 @@
         3
       ],
       "version": "v1",
-      "phase": "Phase 2 \u2014 Account & API"
+      "phase": "Phase 2 — Account & API"
     },
     {
       "storyId": 5,
@@ -48,7 +48,7 @@
         4
       ],
       "version": "v1",
-      "phase": "Phase 2 \u2014 Account & API"
+      "phase": "Phase 2 — Account & API"
     },
     {
       "storyId": 6,
@@ -58,7 +58,7 @@
         2
       ],
       "version": "v1",
-      "phase": "Phase 3 \u2014 Utility"
+      "phase": "Phase 3 — Utility"
     },
     {
       "storyId": 7,
@@ -69,7 +69,7 @@
         5
       ],
       "version": "v2",
-      "phase": "Phase 4 \u2014 v2 Features"
+      "phase": "Phase 4 — v2 Features"
     },
     {
       "storyId": 8,
@@ -79,7 +79,7 @@
         5
       ],
       "version": "v2",
-      "phase": "Phase 4 \u2014 v2 Features"
+      "phase": "Phase 4 — v2 Features"
     },
     {
       "storyId": 9,
@@ -89,7 +89,7 @@
         5
       ],
       "version": "v2",
-      "phase": "Phase 4 \u2014 v2 Features"
+      "phase": "Phase 4 — v2 Features"
     },
     {
       "storyId": 10,
@@ -99,7 +99,7 @@
         2
       ],
       "version": "v2",
-      "phase": "Phase 5 \u2014 Browser OAuth",
+      "phase": "Phase 5 — Browser OAuth",
       "planReference": ".ai/plans/account-login-browser-flow.md"
     },
     {
@@ -111,7 +111,7 @@
         10
       ],
       "version": "v2",
-      "phase": "Phase 5 \u2014 Browser OAuth",
+      "phase": "Phase 5 — Browser OAuth",
       "planReference": ".ai/plans/account-login-browser-flow.md"
     },
     {
@@ -122,7 +122,7 @@
         11
       ],
       "version": "v2",
-      "phase": "Phase 5 \u2014 Browser OAuth",
+      "phase": "Phase 5 — Browser OAuth",
       "planReference": ".ai/plans/account-login-browser-flow.md"
     },
     {
@@ -133,27 +133,27 @@
         12
       ],
       "version": "v2",
-      "phase": "Phase 6 \u2014 Incremental Auth"
+      "phase": "Phase 6 — Incremental Auth"
     },
     {
       "storyId": 14,
-      "title": "Remove NeedsReauth \u2014 Dead Code Elimination",
+      "title": "Remove NeedsReauth — Dead Code Elimination",
       "status": "Completed",
       "dependsOn": [
         13
       ],
       "version": "v2",
-      "phase": "Phase 6 \u2014 Incremental Auth"
+      "phase": "Phase 6 — Incremental Auth"
     },
     {
       "storyId": 15,
-      "title": "scope add \u2014 Zoho Incremental Authorization (Two-Step Browser Flow)",
+      "title": "scope add — Zoho Incremental Authorization (Two-Step Browser Flow)",
       "status": "Completed",
       "dependsOn": [
         14
       ],
       "version": "v2",
-      "phase": "Phase 6 \u2014 Incremental Auth"
+      "phase": "Phase 6 — Incremental Auth"
     },
     {
       "storyId": 16,
@@ -165,7 +165,7 @@
     },
     {
       "storyId": 17,
-      "title": "Unified CliSettings \u2014 Absorb TraceConfig + Add ScopeFile + AppDataDir",
+      "title": "Unified CliSettings — Absorb TraceConfig + Add ScopeFile + AppDataDir",
       "status": "Completed",
       "dependsOn": [
         16
@@ -253,7 +253,7 @@
     },
     {
       "storyId": 28,
-      "title": "Rename 'api call' \u2192 'api request' (alias 'req')",
+      "title": "Rename 'api call' → 'api request' (alias 'req')",
       "status": "Completed",
       "dependsOn": [
         27
@@ -298,5 +298,5 @@
     11,
     12
   ],
-  "notes": "Stories 7-9 may only be started after all v1 stories are Completed. Story 7 depends on 4 and 5 (account commands and api call must exist for scope NeedsReauth to be testable end-to-end). Story 8 (trace) depends on 5 because ApiClient must exist to integrate trace auto-append. Story 6 (util) is independent of 3-5 and can be done in parallel with stories 3-5 if desired \u2014 depends only on 2 (output contract). Stories 10-12 implement the browser OAuth redirect login flow (account login command) \u2014 see .ai/plans/account-login-browser-flow.md. Story 10 can be started as soon as Story 2 is complete (only needs ZapiCliException + ErrorCodes). Story 11 requires Story 4 (AccountService) AND Story 10. Story 12 requires Story 11 only."
+  "notes": "Stories 7-9 may only be started after all v1 stories are Completed. Story 7 depends on 4 and 5 (account commands and api call must exist for scope NeedsReauth to be testable end-to-end). Story 8 (trace) depends on 5 because ApiClient must exist to integrate trace auto-append. Story 6 (util) is independent of 3-5 and can be done in parallel with stories 3-5 if desired — depends only on 2 (output contract). Stories 10-12 implement the browser OAuth redirect login flow (account login command) — see .ai/plans/account-login-browser-flow.md. Story 10 can be started as soon as Story 2 is complete (only needs ZapiCliException + ErrorCodes). Story 11 requires Story 4 (AccountService) AND Story 10. Story 12 requires Story 11 only."
 }

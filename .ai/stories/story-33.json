@@ -1,18 +1,18 @@
 {
   "storyId": 33,
-  "title": "Rename 'api registry' \u2192 'api endpoints'",
-  "description": "Rename the 'api registry' sub-branch and all its commands (list, add, update, show, remove) to 'api endpoints'. Also rename the error codes REGISTRY_ENTRY_* \u2192 ENDPOINT_* throughout the codebase. Keep 'api registry *' as deprecated aliases. 'endpoints' is more descriptive and less internal-sounding than 'registry'.",
+  "title": "Rename 'api registry' → 'api endpoints'",
+  "description": "Rename the 'api registry' sub-branch and all its commands (list, add, update, show, remove) to 'api endpoints'. Also rename the error codes REGISTRY_ENTRY_* → ENDPOINT_* throughout the codebase. Keep 'api registry *' as deprecated aliases. 'endpoints' is more descriptive and less internal-sounding than 'registry'.",
   "status": "Completed",
   "dependsOn": [
     27
   ],
-  "prerequisiteState": "Stories 1\u201327 complete. Commands registered as 'api registry list|add|update|show|remove'. Error codes prefixed REGISTRY_ENTRY_. Deprecation infrastructure available.",
+  "prerequisiteState": "Stories 1–27 complete. Commands registered as 'api registry list|add|update|show|remove'. Error codes prefixed REGISTRY_ENTRY_. Deprecation infrastructure available.",
   "goal": "After this story: 'zapi api endpoints list', 'zapi api endpoints add', 'zapi api endpoints update', 'zapi api endpoints show', 'zapi api endpoints remove' all work. 'zapi api registry *' still works with deprecation warnings. Error codes are now ENDPOINT_*.",
   "scope": [
-    "Rename the command file: src/ZapiCli/Commands/ApiRegistryCommands.cs \u2192 ApiEndpointCommands.cs. Rename all command classes: ApiRegistryListCommand \u2192 ApiEndpointListCommand, ApiRegistryAddCommand \u2192 ApiEndpointAddCommand, ApiRegistryUpdateCommand \u2192 ApiEndpointUpdateCommand, ApiRegistryShowCommand \u2192 ApiEndpointShowCommand, ApiRegistryRemoveCommand \u2192 ApiEndpointRemoveCommand. Rename Settings classes analogously.",
+    "Rename the command file: src/ZapiCli/Commands/ApiRegistryCommands.cs → ApiEndpointCommands.cs. Rename all command classes: ApiRegistryListCommand → ApiEndpointListCommand, ApiRegistryAddCommand → ApiEndpointAddCommand, ApiRegistryUpdateCommand → ApiEndpointUpdateCommand, ApiRegistryShowCommand → ApiEndpointShowCommand, ApiRegistryRemoveCommand → ApiEndpointRemoveCommand. Rename Settings classes analogously.",
     "In src/ZapiCli/Program.cs: change the inner api branch AddBranch from 'registry' to 'endpoints'. Register all five endpoint commands under the 'endpoints' branch.",
     "Re-add a deprecated 'registry' sub-branch inside the 'api' branch. Each deprecated shim command calls DeprecationHelper.Warn(\"api registry <verb>\", \"api endpoints <verb>\") before delegating. Create five deprecated shim classes.",
-    "Rename error codes: find all occurrences of REGISTRY_ENTRY_ in the codebase (ErrorCodes.cs, command classes, and any test fixtures) and replace with ENDPOINT_. Common codes to rename: REGISTRY_ENTRY_NOT_FOUND \u2192 ENDPOINT_NOT_FOUND, REGISTRY_ENTRY_ALREADY_EXISTS \u2192 ENDPOINT_ALREADY_EXISTS, REGISTRY_ENTRY_INVALID \u2192 ENDPOINT_INVALID, etc. List all occurrences found before renaming.",
+    "Rename error codes: find all occurrences of REGISTRY_ENTRY_ in the codebase (ErrorCodes.cs, command classes, and any test fixtures) and replace with ENDPOINT_. Common codes to rename: REGISTRY_ENTRY_NOT_FOUND → ENDPOINT_NOT_FOUND, REGISTRY_ENTRY_ALREADY_EXISTS → ENDPOINT_ALREADY_EXISTS, REGISTRY_ENTRY_INVALID → ENDPOINT_INVALID, etc. List all occurrences found before renaming.",
     "Do NOT change the --url, --method, --name, --headers flags or output format of any registry/endpoint command."
   ],
   "acceptanceCriteria": [
@@ -23,7 +23,7 @@
     "Error codes in stderr envelopes now use ENDPOINT_NOT_FOUND (not REGISTRY_ENTRY_NOT_FOUND)",
     "All existing tests pass (update all class name and error code references)"
   ],
-  "contextForAgent": "Read src/ZapiCli/Commands/ApiRegistryCommands.cs to understand all five command classes and their Settings. Read Program.cs to understand the current 'api' branch structure \u2014 it currently has 'call' (\u2192 'request' after story 28) and 'registry'. Search the entire src/ for REGISTRY_ENTRY_ to find all error code occurrences before renaming. Check src/ZapiCli.Core/ErrorCodes.cs (or equivalent) for the error code constants.",
+  "contextForAgent": "Read src/ZapiCli/Commands/ApiRegistryCommands.cs to understand all five command classes and their Settings. Read Program.cs to understand the current 'api' branch structure — it currently has 'call' (→ 'request' after story 28) and 'registry'. Search the entire src/ for REGISTRY_ENTRY_ to find all error code occurrences before renaming. Check src/ZapiCli.Core/ErrorCodes.cs (or equivalent) for the error code constants.",
   "openItems": [],
   "sourceReferences": [
     "src/ZapiCli/Commands/ApiRegistryCommands.cs",

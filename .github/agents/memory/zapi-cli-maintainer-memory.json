@@ -216,7 +216,7 @@
     },
     {
       "type": "changed-behaviour",
-      "subject": "account add \u2014 removed from HELP.md",
+      "subject": "account add — removed from HELP.md",
       "syncedDate": "2026-03-26",
       "artefactsModified": [
         "SKILL.md"
@@ -272,7 +272,7 @@
     },
     {
       "type": "changed-behaviour",
-      "subject": "Datacenters section \u2014 DC auto-detected from callback, no --dc flag",
+      "subject": "Datacenters section — DC auto-detected from callback, no --dc flag",
       "syncedDate": "2026-03-26",
       "artefactsModified": [
         "SKILL.md"
@@ -312,7 +312,7 @@
     },
     {
       "type": "changed-output",
-      "subject": "config show \u2014 now returns 4 fields (env_file, scope_file, app_data_dir, trace_default_export_path)",
+      "subject": "config show — now returns 4 fields (env_file, scope_file, app_data_dir, trace_default_export_path)",
       "syncedDate": "2026-03-26",
       "artefactsModified": [
         "SKILL.md"
@@ -466,7 +466,7 @@
       "artefactsModified": [
         "SKILL.md"
       ],
-      "summary": "Added 10 missing commands to CLI \u2014 Available Operations table from HELP.md documentation."
+      "summary": "Added 10 missing commands to CLI — Available Operations table from HELP.md documentation."
     },
     {
       "date": "2026-03-23",

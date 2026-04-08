@@ -6,14 +6,14 @@
   "dependsOn": [
     27
   ],
-  "prerequisiteState": "Stories 1\u201327 complete. The only way to set the default account is 'zapi account set-default --name <NAME>' (or --email / --zuidstring). No positional shorthand exists.",
+  "prerequisiteState": "Stories 1–27 complete. The only way to set the default account is 'zapi account set-default --name <NAME>' (or --email / --zuidstring). No positional shorthand exists.",
   "goal": "After this story: 'zapi account use myaccount' sets 'myaccount' as the default account and prints the same output as 'account set-default'. 'zapi account set-default --name myaccount' continues to work unchanged.",
   "scope": [
     "Create a new command class 'AccountUseCommand' in src/ZapiCli/Commands/AccountCommands.cs. Its Settings class 'AccountUseSettings' has a single positional argument: [CommandArgument(0, \"<NAME>\")] public string Name { get; set; }. It also accepts --name <NAME> as a flag alternative (for parity/scripting). Exactly one of the positional argument or --name flag must be provided.",
     "AccountUseCommand.ExecuteAsync: resolve the account by name, call the same set-default logic as AccountSetDefaultCommand. Output: { \"status\": \"ok\", \"data\": { \"name\": \"<name>\" } }. Error codes: ACCOUNT_NOT_FOUND, AMBIGUOUS_ACCOUNT.",
     "In src/ZapiCli/Program.cs, inside the 'account' branch: add account.AddCommand<AccountUseCommand>(\"use\").",
-    "Do NOT modify AccountSetDefaultCommand or its Settings \u2014 both commands coexist.",
-    "Do NOT emit a deprecation warning for AccountSetDefaultCommand \u2014 it is not deprecated."
+    "Do NOT modify AccountSetDefaultCommand or its Settings — both commands coexist.",
+    "Do NOT emit a deprecation warning for AccountSetDefaultCommand — it is not deprecated."
   ],
   "acceptanceCriteria": [
     "'zapi account use myaccount' sets myaccount as the active default and outputs { status: ok, data: { name: 'myaccount' } }",
@@ -23,7 +23,7 @@
     "'zapi account --help' output lists 'use' as a sub-command",
     "All existing tests pass"
   ],
-  "contextForAgent": "Read AccountSetDefaultCommand and its Settings to understand the switch logic and output format \u2014 AccountUseCommand should produce identical output and use the same IAccountStore method. The positional argument syntax in Spectre.Console.Cli is [CommandArgument(0, \"<NAME>\")] for required positionals. Verify whether Settings can have both a positional argument and a --name flag with mutual exclusivity \u2014 if not, just use the positional argument only.",
+  "contextForAgent": "Read AccountSetDefaultCommand and its Settings to understand the switch logic and output format — AccountUseCommand should produce identical output and use the same IAccountStore method. The positional argument syntax in Spectre.Console.Cli is [CommandArgument(0, \"<NAME>\")] for required positionals. Verify whether Settings can have both a positional argument and a --name flag with mutual exclusivity — if not, just use the positional argument only.",
   "openItems": [
     "Confirm whether Spectre.Console.Cli supports both a positional argument AND a named flag for the same logical value in the same Settings class."
   ],

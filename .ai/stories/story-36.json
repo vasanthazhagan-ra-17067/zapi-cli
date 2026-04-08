@@ -1,7 +1,7 @@
 {
   "storyId": 36,
   "title": "HELP.md Full Regeneration and Validation Pass",
-  "description": "Regenerate docs/HELP.md to reflect all changes made in stories 26\u201335: new binary name (zapi), new command names, flattened trace structure, account scope sub-group, account use command, refreshed trace commands, api endpoints, util timestamp/now, and new flag names. Cross-check the final HELP.md against the canonical spec at tech_spec/docs/command-reference.md. Also update README.md command examples.",
+  "description": "Regenerate docs/HELP.md to reflect all changes made in stories 26–35: new binary name (zapi), new command names, flattened trace structure, account scope sub-group, account use command, refreshed trace commands, api endpoints, util timestamp/now, and new flag names. Cross-check the final HELP.md against the canonical spec at tech_spec/docs/command-reference.md. Also update README.md command examples.",
   "status": "Completed",
   "dependsOn": [
     26,
@@ -15,15 +15,15 @@
     34,
     35
   ],
-  "prerequisiteState": "Stories 26\u201335 all complete. The CLI binary is named 'zapi'. All command renames are implemented with deprecated aliases. Param renames are in place. HELP.md still documents the old command names.",
+  "prerequisiteState": "Stories 26–35 all complete. The CLI binary is named 'zapi'. All command renames are implemented with deprecated aliases. Param renames are in place. HELP.md still documents the old command names.",
   "goal": "After this story: HELP.md is fully consistent with the post-refactor CLI surface. Every command, flag, example, and error code in HELP.md matches what the actual binary produces. README.md quick-start examples use the new command names. tech_spec/docs/command-reference.md and HELP.md are in sync.",
   "scope": [
     "Read tech_spec/docs/command-reference.md in full as the authoritative reference for all new command names, flags, and error codes.",
     "Update HELP.md binary name throughout: replace all invocations of 'zapi-cli' in command examples with 'zapi'.",
-    "Update command section headings and usage blocks for all renamed commands: api call \u2192 api request (api req), trace session start \u2192 trace start (add note that 'trace session start' is deprecated), account re-auth \u2192 account refresh, api registry \u2192 api endpoints, util time-ms \u2192 util timestamp, util time-now \u2192 util now.",
+    "Update command section headings and usage blocks for all renamed commands: api call → api request (api req), trace session start → trace start (add note that 'trace session start' is deprecated), account re-auth → account refresh, api registry → api endpoints, util time-ms → util timestamp, util time-now → util now.",
     "Add new sections for: 'account scope add' and 'account scope list' (with note that top-level 'scope *' is deprecated), 'account use <NAME>'.",
-    "Update all flag documentation: --zuidstring \u2192 --zuid (note --zuidstring is accepted for backward compatibility), --new-name \u2192 --to, --wait-ms \u2192 --drain-timeout.",
-    "Update all error codes that changed: REGISTRY_ENTRY_* \u2192 ENDPOINT_* in the api endpoints section.",
+    "Update all flag documentation: --zuidstring → --zuid (note --zuidstring is accepted for backward compatibility), --new-name → --to, --wait-ms → --drain-timeout.",
+    "Update all error codes that changed: REGISTRY_ENTRY_* → ENDPOINT_* in the api endpoints section.",
     "Add a 'Deprecated Commands' section at the bottom of HELP.md listing all deprecated forms and their replacements. This is useful for scripts that may use old names.",
     "Update README.md quick-start section: replace 'zapi-cli api call' with 'zapi api request', update any other examples shown in README.",
     "Run the full test suite (dotnet test) and confirm all tests pass before finalizing this story.",
@@ -40,10 +40,10 @@
     "dotnet test passes (all tests green)",
     "tech_spec/docs/command-reference.md and HELP.md are consistent (cross-checked)"
   ],
-  "contextForAgent": "Do a section-by-section comparison between the current HELP.md and tech_spec/docs/command-reference.md. The command-reference.md is the canonical spec \u2014 HELP.md should match it exactly. Pay special attention to: the 'trace' section (now flat, no 'session' nesting), the 'account' section (new 'scope' sub-group and 'use' command), the 'api' section (request/req instead of call, endpoints instead of registry), and the 'util' section (timestamp/now). The Deprecated Commands appendix section should list each old form \u2192 new form clearly so shell scripts can be updated.",
+  "contextForAgent": "Do a section-by-section comparison between the current HELP.md and tech_spec/docs/command-reference.md. The command-reference.md is the canonical spec — HELP.md should match it exactly. Pay special attention to: the 'trace' section (now flat, no 'session' nesting), the 'account' section (new 'scope' sub-group and 'use' command), the 'api' section (request/req instead of call, endpoints instead of registry), and the 'util' section (timestamp/now). The Deprecated Commands appendix section should list each old form → new form clearly so shell scripts can be updated.",
   "openItems": [
-    "Verify whether 'account use' should appear before or after 'account set-default' in HELP.md \u2014 order should match 'zapi account --help' output.",
-    "Confirm whether any tests directly parse HELP.md output \u2014 if so, update those tests too."
+    "Verify whether 'account use' should appear before or after 'account set-default' in HELP.md — order should match 'zapi account --help' output.",
+    "Confirm whether any tests directly parse HELP.md output — if so, update those tests too."
   ],
   "sourceReferences": [
     "docs/HELP.md",
