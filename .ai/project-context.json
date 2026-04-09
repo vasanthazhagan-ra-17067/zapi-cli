@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "zapi-cli",
-    "binaryName": "zapi-cli (pending rename to 'zapi' — see stories 26–36 and plan/refactor-cli-naming-1.md)",
+    "binaryName": "zapi",
     "description": "Standalone cross-platform CLI binary providing a scriptable interface to any Zoho product's REST APIs. Primary consumer is AI agents (GitHub Copilot CLI Skills, Claude Agent Skills). Manages multiple Zoho accounts via OAuth Self-Client authentication and exposes a general-purpose HTTP API invoker where the caller supplies the full URL at invocation time.",
     "repository": "zapi-cli",
     "language": "C# 13+",
@@ -47,22 +47,22 @@
     "keychain": "Direct P/Invoke to OS APIs — NO third-party NuGet keychain package"
   },
   "authModel": {
-    "v1": "OAuth Self-Client — user supplies --token (initial access token), --client-id, --client-secret at account add. Stored as a single JSON blob in OS keychain under key 'zapi-cli:<accountName>:oauth'. Auto-refresh via stored client-id + client-secret on 401 or NeedsReauth=true.",
+    "v1": "Mobile OAuth 2.0 — CLI generates RSA key pair, opens /oauth/v2/mobile/auth in browser, Zoho encrypts client_secret in redirect callback (gt_sec). DC auto-detected from callback location parameter. Credentials stored as camelCase JSON blob in OS keychain under key 'zapi-cli:<accountName>:oauth'. Auto-refresh via stored clientId + clientSecret + refreshToken on 401.",
     "keychainKeyFormat": "zapi-cli:<accountName>:oauth",
-    "keychainValueFormat": "JSON: { \"access_token\": \"...\", \"client_id\": \"...\", \"client_secret\": \"...\" }",
+    "keychainValueFormat": "JSON (camelCase, internal format): { \"accessToken\": \"...\", \"refreshToken\": \"...\", \"clientId\": \"...\", \"clientSecret\": \"...\" }",
     "tokenHeaderFormat": "Authorization: Zoho-oauthtoken <access_token>"
   },
   "scopeBoundaries": {
     "v1": [
       "Three-project solution scaffold",
       "IKeychainProvider + all platform implementations + AES-256-GCM fallback",
-      "IAuthProvider + OAuthProvider (Self-Client) with auto-refresh on 401 / NeedsReauth",
+      "IAuthProvider + OAuthProvider with auto-refresh on 401",
       "IOutputWriter + no-wrapper JSON output contract",
-      "AccountStore + AccountEntry with Dc + Zuid fields",
-      "account command group (add, list, remove, show, set-default, re-auth)",
+      "AccountStore + AccountEntry with Dc + Zuid + Email + Scopes fields",
+      "account command group (login, list, show, set-default, use, remove, refresh, rename)",
       "ApiClient with host allowlist + ZohoCorp block",
-      "api call command (--url required, full URL every invocation)",
-      "util commands (time-ms, uuid, time-now)"
+      "api request command (--url required, full URL every invocation)",
+      "util commands (timestamp, uuid, now)"
     ],
     "v2": [
       "Scope management (scope add, remove, list)",
@@ -78,13 +78,13 @@
       "Interactive TUI / shell mode",
       "CI/CD pipeline automation"
     ],
-    "browserOAuth": [
-      "account login command — browser OAuth redirect flow (Stories 10-12)",
+    "mobileOAuth": [
+      "account login command — Mobile OAuth 2.0 flow with RSA key exchange (Stories 10-12)",
       "LocalCallbackServer — ephemeral-port HTTP listener for OAuth callback",
       "IOAuthBrowserFlow / OAuthBrowserFlow — authorization URL builder + system browser launcher",
-      "LoginConfig — CLI-layer JSON config model for --file flag",
-      "templates/account-login.json — starter template for --file input",
-      "Plan: .ai/plans/account-login-browser-flow.md"
+      "IRsaKeyPairProvider / RsaKeyPairProvider — RSA 2048-bit key pair generation for gt_sec decryption",
+      "MobileCallbackResult — parsed redirect callback parameters (code, state, gt_sec, gt_hash, accounts_server, location)",
+      "DcResolver — maps Zoho location parameter to DC short name"
     ]
   },
   "outputContract": {
@@ -127,24 +127,42 @@
     "zohoapis.in"
   ],
   "documentInventory": {
-    "prd": "tech_spec/prd.md",
-    "techSpec": "tech_spec/tech_spec.md",
-    "brainstorming": "tech_spec/brainstorming.md",
+    "prd": ".ai/spec/prds/prd.md",
+    "techSpec": ".ai/spec/tech-specs/tech-spec.md",
+    "brainstorming": ".ai/spec/brainstormings/brainstorming.md",
+    "commandReference": ".ai/docs/command-reference.md",
+    "constantsReference": ".ai/docs/constants-reference.md",
+    "story8Questions": ".ai/docs/story-8-questions.md",
+    "mobileAppSetup": ".ai/docs/zoho-mobile-app-setup.md",
+    "help": "docs/HELP.md",
     "adrs": {
-      "ADR-0001": "tech_spec/docs/adr/adr-0001-technology-stack.md",
-      "ADR-0002": "tech_spec/docs/adr/adr-0002-oauth-self-client-authentication.md",
-      "ADR-0003": "tech_spec/docs/adr/adr-0003-zohocorp-domain-block.md",
-      "ADR-0004": "tech_spec/docs/adr/adr-0004-host-allowlist.md",
-      "ADR-0005": "tech_spec/docs/adr/adr-0005-os-keychain-abstraction.md",
-      "ADR-0006": "tech_spec/docs/adr/adr-0006-full-url-required.md",
-      "ADR-0007": "tech_spec/docs/adr/adr-0007-three-layer-project-structure.md",
-      "ADR-0008": "tech_spec/docs/adr/adr-0008-output-contract.md"
-    },
-    "plans": {
-      "browser-oauth": ".ai/plans/account-login-browser-flow.md"
+      "ADR-0001": ".ai/spec/adr/adr-0001-technology-stack.md",
+      "ADR-0002": ".ai/spec/adr/adr-0002-oauth-self-client-authentication.md",
+      "ADR-0003": ".ai/spec/adr/adr-0003-zohocorp-domain-block.md",
+      "ADR-0004": ".ai/spec/adr/adr-0004-host-allowlist.md",
+      "ADR-0005": ".ai/spec/adr/adr-0005-os-keychain-abstraction.md",
+      "ADR-0006": ".ai/spec/adr/adr-0006-full-url-required.md",
+      "ADR-0007": ".ai/spec/adr/adr-0007-three-layer-project-structure.md",
+      "ADR-0008": ".ai/spec/adr/adr-0008-output-contract.md"
     },
     "authDocs": {
-      "zohoSelfClientOAuth": "tech_spec/docs/Authentication.md"
+      "zohoSelfClientOAuth": ".ai/docs/Authentication.md",
+      "zohoOauthIncrementalAuth": ".ai/docs/zoho-oauth-incremental-authorization.md",
+      "appXMacAuth": ".ai/docs/AppXMacAuth-Pod.md"
+    },
+    "plans": {
+      "browser-oauth": ".ai/plans/account-login-browser-flow.md",
+      "refactor-cli-naming": ".ai/plans/refactor-cli-naming-1.md",
+      "remove-deprecated-commands": ".ai/plans/remove-deprecated-commands-1.md",
+      "feature-app-credentials-keychain": ".ai/plans/feature-app-credentials-keychain-1.md",
+      "feature-mobile-auth-login": ".ai/plans/feature-mobile-auth-login-1.md",
+      "feature-scope-incremental-auth": ".ai/plans/feature-scope-incremental-auth-1.md"
+    },
+    "apiAnalysis": {
+      "plan": "docs/api-analysis/api-analysis-plan.md",
+      "catalog": "docs/api-analysis/api-catalog.md",
+      "failures": "docs/api-analysis/failures.md",
+      "responses": "docs/api-analysis/responses/"
     }
   },
   "configDirectories": {
@@ -158,6 +176,6 @@
     "implicitUsings": "enable",
     "targetFramework": "net10.0",
     "outputType": "Exe (ZapiCli only)",
-    "assemblyName": "zapi-cli"
+    "assemblyName": "zapi"
   }
 }

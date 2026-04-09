@@ -1,85 +1,68 @@
 {
   "commandTree": {
-    "root": "zapi-cli [--account <name>] [--json] [--no-input] [--help] [--version]",
+    "root": "zapi [--account <name>] [--no-input] [--help] [--version]",
+    "_note": "Post-refactor command surface (stories 26-36 + remove deprecated stories 37-41). All deprecated aliases removed.",
     "groups": {
       "account": {
         "subcommands": [
-          { "name": "add",         "flags": ["--name (req)", "--token (req)", "--client-id (req)", "--client-secret (req)", "--dc (default: us; values: us|eu|in|au|cn|jp|sa|uk|ca)"] },
+          { "name": "login",       "flags": ["--name (optional)", "--scope (optional, comma-separated; additive to scope-file)", "--dc (default: us)", "--port (default: 8085)"], "note": "Mobile OAuth 2.0 flow with RSA key exchange. Opens system browser to /oauth/v2/mobile/auth, starts local callback server. DC auto-detected from callback location parameter." },
           { "name": "list",        "flags": [] },
-          { "name": "remove",      "flags": ["--name (req)"] },
-          { "name": "show",        "flags": ["--name (req)"] },
-          { "name": "set-default", "flags": ["--name (req)"] },
-          { "name": "re-auth",     "flags": ["--name (req)"], "note": "explicit token refresh; also triggered automatically on 401 or NeedsReauth" },
-          { "name": "login",       "flags": ["--name (req if --file absent)", "--client-id (req if --file absent)", "--client-secret (req if --file absent)", "--scope (req if --file absent, comma-separated)", "--dc (default: us)", "--file (optional path to JSON config; CLI flags override file values)"], "note": "browser OAuth redirect flow — opens system browser, starts local ephemeral-port callback server, exchanges code for tokens. Stories 10-12. Plan: .ai/plans/account-login-browser-flow.md" }
-        ]
-      },
-      "scope": {
-        "version": "v2",
-        "subcommands": [
-          { "name": "add",    "flags": ["--scope (req, comma-separated)", "--account (optional)"] },
-          { "name": "remove", "flags": ["--scope (req, comma-separated)", "--account (optional)"] },
-          { "name": "list",   "flags": ["--account (optional)"] }
+          { "name": "show",        "flags": ["--name / --email / --zuid (exactly one req)"] },
+          { "name": "set-default", "flags": ["--name / --email / --zuid (exactly one req)"] },
+          { "name": "use",         "flags": ["<NAME> positional (req)"], "note": "Shorthand for set-default. Ex: zapi account use work" },
+          { "name": "remove",      "flags": ["--name / --email / --zuid (exactly one req)"] },
+          { "name": "refresh",     "flags": ["--name / --email / --zuid (exactly one req)"], "note": "Re-authenticates using stored refresh token" },
+          { "name": "rename",      "flags": ["--name / --email / --Zuid (exactly one req)", "--to <NEW_NAME> (req)"] },
+          { "name": "scope add",   "flags": ["--scope (req, comma-separated)", "--account / -a (optional)", "--port (default: 8085)"], "note": "Zoho Incremental Authorization flow (planned — feature-scope-incremental-auth-1.md)" },
+          { "name": "scope list",  "flags": ["--account / -a (optional)"] }
         ]
       },
       "api": {
         "subcommands": [
           {
-            "name": "call",
+            "name": "request (alias: req)",
             "flags": [
               "--url <full-url> (req) — full endpoint URL, no derivation from account dc",
-              "--method GET|POST|PUT|PATCH|DELETE (req)",
+              "--method / -X GET|POST|PUT|PATCH|DELETE (req)",
               "--body <json-string> (mutually exclusive with --body-file)",
               "--body-file <path> (mutually exclusive with --body)",
               "--header key:value (repeatable)",
               "--query key=value (repeatable)",
-              "--account <name> (optional override)"
-            ],
-            "examples": [
-              "zapi-cli api call --url \"https://cliq.zoho.com/api/v2/channels\" --method GET",
-              "zapi-cli api call --url \"https://desk.zoho.com/api/v1/tickets\" --method GET",
-              "zapi-cli api call --url \"https://crm.zoho.com/crm/v5/Leads\" --method POST --body '{\"data\":[{\"Last_Name\":\"Doe\"}]}'"
+              "--account / -a <name> (optional override)"
             ]
           },
-          { "name": "registry list",   "flags": [],                                                                                              "version": "v2" },
-          { "name": "registry add",    "flags": ["--id (req)", "--url (req)", "--method (req)", "--purpose (req)"],                              "version": "v2" },
-          { "name": "registry show",   "flags": ["--id (req)"],                                                                                  "version": "v2" },
-          { "name": "registry remove", "flags": ["--id (req)"],                                                                                  "version": "v2" }
+          { "name": "endpoints list",   "flags": [] },
+          { "name": "endpoints add",    "flags": ["--id (req)", "--url (req)", "--method (req)", "--purpose (req)"] },
+          { "name": "endpoints update", "flags": ["--id (req)", "--url / --method / --purpose (at least one req)"] },
+          { "name": "endpoints show",   "flags": ["--id (req)"] },
+          { "name": "endpoints remove", "flags": ["--id (req)"] }
         ]
       },
       "trace": {
-        "version": "v2",
         "subcommands": [
-          { "name": "session start",  "flags": ["--name (req)"] },
-          { "name": "session list",   "flags": [] },
-          { "name": "session export", "flags": ["--name (req)", "--truncate-body <bytes> (optional)", "--type api|pex (optional)", "--product <name> (optional, requires API Registry)"] },
-          { "name": "session close",  "flags": ["--name (req)"] },
-          { "name": "session remove", "flags": ["--name (req)"] }
+          { "name": "start",       "flags": ["--name (req)", "--export-path (optional)"] },
+          { "name": "list",        "flags": [] },
+          { "name": "export",      "flags": ["--id <UUID> / --name (one req)", "--type api|pex (optional)", "--truncate-body <N> (optional)"] },
+          { "name": "close",       "flags": ["--id <UUID> / --name (one req)", "--drain-timeout <MS> (optional, default: 5000)"] },
+          { "name": "reopen",      "flags": ["--id <UUID> / --name (one req)"] },
+          { "name": "remove",      "flags": ["--id <UUID> / --name (one req)"] },
+          { "name": "config set",  "flags": ["--default-export-path <PATH>"] },
+          { "name": "config show", "flags": [] }
         ]
       },
-      "ws": {
-        "version": "v3-future",
+      "config": {
         "subcommands": [
-          { "name": "connect", "flags": ["--url (req)", "--name (req)", "--account (optional)"] },
-          { "name": "send",    "flags": ["--name (req)", "--message (req)"] },
-          { "name": "listen",  "flags": ["--name (req)"] },
-          { "name": "close",   "flags": ["--name (req)"] }
-        ]
-      },
-      "pex": {
-        "version": "v3-future",
-        "subcommands": [
-          { "name": "connect", "flags": ["--account (optional)"] },
-          { "name": "send",    "flags": ["--message (req)", "--account (optional)"] },
-          { "name": "drain",   "flags": ["--account (optional)"] },
-          { "name": "clear",   "flags": ["--account (optional)"] },
-          { "name": "listen",  "flags": ["--account (optional)"] },
-          { "name": "close",   "flags": ["--account (optional)"] }
+          { "name": "set env-file",   "flags": ["<PATH> positional"] },
+          { "name": "set scope-file", "flags": ["<PATH> positional"] },
+          { "name": "set app-dir",    "flags": ["<PATH> positional"] },
+          { "name": "show",           "flags": [] }
         ]
       },
       "util": {
         "subcommands": [
-          { "name": "time-ms", "description": "Current UTC time as Unix millisecond timestamp — output: {\"ts\": <value>}" },
-          { "name": "uuid",    "description": "Generate a random UUID v4 — output: {\"uuid\": \"<value>\"}" }
+          { "name": "timestamp", "description": "Current UTC time as Unix millisecond timestamp — output: {\"ts\": <value>}" },
+          { "name": "uuid",      "description": "Generate a random UUID v4 — output: {\"uuid\": \"<value>\"}" },
+          { "name": "now",       "description": "Current India Standard Time (IST) — output: {\"now\": \"DD/MM/YY HH:mm:ss.fff\"}" }
         ]
       }
     }
@@ -104,25 +87,35 @@
     },
     "IOAuthBrowserFlow": {
       "namespace": "ZapiCli.Core.Auth",
-      "story": 10,
       "methods": [
         "string GenerateState()  — URL-safe base64 of 32 cryptographically random bytes (CSRF token)",
         "string BuildAuthorizationUrl(string baseUrl, string clientId, string redirectUri, string[] scopes, string state)",
+        "string BuildMobileAuthorizationUrl(string baseUrl, string clientId, string redirectUri, string[] scopes, string state, string publicKeyBase64)  — targets /oauth/v2/mobile/auth with ss_id=publicKeyBase64 and newmobilepage=true",
         "void OpenBrowser(string url)  — platform dispatch: open/xdg-open/UseShellExecute; always prints URL to stderr as fallback"
       ],
       "implementation": "OAuthBrowserFlow",
-      "note": "Constructor-injected into AccountService. Registered as singleton in DI (Story 12)."
+      "note": "Constructor-injected into AccountService. Registered as singleton in DI."
     },
     "IAuthProvider": {
       "namespace": "ZapiCli.Core.Auth",
       "methods": [
         "Task<string> GetTokenAsync(string accountName, CancellationToken ct = default)",
-        "Task StoreTokenAsync(string accountName, string accessToken, string clientId, string clientSecret, CancellationToken ct = default)",
+        "Task StoreTokenAsync(string accountName, string accessToken, string refreshToken, string clientId, string clientSecret, CancellationToken ct = default)",
         "Task ClearTokenAsync(string accountName, CancellationToken ct = default)",
-        "Task<string> RefreshTokenAsync(string accountName, IEnumerable<string> scopes, CancellationToken ct = default)"
+        "Task RenameTokenAsync(string oldName, string newName, CancellationToken ct = default)",
+        "Task<string> RefreshTokenAsync(string accountName, IEnumerable<string> scopes, string dc, CancellationToken ct = default)",
+        "Task<(string EnhanceToken, string ClientId)> GetScopeEnhancementTokenAsync(string accountName, string dc, CancellationToken ct = default)"
       ],
       "v1Implementation": "OAuthProvider",
-      "note": "StoreTokenAsync stores the JSON blob {access_token, client_id, client_secret} to keychain. RefreshTokenAsync reads client_id + client_secret from keychain, calls Zoho token endpoint, stores new access token, returns it. ApiClient calls IAuthProvider.GetTokenAsync and IAuthProvider.RefreshTokenAsync — never IKeychainProvider directly."
+      "note": "StoreTokenAsync stores the JSON blob {accessToken, refreshToken, clientId, clientSecret} (camelCase) to keychain. RefreshTokenAsync reads credentials from keychain, calls Zoho token endpoint, stores new access token, returns it. RenameTokenAsync moves credentials from old key to new key atomically. GetScopeEnhancementTokenAsync is used by AddScopesAsync (Zoho incremental authorization Step 1)."
+    },
+    "IRsaKeyPairProvider": {
+      "namespace": "ZapiCli.Core.Auth",
+      "methods": [
+        "(string PublicKeyBase64, RSA PrivateKey) Generate()  — generates a fresh 2048-bit RSA key pair; caller owns and must dispose the RSA instance"
+      ],
+      "implementation": "RsaKeyPairProvider",
+      "note": "Injected into AccountService for the Mobile OAuth login flow. FakeRsaKeyPairProvider used in tests."
     },
     "IAccountStore": {
       "namespace": "ZapiCli.Core.Accounts",
@@ -130,8 +123,27 @@
         "Task<AccountsRoot> LoadAsync(CancellationToken ct = default)",
         "Task SaveAsync(AccountsRoot root, CancellationToken ct = default)",
         "Task<AccountEntry?> FindAsync(string name, CancellationToken ct = default)",
-        "Task<AccountEntry> GetDefaultAsync(CancellationToken ct = default)"
+        "Task<AccountEntry> GetDefaultAsync(CancellationToken ct = default)",
+        "Task<AccountEntry?> FindByEmailAsync(string email, CancellationToken ct = default)",
+        "Task<AccountEntry?> FindByZuidAsync(string zuidstring, CancellationToken ct = default)",
+        "Task<bool> MigrateToDirectoryAsync(string newDataDir, CancellationToken ct = default)"
       ]
+    },
+    "IAccountService": {
+      "namespace": "ZapiCli.Core.Accounts",
+      "methods": [
+        "Task<IReadOnlyList<AccountListView>> ListAccountsAsync(CancellationToken ct = default)",
+        "Task<AccountShowView> ShowAccountAsync(string? name, string? email, string? zuidstring, CancellationToken ct = default)",
+        "Task SetDefaultAsync(string? name, string? email, string? zuidstring, CancellationToken ct = default)",
+        "Task RemoveAccountAsync(string? name, string? email, string? zuidstring, CancellationToken ct = default)",
+        "Task ReAuthAsync(string? name, string? email, string? zuidstring, CancellationToken ct = default)",
+        "Task<(string Name, string Dc)> MobileLoginAsync(string? name, string clientId, string[] scopes, string? clientSecret, CancellationToken ct = default)",
+        "Task<(string AccountName, List<string> UpdatedScopes)> AddScopesAsync(string accountName, IEnumerable<string> scopesToAdd, int callbackPort, CancellationToken ct = default)",
+        "Task<List<string>> GetScopesAsync(string accountName, CancellationToken ct = default)",
+        "Task<(string OldName, string NewName)> RenameAccountAsync(string? name, string? email, string? zuidstring, string newName, CancellationToken ct = default)"
+      ],
+      "implementation": "AccountService",
+      "note": "All business logic for account subcommands. Commands are thin wrappers that validate flags and delegate here."
     },
     "IOutputWriter": {
       "namespace": "ZapiCli.Core",
@@ -142,6 +154,21 @@
         "void WriteError(string message, string code, int exitCode)"
       ],
       "note": "WriteJson serializes data with SnakeCaseLower and writes to stdout. WriteRaw writes the raw string to stdout as-is (used by api call for Zoho response passthrough). WriteError writes the error envelope to stderr."
+    },
+    "ITraceSession": {
+      "namespace": "ZapiCli.Core.Trace",
+      "methods": [
+        "Task<TraceSessionEntry?> GetActiveSessionAsync(CancellationToken ct = default)",
+        "Task<TraceSessionEntry> StartSessionAsync(string name, string? requestedExportPath, CancellationToken ct = default)",
+        "Task CloseSessionAsync(string sessionId, int waitMs, CancellationToken ct = default)",
+        "Task ReopenSessionAsync(string sessionId, CancellationToken ct = default)",
+        "Task RemoveSessionAsync(string sessionId, CancellationToken ct = default)",
+        "Task<IReadOnlyList<TraceSessionEntry>> ListSessionsAsync(CancellationToken ct = default)",
+        "Task<TraceSessionEntry?> FindByNameOrIdAsync(string? name, string? id, CancellationToken ct = default)",
+        "Task<int> IncrementEntryCountAsync(string sessionId, CancellationToken ct = default)"
+      ],
+      "implementation": "TraceSession",
+      "note": "Manages traces/sessions.json index. Mutex-protected for concurrent Seq assignment. Session statuses: active → closing → closed. Reopen sets closed back to active."
     }
   },
   "dataModels": {
@@ -150,14 +177,14 @@
       "type": "sealed record",
       "jsonFile": "accounts.json",
       "properties": [
-        { "name": "Name",        "type": "required string",  "jsonKey": "name" },
-        { "name": "Dc",          "type": "required string",  "jsonKey": "dc",           "example": "us",  "values": "us|eu|in|au|cn|jp|sa|uk|ca" },
-        { "name": "Email",       "type": "string?",          "jsonKey": "email",        "note": "populated from Zoho user-info API at account add; never stored in keychain; used for ZohoCorp domain block" },
-        { "name": "Zuid",        "type": "string?",          "jsonKey": "zuidstring",   "note": "Zoho User ID (ZPUID/ZUIDSTRING), fetched from user-info at account add" },
-        { "name": "Scopes",      "type": "List<string>",     "jsonKey": "scopes",       "default": "[]" },
-        { "name": "IsDefault",   "type": "bool",             "jsonKey": "is_default" },
-        { "name": "NeedsReauth", "type": "bool",             "jsonKey": "needs_reauth" }
+        { "name": "Name",      "type": "required string",  "jsonKey": "name" },
+        { "name": "Dc",        "type": "required string",  "jsonKey": "dc",         "example": "us", "values": "us|eu|in|au|cn|jp|sa|uk|ca" },
+        { "name": "Email",     "type": "string?",          "jsonKey": "email",      "note": "populated from Zoho user-info API at login; never stored in keychain; used for ZohoCorp domain block" },
+        { "name": "Zuid",      "type": "string?",          "jsonKey": "zuidstring", "note": "Zoho User ID fetched from user-info at login" },
+        { "name": "Scopes",    "type": "List<string>",     "jsonKey": "scopes",     "default": "[]" },
+        { "name": "IsDefault", "type": "bool",             "jsonKey": "is_default" }
       ],
+      "_removed": "NeedsReauth removed in scope-incremental-auth refactor (was dead code)",
       "securityNote": "No token, client_id, or client_secret fields. Credentials live exclusively in the OS keychain under zapi-cli:<name>:oauth."
     },
     "AccountsRoot": {
@@ -235,15 +262,42 @@
         { "name": "Purpose", "type": "required string",  "jsonKey": "purpose" }
       ]
     },
+    "TraceSessionEntry": {
+      "namespace": "ZapiCli.Core.Trace",
+      "type": "sealed record",
+      "jsonFile": "traces/sessions.json",
+      "properties": [
+        { "name": "UniqueId",   "type": "required string",         "jsonKey": "unique_id",   "note": "UUID v4 — primary key" },
+        { "name": "Name",       "type": "required string",         "jsonKey": "name",        "note": "Human-readable label; non-unique" },
+        { "name": "StartTime",  "type": "required DateTimeOffset", "jsonKey": "start_time" },
+        { "name": "ExportPath", "type": "required string",         "jsonKey": "export_path", "note": "Absolute path to JSONL trace file" },
+        { "name": "EntryCount", "type": "int",                     "jsonKey": "entry_count",  "default": "0" },
+        { "name": "Status",     "type": "required string",         "jsonKey": "status",      "values": "active | closing | closed" }
+      ]
+    },
     "OAuthCredentials": {
       "namespace": "ZapiCli.Core.Auth",
       "type": "internal sealed record (deserialized from keychain value)",
       "properties": [
         "required string AccessToken",
+        "required string RefreshToken",
         "required string ClientId",
         "required string ClientSecret"
       ],
-      "note": "Stored as JSON blob in keychain. Never written to disk or any log."
+      "note": "Stored as camelCase JSON blob in keychain. Never written to disk or any log."
+    },
+    "MobileCallbackResult": {
+      "namespace": "ZapiCli.Core.Auth",
+      "type": "record (positional)",
+      "description": "Parsed parameters from the OAuth redirect callback for the Mobile OAuth flow",
+      "properties": [
+        "string Code  (authorization code)",
+        "string State  (CSRF state — must match sent state)",
+        "string? GtHash  (optional; sent as rt_hash in token exchange)",
+        "string? GtSec  (optional; RSA-encrypted client_secret, base64-encoded)",
+        "string? AccountsServer  (optional; per-user accounts base URL for DCL routing)",
+        "string? Location  (optional; DC location prefix e.g. 'us', 'eu' — used for DC auto-detection)"
+      ]
     }
   },
   "zohoCorpGuard": {
@@ -251,26 +305,40 @@
     "covers": "zohocorp.com, zohocorp.eu, zohocorp.in, zohocorp.com.au, and all future datacenter TLDs",
     "errorCode": "ACCOUNT_DOMAIN_BLOCKED",
     "blockedEntryPoints": [
-      "account add (before keychain write)",
-      "api call (before any HTTP request — check stored account email)",
-      "scope add/remove/list (before any mutation)"
+      "account login (before keychain write)",
+      "api request (before any HTTP request — check stored account email)",
+      "account scope add (before any mutation)"
     ]
   },
   "errorCodes": {
-    "ACCOUNT_NOT_FOUND":      { "exit": 1, "meaning": "Named account does not exist" },
-    "ACCOUNT_ALREADY_EXISTS": { "exit": 1, "meaning": "account add with duplicate name" },
-    "NO_DEFAULT_ACCOUNT":     { "exit": 1, "meaning": "No active account and --account not provided" },
-    "AUTH_FAILURE":           { "exit": 2, "meaning": "Auto-refresh or keychain read failed" },
-    "NEEDS_REAUTH":           { "exit": 2, "meaning": "Auto-refresh attempted but failed; account locked" },
-    "API_ERROR":              { "exit": 1, "meaning": "HTTP 4xx/5xx from Zoho API; response body still on stdout" },
-    "INVALID_ARGS":           { "exit": 1, "meaning": "Missing or conflicting flags" },
-    "IO_ERROR":               { "exit": 1, "meaning": "File system failure" },
-    "KEYCHAIN_ERROR":         { "exit": 2, "meaning": "OS keychain operation failed" },
-    "ACCOUNT_DOMAIN_BLOCKED": { "exit": 1, "meaning": "Account email is a ZohoCorp domain" },
-    "EMAIL_REQUIRED":         { "exit": 1, "meaning": "User-info API returned no email; account add aborted" },
-    "HOST_NOT_ALLOWED":       { "exit": 1, "meaning": "Outgoing URL host not in compile-time allowlist" },
-    "INTERNAL_ERROR":         { "exit": 1, "meaning": "Unhandled exception at top level" },
-    "STATE_MISMATCH":          { "exit": 1, "meaning": "OAuth callback state parameter does not match sent state (CSRF guard) or Zoho returned ?error= in callback" },
-    "LOGIN_TIMEOUT":           { "exit": 1, "meaning": "120-second browser auth window expired before receiving OAuth callback" }
+    "ACCOUNT_NOT_FOUND":           { "exit": 1, "meaning": "Named account does not exist" },
+    "ACCOUNT_ALREADY_EXISTS":      { "exit": 1, "meaning": "account login / mobile-login with duplicate name" },
+    "ACCOUNT_RENAME_FAILED":       { "exit": 2, "meaning": "Keychain rename partial failure (write OK but delete of old key failed)" },
+    "NO_DEFAULT_ACCOUNT":          { "exit": 1, "meaning": "No active account and --account not provided" },
+    "AUTH_FAILURE":                { "exit": 2, "meaning": "Auto-refresh or keychain read failed" },
+    "API_ERROR":                   { "exit": 1, "meaning": "HTTP 4xx/5xx from Zoho API; response body still on stdout" },
+    "INVALID_ARGS":                { "exit": 1, "meaning": "Missing or conflicting flags" },
+    "IO_ERROR":                    { "exit": 1, "meaning": "File system failure" },
+    "KEYCHAIN_ERROR":              { "exit": 2, "meaning": "OS keychain operation failed" },
+    "ACCOUNT_DOMAIN_BLOCKED":      { "exit": 1, "meaning": "Account email is a ZohoCorp domain" },
+    "EMAIL_REQUIRED":              { "exit": 1, "meaning": "User-info API returned no email; login aborted" },
+    "HOST_NOT_ALLOWED":            { "exit": 1, "meaning": "Outgoing URL host not in compile-time allowlist" },
+    "INTERNAL_ERROR":              { "exit": 1, "meaning": "Unhandled exception at top level" },
+    "STATE_MISMATCH":              { "exit": 1, "meaning": "OAuth callback state parameter does not match sent state (CSRF guard)" },
+    "LOGIN_TIMEOUT":               { "exit": 1, "meaning": "120-second browser auth window expired before receiving OAuth callback" },
+    "DUPLICATE_IDENTIFIER":        { "exit": 1, "meaning": "More than one of --name / --email / --Zuid provided (exactly one required)" },
+    "SESSION_NOT_FOUND":           { "exit": 1, "meaning": "Trace session name or UUID does not match any session" },
+    "SESSION_AMBIGUOUS":           { "exit": 1, "meaning": "Multiple trace sessions share the given name — use --id instead" },
+    "EXPORT_PATH_NOT_SET":         { "exit": 1, "meaning": "No --export-path on trace start and no default configured" },
+    "ENDPOINT_NOT_FOUND":          { "exit": 1, "meaning": "api endpoints operation targets an id that does not exist" },
+    "ENDPOINT_ALREADY_EXISTS":     { "exit": 1, "meaning": "api endpoints add — specified id already exists" },
+    "REGISTRY_ENTRY_NOT_FOUND":    { "exit": 1, "meaning": "DEPRECATED alias of ENDPOINT_NOT_FOUND — still present in ErrorCodes.cs for backward compatibility" },
+    "REGISTRY_ENTRY_ALREADY_EXISTS": { "exit": 1, "meaning": "DEPRECATED alias of ENDPOINT_ALREADY_EXISTS" },
+    "SCOPE_ENHANCE_DENIED":        { "exit": 1, "meaning": "User rejected scope enhancement consent or callback returned error" },
+    "SCOPE_ENHANCE_FAILED":        { "exit": 2, "meaning": "HTTP-level failure on POST /scopeenhance" },
+    "DCL_MISSING":                 { "exit": 2, "meaning": "Mobile OAuth token exchange response missing dc_locations field" },
+    "RSA_DECRYPT_FAILURE":         { "exit": 2, "meaning": "RSA decryption of gt_sec from Mobile OAuth callback failed" },
+    "ENV_FILE_NOT_CONFIGURED":     { "exit": 1, "meaning": "ZOHO_CLIENT_ID not set (account login); configure env-file or config set client-id" },
+    "SCOPE_FILE_NOT_CONFIGURED":   { "exit": 1, "meaning": "No scopes provided via --scope or configured scope-file" }
   }
 }

@@ -967,3 +967,21 @@ No external keychain NuGet — platform keychain access is implemented via direc
 - No multi-account simultaneous API calls (one active account per invocation).
 - No sync/caching layer — all API calls are live.
 - No product-alias shortcuts for `--url` — full URL required on every `api call`.
+>
+> **Contents summary (~1050 lines):** Full architecture spec covering:
+> - §1 Project Overview — binary, purpose, consumer model
+> - §2 Solution Structure — 3-project layout (ZapiCli / ZapiCli.Core / ZapiCli.Keychain)
+> - §3 Project Structure — folder map, file inventory
+> - §4 Output Contract — stdout raw passthrough, stderr structured JSON
+> - §5 Authentication — Self-Client OAuth, PKCE, token exchange, refresh, revoke
+> - §6 Account Store — `accounts.json`, keychain keys, `AccountEntry` schema
+> - §7 API Client — `ApiClient`, host allowlist, 401 auto-retry, `ApiResponse`
+> - §8 API Registry — `endpoints.json`, CRUD, `ApiEndpointEntry`
+> - §9 Config System — `cli-settings.json`, `CliSettingsStore`
+> - §10 Trace System — sessions.json, JSONL, Mutex, `TraceSessionEntry`, `ApiTraceEntry`
+> - §11 Security — ZohoCorpGuard, host allowlist, SSRF prevention
+> - §12 Error Codes — complete list of all `ErrorCodes` constants
+> - §13 Testing Strategy — XUnit, NSubstitute, fake implementations
+> - §14 Build & Publishing — `publish-all.sh`, platform targets
+
+See: [`tech_spec/tech_spec.md`](../../tech_spec/tech_spec.md)

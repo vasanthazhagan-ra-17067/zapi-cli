@@ -35,7 +35,7 @@ keychain-backed credentials model.
   - `zapi-cli config set client-id <CLIENT_ID>`
   - `zapi-cli config set client-secret <CLIENT_SECRET>`
 - **REQ-004**: Each config command stores the value in the OS keychain using the existing `IKeychainProvider` abstraction, under its own dedicated key.
-- **REQ-005**: At login time the CLI queries the keychain for both values.  
+- **REQ-005**: At login time the CLI queries the keychain for both values.
   - If both are present and non-default → use them.
   - If either is absent or still matches the dummy defaults → throw `ZapiCliException` with `APP_CREDENTIALS_NOT_CONFIGURED`.
 - **REQ-006**: The error message must clearly instruct the user how to fix the issue:
@@ -71,28 +71,17 @@ These keys are constants in `AppClientDefaults.cs` (same file, different section
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-001 | Create `src/ZapiCli.Core/Auth/AppClientDefaults.cs`. Define `internal static class AppClientDefaults` with three `const string` members: `ClientId` (dummy), `ClientSecret` (dummy), `KeychainClientIdKey` (`"zapi-cli:config:client-id"`), `KeychainClientSecretKey` (`"zapi-cli:config:client-secret"`). | | |
+| TASK-001 | Create `src/ZapiCli.Core/Auth/AppClientDefaults.cs`. Define `internal static class AppClientDefaults` with constants: `ClientId` (dummy), `ClientSecret` (dummy), `KeychainClientIdKey` (`"zapi-cli:config:client-id"`), `KeychainClientSecretKey` (`"zapi-cli:config:client-secret"`). | | |
 
 ```csharp
 // src/ZapiCli.Core/Auth/AppClientDefaults.cs
 namespace ZapiCli.Core.Auth;
 
-/// <summary>
-/// Build-time default (dummy) OAuth client credentials.
-/// Real credentials are stored in the OS keychain via <c>config set client-id/client-secret</c>.
-/// </summary>
 internal static class AppClientDefaults
 {
-    /// <summary>Dummy client ID shipped in the binary. Never used for real logins.</summary>
     public const string ClientId = "DUMMY_CLIENT_ID";
-
-    /// <summary>Dummy client secret shipped in the binary. Never used for real logins.</summary>
     public const string ClientSecret = "DUMMY_CLIENT_SECRET";
-
-    /// <summary>Keychain key under which the user-configured client ID is stored.</summary>
     public const string KeychainClientIdKey = "zapi-cli:config:client-id";
-
-    /// <summary>Keychain key under which the user-configured client secret is stored.</summary>
     public const string KeychainClientSecretKey = "zapi-cli:config:client-secret";
 }
 ```
@@ -111,19 +100,8 @@ internal static class AppClientDefaults
 // src/ZapiCli.Core/Auth/IAppCredentialsProvider.cs
 namespace ZapiCli.Core.Auth;
 
-/// <summary>
-/// Resolves the OAuth application client ID and client secret for use during login.
-/// Reads from OS keychain; falls back to dummy defaults which then produce an error.
-/// </summary>
 public interface IAppCredentialsProvider
 {
-    /// <summary>
-    /// Returns the effective <c>(ClientId, ClientSecret)</c> pair.
-    /// </summary>
-    /// <exception cref="ZapiCliException">
-    /// Thrown with <see cref="ErrorCodes.APP_CREDENTIALS_NOT_CONFIGURED"/> when no real
-    /// credentials have been stored (keychain is empty or matches dummy defaults).
-    /// </exception>
     Task<(string ClientId, string ClientSecret)> GetCredentialsAsync(CancellationToken ct = default);
 }
 ```
@@ -136,7 +114,7 @@ public interface IAppCredentialsProvider
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-003 | Create `src/ZapiCli.Core/Auth/AppCredentialsProvider.cs`. Constructor injects `IKeychainProvider`. `GetCredentialsAsync` reads both keychain keys. If either is null/empty, falls back to `AppClientDefaults.ClientId/Secret`. Compares final values against dummy defaults; if match, throws `ZapiCliException` with `APP_CREDENTIALS_NOT_CONFIGURED` and the instructional error message. | | |
+| TASK-003 | Create `src/ZapiCli.Core/Auth/AppCredentialsProvider.cs`. Constructor injects `IKeychainProvider`. `GetCredentialsAsync` reads both keychain keys. If either is null/empty, falls back to `AppClientDefaults`. Compares final values against dummy defaults; if match, throws `ZapiCliException` with `APP_CREDENTIALS_NOT_CONFIGURED`. | | |
 
 ```csharp
 // src/ZapiCli.Core/Auth/AppCredentialsProvider.cs
@@ -148,8 +126,7 @@ public sealed class AppCredentialsProvider : IAppCredentialsProvider
 {
     private readonly IKeychainProvider _keychain;
 
-    public AppCredentialsProvider(IKeychainProvider keychain)
-        => _keychain = keychain;
+    public AppCredentialsProvider(IKeychainProvider keychain) => _keychain = keychain;
 
     public async Task<(string ClientId, string ClientSecret)> GetCredentialsAsync(
         CancellationToken ct = default)
@@ -185,11 +162,6 @@ public sealed class AppCredentialsProvider : IAppCredentialsProvider
 |------|-------------|-----------|------|
 | TASK-004 | Open `src/ZapiCli.Core/ErrorCodes.cs`. Add `public const string APP_CREDENTIALS_NOT_CONFIGURED = nameof(APP_CREDENTIALS_NOT_CONFIGURED);` alongside the existing `ENV_FILE_NOT_CONFIGURED` constant. | | |
 
-```csharp
-// In ErrorCodes.cs — add alongside ENV_FILE_NOT_CONFIGURED
-public const string APP_CREDENTIALS_NOT_CONFIGURED = nameof(APP_CREDENTIALS_NOT_CONFIGURED);
-```
-
 ---
 
 ### Phase 5 — `ConfigCommands` — new `config set client-id` and `config set client-secret` sub-commands
@@ -201,7 +173,6 @@ public const string APP_CREDENTIALS_NOT_CONFIGURED = nameof(APP_CREDENTIALS_NOT_
 | TASK-005 | In `src/ZapiCli/Commands/ConfigCommands.cs`, add `ConfigSetClientIdSettings` + `ConfigSetClientIdCommand` and `ConfigSetClientSecretSettings` + `ConfigSetClientSecretCommand`. Each command: accepts a single positional `<VALUE>` argument, validates it is non-empty, calls `IKeychainProvider.SetAsync(key, value, ct)`, and returns `{ status: "ok", data: { key } }`. | | |
 
 ```csharp
-// ─── config set client-id ─────────────────────────────────────────────────
 public sealed class ConfigSetClientIdSettings : CommandSettings
 {
     [CommandArgument(0, "<CLIENT_ID>")]
@@ -232,9 +203,7 @@ public sealed class ConfigSetClientIdCommand : AsyncCommand<ConfigSetClientIdSet
         return 0;
     }
 }
-
-// ─── config set client-secret ─────────────────────────────────────────────
-// (mirrors ConfigSetClientIdCommand; replaces KeychainClientSecretKey)
+// ConfigSetClientSecretCommand mirrors the above with KeychainClientSecretKey
 ```
 
 ---
@@ -245,7 +214,7 @@ public sealed class ConfigSetClientIdCommand : AsyncCommand<ConfigSetClientIdSet
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-006 | In `src/ZapiCli/Program.cs` (or wherever `config set` sub-commands are added to the `CommandApp`), register `ConfigSetClientIdCommand` and `ConfigSetClientSecretCommand` under the `config set` branch alongside the existing `env-file` and `scope-file` commands. | | |
+| TASK-006 | In `src/ZapiCli/Program.cs`, register `ConfigSetClientIdCommand` and `ConfigSetClientSecretCommand` under the `config set` branch alongside the existing `env-file` and `scope-file` commands. | | |
 
 ---
 
@@ -255,7 +224,7 @@ public sealed class ConfigSetClientIdCommand : AsyncCommand<ConfigSetClientIdSet
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-007 | In `src/ZapiCli/DependencyInjectionRegistrar.cs`, add `services.AddSingleton<IAppCredentialsProvider, AppCredentialsProvider>();`. `IKeychainProvider` is already registered. | | |
+| TASK-007 | In `src/ZapiCli/DependencyInjectionRegistrar.cs`, add `services.AddSingleton<IAppCredentialsProvider, AppCredentialsProvider>();`. | | |
 
 ---
 
@@ -265,24 +234,19 @@ public sealed class ConfigSetClientIdCommand : AsyncCommand<ConfigSetClientIdSet
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-008 | In `AccountLoginCommand`: add `IAppCredentialsProvider _appCredentials` to the constructor and stored field. Remove the `Environment.GetEnvironmentVariable("ZOHO_CLIENT_ID")` block and its guard. Remove the `Environment.GetEnvironmentVariable("ZOHO_CLIENT_SECRET")` line. Replace both with a single `var (clientId, clientSecret) = await _appCredentials.GetCredentialsAsync(default).ConfigureAwait(false);` call near the start of `ExecuteAsync`. The rest of the method is unchanged. | | |
+| TASK-008 | In `AccountLoginCommand`: add `IAppCredentialsProvider _appCredentials` constructor field. Remove `Environment.GetEnvironmentVariable("ZOHO_CLIENT_ID")` and `"ZOHO_CLIENT_SECRET"` blocks. Replace with: `var (clientId, clientSecret) = await _appCredentials.GetCredentialsAsync(default).ConfigureAwait(false);` | | |
 
 **Before:**
 ```csharp
 var clientId = Environment.GetEnvironmentVariable("ZOHO_CLIENT_ID");
 if (string.IsNullOrWhiteSpace(clientId))
-    throw new ZapiCliException(
-        "ZOHO_CLIENT_ID is not set. Configure an env-file via 'zapi-cli config set env-file <path>'.",
-        ErrorCodes.ENV_FILE_NOT_CONFIGURED,
-        exitCode: 1);
-// ... scope loading ...
+    throw new ZapiCliException("ZOHO_CLIENT_ID is not set...", ErrorCodes.ENV_FILE_NOT_CONFIGURED, exitCode: 1);
 var clientSecret = Environment.GetEnvironmentVariable("ZOHO_CLIENT_SECRET");
 ```
 
 **After:**
 ```csharp
-var (clientId, clientSecret) = await _appCredentials.GetCredentialsAsync(default)
-    .ConfigureAwait(false);
+var (clientId, clientSecret) = await _appCredentials.GetCredentialsAsync(default).ConfigureAwait(false);
 ```
 
 ---
@@ -293,7 +257,7 @@ var (clientId, clientSecret) = await _appCredentials.GetCredentialsAsync(default
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-009 | Create `tests/ZapiCli.Tests/Auth/AppCredentialsProviderTests.cs`. Add tests for: (a) keychain has both values → returns them; (b) keychain missing client-id → throws `APP_CREDENTIALS_NOT_CONFIGURED`; (c) keychain missing client-secret → throws `APP_CREDENTIALS_NOT_CONFIGURED`; (d) keychain returns dummy-default value → throws `APP_CREDENTIALS_NOT_CONFIGURED`. Use `NSubstitute` mock for `IKeychainProvider`. | | |
+| TASK-009 | Create `tests/ZapiCli.Tests/Auth/AppCredentialsProviderTests.cs`. Tests: (a) keychain has both values → returns them; (b) keychain missing client-id → throws `APP_CREDENTIALS_NOT_CONFIGURED`; (c) keychain missing client-secret → throws; (d) keychain returns dummy-default value → throws. Use `NSubstitute` mock for `IKeychainProvider`. | | |
 
 ```csharp
 // Scenario (a): valid credentials returned
@@ -301,10 +265,8 @@ var (clientId, clientSecret) = await _appCredentials.GetCredentialsAsync(default
 public async Task GetCredentialsAsync_ValidKeychain_ReturnsCredentials()
 {
     var keychain = Substitute.For<IKeychainProvider>();
-    keychain.GetAsync(AppClientDefaults.KeychainClientIdKey, default)
-            .Returns("real-client-id");
-    keychain.GetAsync(AppClientDefaults.KeychainClientSecretKey, default)
-            .Returns("real-client-secret");
+    keychain.GetAsync(AppClientDefaults.KeychainClientIdKey, default).Returns("real-client-id");
+    keychain.GetAsync(AppClientDefaults.KeychainClientSecretKey, default).Returns("real-client-secret");
 
     var sut = new AppCredentialsProvider(keychain);
     var (id, secret) = await sut.GetCredentialsAsync();
@@ -312,23 +274,6 @@ public async Task GetCredentialsAsync_ValidKeychain_ReturnsCredentials()
     Assert.Equal("real-client-id", id);
     Assert.Equal("real-client-secret", secret);
 }
-
-// Scenario (b): keychain missing client-id → error
-[Fact]
-public async Task GetCredentialsAsync_MissingClientId_Throws()
-{
-    var keychain = Substitute.For<IKeychainProvider>();
-    keychain.GetAsync(AppClientDefaults.KeychainClientIdKey, default)
-            .Returns((string?)null);
-    keychain.GetAsync(AppClientDefaults.KeychainClientSecretKey, default)
-            .Returns("real-client-secret");
-
-    var sut = new AppCredentialsProvider(keychain);
-    var ex = await Assert.ThrowsAsync<ZapiCliException>(() => sut.GetCredentialsAsync());
-    Assert.Equal(ErrorCodes.APP_CREDENTIALS_NOT_CONFIGURED, ex.ErrorCode);
-}
-
-// Scenarios (c) and (d) follow the same pattern.
 ```
 
 ---
@@ -349,29 +294,7 @@ public async Task GetCredentialsAsync_MissingClientId_Throws()
 
 ---
 
-## 5. Command Reference (after this feature)
-
-```
-zapi-cli config set client-id <CLIENT_ID>
-    Stores the Zoho OAuth client ID in the OS keychain.
-    Required before the first account login.
-
-zapi-cli config set client-secret <CLIENT_SECRET>
-    Stores the Zoho OAuth client secret in the OS keychain.
-    Required before the first account login.
-```
-
-**Login error when credentials not configured:**
-```
-Error: No credentials found to perform login. Update client details using:
-  zapi-cli config set client-id <CLIENT_ID>
-  zapi-cli config set client-secret <CLIENT_SECRET>
-```
-
----
-
-## 6. Out of Scope
+## 5. Out of Scope
 
 - `config set env-file` is **not removed** — it may still be needed for other env vars.
-- Fetching the default `ClientId`/`ClientSecret` from any external service or file is out of scope — they remain hardcoded dummy values until replaced by a future ADR.
 - No migration path for users who previously used env vars — this is a breaking change in behavior for self-hosted usage, which is acceptable at this stage.

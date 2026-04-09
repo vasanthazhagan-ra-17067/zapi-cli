@@ -3,6 +3,8 @@
 > **Canonical specification for the redesigned `zapi` CLI surface.**
 > This document is the authoritative source for all command names, flags, and param names
 > after the CLI naming refactor (stories 26–36). HELP.md is regenerated from this spec.
+>
+> **Source:** `tech_spec/docs/command-reference.md`
 
 ---
 
@@ -343,8 +345,7 @@ zapi api endpoints remove --id cliq-channels
 
 ## `trace` group
 
-> All session commands sit directly
-> under `trace`. The intermediate `session` nesting level has been removed.
+> All session commands sit directly under `trace`. The intermediate `session` nesting level has been removed.
 
 ### `trace start`
 
@@ -451,8 +452,6 @@ zapi trace remove --id 550e8400-e29b-41d4-a716-446655440000
 zapi trace config set --default-export-path <PATH>
 ```
 
-*(No change to this command.)*
-
 **Example:**
 ```bash
 zapi trace config set --default-export-path /tmp/traces/
@@ -465,8 +464,6 @@ zapi trace config set --default-export-path /tmp/traces/
 ```
 zapi trace config show
 ```
-
-*(No change to this command.)*
 
 **Example:**
 ```bash
@@ -483,8 +480,6 @@ zapi trace config show
 zapi config set env-file <PATH>
 ```
 
-*(No change.)*
-
 **Example:**
 ```bash
 zapi config set env-file ~/.zapi/.env
@@ -497,8 +492,6 @@ zapi config set env-file ~/.zapi/.env
 ```
 zapi config set scope-file <PATH>
 ```
-
-*(No change.)*
 
 **Example:**
 ```bash
@@ -513,8 +506,6 @@ zapi config set scope-file ~/.zapi/scopes.txt
 zapi config set app-dir <PATH>
 ```
 
-*(No change.)*
-
 **Example:**
 ```bash
 zapi config set app-dir ~/projects/myapp/.zapi
@@ -527,8 +518,6 @@ zapi config set app-dir ~/projects/myapp/.zapi
 ```
 zapi config show
 ```
-
-*(No change.)*
 
 **Example:**
 ```bash
@@ -576,8 +565,6 @@ zapi util now
 ```
 zapi util uuid
 ```
-
-*(No change.)*
 
 **Example:**
 ```bash

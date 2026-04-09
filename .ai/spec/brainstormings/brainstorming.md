@@ -710,3 +710,7 @@ zapi-cli/
 8. **Trace body size limits** — Recommended default: write full body to `.jsonl`, apply `--truncate-body` only at export time. Preserves full fidelity in storage and gives the agent control at export.
 
 9. **Multi-product trace filtering** — The `--product` export filter requires a `products.json` alias registry to work (see point 1). Tie the two features together or defer both.
+>
+> **Contents summary:** Project vision — why a CLI for Zoho REST APIs, target consumer (AI agents / GitHub Copilot CLI Skills / Claude Agent Skills), design philosophy (raw passthrough, structured stderr, host allowlist, self-contained binary), competitive analysis vs. Postman/httpie/curl, and v1/v2/v3 scope boundaries.
+
+See: [`tech_spec/brainstorming.md`](../../tech_spec/brainstorming.md)

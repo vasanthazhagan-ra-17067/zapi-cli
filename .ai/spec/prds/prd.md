@@ -412,3 +412,7 @@ An AI agent working in a GitHub Copilot session needs to fetch open support tick
 
 - **WebSocket connections** (`ws connect/send/listen/close`): Generic named WebSocket sessions for Zoho real-time endpoints.
 - **Pex / real-time chat** (`pex connect/send/drain/clear/listen/close`): Zoho Cliq proprietary Pex/WMS real-time protocol; events buffered to a per-account JSONL file and drained on demand.
+>
+> **Contents summary:** Problem statement, target user (AI agents / CLI power users), v1 scope (account management, api call, trace system, api registry, util commands), v2 scope (mobile login, incremental auth, keychain credentials), v3 deferred (team sharing, remote trace storage). Full requirements list with MoSCoW prioritization.
+
+See: [`tech_spec/prd.md`](../../tech_spec/prd.md)

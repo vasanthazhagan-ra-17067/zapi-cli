@@ -35,7 +35,7 @@ Step 2: GET  /oauth/v2/token/addextrascope
         → User consents → refresh token appended with new scopes
 ```
 
-> **Note:** The `accounts-server-url` is datacenter-specific. See [Multiple Data Centers](Authentication.md#multiple-data-centers) for the full list of datacenter-specific accounts URLs.
+> **Note:** The `accounts-server-url` is datacenter-specific. See [Authentication.md](Authentication.md#multiple-data-centers) for the full list of datacenter-specific accounts URLs.
 
 ---
 
@@ -97,7 +97,6 @@ refresh_token=1000.XXXXX
 |                        | `grant_type` is missing or not `update_scopes_token`. |
 | `invalid_client_secret` | `client_secret` is missing or invalid. |
 | `invalid_code`          | `refresh_token` is missing, invalid, or already used. |
-|                        | `grant_type` value is incorrect (must be `update_scopes_token`). |
 | `400 Bad Request`       | HTTP method is incorrect — must be `POST`. |
 
 ---
@@ -118,8 +117,8 @@ GET {accounts-server-url}/oauth/v2/token/addextrascope
 |----------------|----------|-------------|
 | `client_id`    | ✅ Yes   | The unique ID of your application from the API console. |
 | `response_type`| ✅ Yes   | Must be set to `update_scopes`. |
-| `redirect_uri` | ✅ Yes   | URI to redirect the browser after grant/rejection. Must match the URI registered in the API console. Must start with `http://` or `https://`. <br>Example: `https://www.zylker.com/oauthredirect` |
-| `scope`        | ✅ Yes   | The additional scopes to request from the user. These will appear on the consent screen. <br>Example: `ZohoCRM.settings.READ` |
+| `redirect_uri` | ✅ Yes   | URI to redirect the browser after grant/rejection. Must match the URI registered in the API console. |
+| `scope`        | ✅ Yes   | The additional scopes to request from the user. |
 | `enhance_token`| ✅ Yes   | The scope enhancement token received from Step 1. |
 | `logout`       | ✅ Yes   | Set to `true` to terminate the user's session after they grant or reject permission. |
 
@@ -139,7 +138,7 @@ GET https://accounts.zoho.com/oauth/v2/token/addextrascope
 
 After authenticating the user, Zoho displays a consent screen showing the permissions your app is requesting.
 
-- If the user **approves**, the refresh token (from Step 1) and its associated access tokens are appended with the additional scopes, and a success response is returned to `redirect_uri`.
+- If the user **approves**, the refresh token (from Step 1) and its associated access tokens are appended with the additional scopes.
 - If the user **rejects**, a failure response is returned.
 
 ### Response Parameters (Redirect)
@@ -148,18 +147,6 @@ After authenticating the user, Zoho displays a consent screen showing the permis
 |----------|-------------|
 | **Success** | `{redirect_uri}?status=success&scope_enhanced=true` |
 | **Failure** | `{redirect_uri}?error=access_denied` |
-
-### Response Examples
-
-**Success:**
-```
-https://www.zylker.com/oauthredirect?status=success&scope_enhanced=true
-```
-
-**Failure:**
-```
-https://www.zylker.com/oauthredirect?error=access_denied
-```
 
 ---
 

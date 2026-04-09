@@ -86,7 +86,7 @@ Supported RIDs: `win-x64`, `osx-x64`, `osx-arm64`, `linux-x64`.
 
 ## References
 
-- **REF-001**: [tech_spec/tech_spec.md — Section 2: Runtime & Language](../tech_spec/tech_spec.md#2-runtime--language)
-- **REF-002**: [tech_spec/tech_spec.md — Section 13: Dependencies](../tech_spec/tech_spec.md#13-dependencies)
+- **REF-001**: [tech_spec/tech_spec.md — Section 2: Runtime & Language](../../tech_spec/tech_spec.md#2-runtime--language)
+- **REF-002**: [tech_spec/tech_spec.md — Section 13: Dependencies](../../tech_spec/tech_spec.md#13-dependencies)
 - **REF-003**: [Spectre.Console.Cli documentation](https://spectreconsole.net/cli/getting-started)
 - **REF-004**: [.NET 10 RID catalog](https://learn.microsoft.com/en-us/dotnet/core/rid-catalog)

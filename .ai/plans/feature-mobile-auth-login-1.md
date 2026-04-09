@@ -12,7 +12,7 @@ tags: [feature, auth, mobile-oauth]
 ![Status: Planned](https://img.shields.io/badge/status-planned-blue)
 
 Implement the `account mobile-login` command following the Zoho Mobile OAuth 2.0 flow documented
-in [`tech_spec/docs/AppXMacAuth-Pod.md`](../tech_spec/docs/AppXMacAuth-Pod.md).
+in [`.ai/docs/AppXMacAuth-Pod.md`](../docs/AppXMacAuth-Pod.md).
 
 Unlike `account login` (Self-Client flow), this flow:
 - Requires **no `client_secret` from the user** — Zoho delivers it RSA-encrypted in the redirect.
@@ -81,10 +81,10 @@ public sealed class RsaKeyPairProvider : IRsaKeyPairProvider
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-002 | In `src/ZapiCli.Core/Accounts/AccountService.cs`, change the `ExchangeAndFinalizeAsync` signature to add three optional parameters: `string? accountsServerOverride = null`, `string? rtHash = null`, `bool requireDcLocations = false`. | | |
+| TASK-002 | In `AccountService.cs`, add three optional parameters to `ExchangeAndFinalizeAsync`: `string? accountsServerOverride = null`, `string? rtHash = null`, `bool requireDcLocations = false`. | | |
 | TASK-003 | Replace `var baseUrl = DcResolver.GetAccountsBaseUrl(dc);` with `var baseUrl = accountsServerOverride ?? DcResolver.GetAccountsBaseUrl(dc);` | | |
 | TASK-004 | In the token exchange form data block, add: `if (rtHash is not null) tokenFormData["rt_hash"] = rtHash;` | | |
-| TASK-005 | After parsing `access_token` and `refresh_token` from the token response, add the `requireDcLocations` check: if `requireDcLocations == true` and the root JSON does not contain a `dc_locations` property with `JsonValueKind.Object`, throw `new ZapiCliException("Token exchange response did not contain 'dc_locations'. ...", ErrorCodes.DCL_MISSING, exitCode: 2)`. | | |
+| TASK-005 | After parsing `access_token` and `refresh_token`, add the `requireDcLocations` check: if `requireDcLocations == true` and the root JSON does not contain `dc_locations` property with `JsonValueKind.Object`, throw `new ZapiCliException("Token exchange response did not contain 'dc_locations'.", ErrorCodes.DCL_MISSING, exitCode: 2)`. | | |
 
 **Signature after change:**
 ```csharp
@@ -111,13 +111,13 @@ private async Task<(string Name, string Dc)> ExchangeAndFinalizeAsync(
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-006 | Replace the public `MobileLoginAsync` stub with a delegate call to the internal overload — identical pattern to `LoginAsync`. Public method creates `new RsaKeyPairProvider()` and `() => new LocalCallbackServer(callbackPort)`. | | |
-| TASK-007 | Implement the internal `MobileLoginAsync(name, clientId, scopes, dc, callbackPort, rsaProvider, ct, serverFactory)` overload. Step-by-step: | | |
-| TASK-008 | **Step 1 — Uniqueness check**: same as `LoginAsync` — abort with `ACCOUNT_ALREADY_EXISTS` if name exists in store. At this point, do NOT open browser yet. | | |
-| TASK-009 | **Step 2 — RSA key pair generation**: call `rsaProvider.Generate()` to get `(publicKeyBase64, privateKey)`. Wrap in `await using` or ensure `privateKey.Dispose()` in `finally` block. | | |
+| TASK-007 | Implement the internal `MobileLoginAsync(name, clientId, scopes, dc, callbackPort, rsaProvider, ct, serverFactory)` overload. | | |
+| TASK-008 | **Step 1 — Uniqueness check**: abort with `ACCOUNT_ALREADY_EXISTS` if name exists in store. Do NOT open browser yet. | | |
+| TASK-009 | **Step 2 — RSA key pair generation**: call `rsaProvider.Generate()`. Wrap in `using` to ensure `privateKey.Dispose()` in `finally` block. | | |
 | TASK-010 | **Step 3 — Build mobile auth URL**: call `_browserFlow.BuildMobileAuthorizationUrl(baseUrl, clientId, redirectUri, scopes, state, publicKeyBase64)`. | | |
-| TASK-011 | **Step 4 — Open browser and wait for callback**: `await using var server = serverFactory();`, generate state, build redirect URI as `$"http://localhost:{server.Port}/callback"`, call `_browserFlow.OpenBrowser(authUrl)`, then `var mobileResult = await server.WaitForMobileCallbackAsync(TimeSpan.FromSeconds(120), ct)`. | | |
+| TASK-011 | **Step 4 — Open browser and wait for callback**: `await using var server = serverFactory();`, generate state, build redirect URI, call `_browserFlow.OpenBrowser(authUrl)`, then `var mobileResult = await server.WaitForMobileCallbackAsync(TimeSpan.FromSeconds(120), ct)`. | | |
 | TASK-012 | **Step 5 — CSRF state check**: if `mobileResult.State != state`, throw `ZapiCliException` with `STATE_MISMATCH`. | | |
-| TASK-013 | **Step 6 — RSA decryption of `gt_sec`**: `Convert.FromBase64String(mobileResult.GtSec)` then `privateKey.Decrypt(cipherBytes, RSAEncryptionPadding.Pkcs1)` → `Encoding.UTF8.GetString(plainBytes)`. Wrap in `try/catch(CryptographicException)` → rethrow as `ZapiCliException` with `RSA_DECRYPT_FAILURE`. Also catch `FormatException` (bad base64) with the same error code. | | |
+| TASK-013 | **Step 6 — RSA decryption of `gt_sec`**: `Convert.FromBase64String(mobileResult.GtSec)` then `privateKey.Decrypt(cipherBytes, RSAEncryptionPadding.Pkcs1)`. Catch `CryptographicException` and `FormatException` → rethrow as `ZapiCliException` with `RSA_DECRYPT_FAILURE`. | | |
 | TASK-014 | **Step 7 — Token exchange + finalize**: call `ExchangeAndFinalizeAsync(name, mobileResult.Code, redirectUri, clientId, clientSecret, dc, scopes, ct, accountsServerOverride: mobileResult.AccountsServer, rtHash: mobileResult.GtHash, requireDcLocations: true)`. | | |
 
 **Pseudocode for the internal overload:**
@@ -140,15 +140,12 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
     // Step 3: Start callback server + build auth URL
     var baseUrl = DcResolver.GetAccountsBaseUrl(dc);
     await using var server = serverFactory();
-
     var state = _browserFlow.GenerateState();
     var redirectUri = $"http://localhost:{server.Port}/callback";
     var authUrl = _browserFlow.BuildMobileAuthorizationUrl(
         baseUrl, clientId, redirectUri, scopes, state, publicKeyBase64);
 
-    Console.Error.WriteLine($"Redirect URI (must be registered in Zoho Developer Console): {redirectUri}");
     _browserFlow.OpenBrowser(authUrl);
-    Console.Error.WriteLine("Waiting for browser authentication... (timeout: 120s)");
 
     // Step 4: Wait for mobile callback
     var result = await server.WaitForMobileCallbackAsync(
@@ -170,8 +167,7 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
     catch (Exception ex) when (ex is FormatException or CryptographicException)
     {
         throw new ZapiCliException(
-            "Failed to decrypt the client secret from the OAuth redirect. " +
-            "Ensure the correct client ID is registered with Zoho as a Mobile/Desktop app.",
+            "Failed to decrypt the client secret from the OAuth redirect.",
             ErrorCodes.RSA_DECRYPT_FAILURE, exitCode: 2);
     }
 
@@ -192,7 +188,7 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-015 | Add `AccountMobileLoginSettings : GlobalSettings` to `src/ZapiCli/Commands/AccountCommands.cs`. Required options: `--name <NAME>`, `--client-id <CLIENT_ID>`, `--scope <SCOPE>` (comma-separated). Optional: `--dc <DC>` (default `"us"`), `--port <PORT>` (default `8085`). File mode (`--file`) is NOT needed — mobile-login config has no `client-secret`. Validation: same null/name-chars/dc checks as `AccountLoginSettings`. | | |
+| TASK-015 | Add `AccountMobileLoginSettings : GlobalSettings` to `AccountCommands.cs`. Required options: `--name <NAME>`, `--client-id <CLIENT_ID>`, `--scope <SCOPE>` (comma-separated). Optional: `--dc <DC>` (default `"us"`), `--port <PORT>` (default `8085`). No `--client-secret` option. | | |
 | TASK-016 | Add `AccountMobileLoginCommand : AsyncCommand<AccountMobileLoginSettings>`. `ExecuteAsync` calls `_service.MobileLoginAsync(name, clientId, scopes, dc, port)` and writes `{ "status": "ok", "data": { "name", "dc" } }`. | | |
 
 ---
@@ -203,8 +199,8 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-017 | In `src/ZapiCli/DependencyInjectionRegistrar.cs`, add `services.AddSingleton<IRsaKeyPairProvider, RsaKeyPairProvider>();`. | | |
-| TASK-018 | In `src/ZapiCli/Program.cs`, add `config.AddCommand<AccountCommands.AccountMobileLoginCommand>("mobile-login")` inside the `account` branch. | | |
+| TASK-017 | In `DependencyInjectionRegistrar.cs`, add `services.AddSingleton<IRsaKeyPairProvider, RsaKeyPairProvider>();`. | | |
+| TASK-018 | In `Program.cs`, add `config.AddCommand<AccountCommands.AccountMobileLoginCommand>("mobile-login")` inside the `account` branch. | | |
 
 ---
 
@@ -214,18 +210,18 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-019 | Remove `NotImplementedException` from `AccountService.MobileLoginAsync` public stub (replaced by delegate to internal overload). | | |
-| TASK-020 | Remove `NotImplementedException` from `AccountService.MobileLoginAsync` internal overload (replaced by real implementation). | | |
+| TASK-019 | Remove `NotImplementedException` from `AccountService.MobileLoginAsync` public stub. | | |
+| TASK-020 | Remove `NotImplementedException` from `AccountService.MobileLoginAsync` internal overload. | | |
 | TASK-021 | Run `dotnet test src/zapi-cli.sln` — all 12 new scenarios must pass, all prior tests must remain green. | | |
 
 ---
 
 ## 3. Alternatives
 
-- **ALT-001**: Generate `rook_cook` AES fingerprint (as AppXMacAuth does). Skipped — the server uses it for anomaly detection only, not access control. Absence does not block login. Can be added in a follow-up story.
-- **ALT-002**: Store `dc_locations` JSON in `AccountEntry` for URL-transform support (`GET /oauth/user/info` → contacts URL routing). Deferred — no current CLI command needs per-user URL transforms. File-level `accounts_server` is enough for token refresh DCL routing.
-- **ALT-003**: Use `RSAEncryptionPadding.OaepSHA256` instead of PKCS#1 v1.5. Not viable — the AppXMacAuth pod uses PKCS#1 v1.5; the server encrypts with that padding and the CLI must decrypt with the matching padding.
-- **ALT-004**: Add `--client-secret` as an optional flag on `account mobile-login` for power users who already know it. Deferred — the whole point of this flow is to NOT require the user to copy the secret.
+- **ALT-001**: Generate `rook_cook` AES fingerprint (as AppXMacAuth does). Skipped — server uses it for anomaly detection only, not access control. Can be added in a follow-up story.
+- **ALT-002**: Store `dc_locations` JSON in `AccountEntry` for URL-transform support. Deferred — no current CLI command needs per-user URL transforms.
+- **ALT-003**: Use `RSAEncryptionPadding.OaepSHA256` instead of PKCS#1 v1.5. Not viable — AppXMacAuth pod uses PKCS#1 v1.5; the server encrypts with that padding.
+- **ALT-004**: Add `--client-secret` as an optional flag. Deferred — the whole point of this flow is to NOT require the user to copy the secret.
 
 ---
 
@@ -233,8 +229,8 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
 
 - **DEP-001**: `System.Security.Cryptography` (in-box .NET 8+, no NuGet package needed).
 - **DEP-002**: `IRsaKeyPairProvider` interface — created in this plan (Phase 1).
-- **DEP-003**: `MobileCallbackResult` record — created as part of test scaffolding (already exists).
-- **DEP-004**: `LocalCallbackServer.WaitForMobileCallbackAsync` — stub already added; ensure real implementation parses all six required parameters.
+- **DEP-003**: `MobileCallbackResult` record — test scaffolding (already exists).
+- **DEP-004**: `LocalCallbackServer.WaitForMobileCallbackAsync` — stub already added.
 - **DEP-005**: `IOAuthBrowserFlow.BuildMobileAuthorizationUrl` — stub already added in `OAuthBrowserFlow`.
 
 ---
@@ -246,19 +242,17 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
 | `src/ZapiCli.Core/Auth/RsaKeyPairProvider.cs` | **CREATE** — production implementation |
 | `src/ZapiCli.Core/Auth/IRsaKeyPairProvider.cs` | Already created (stub) — no changes needed |
 | `src/ZapiCli.Core/Auth/MobileCallbackResult.cs` | Already created — no changes needed |
-| `src/ZapiCli.Core/Auth/LocalCallbackServer.cs` | Modified (stub `WaitForMobileCallbackAsync`) — real implementation already complete |
+| `src/ZapiCli.Core/Auth/LocalCallbackServer.cs` | Modified (stub `WaitForMobileCallbackAsync`) — complete |
 | `src/ZapiCli.Core/Auth/IOAuthBrowserFlow.cs` | Modified (`BuildMobileAuthorizationUrl` added) — complete |
 | `src/ZapiCli.Core/Auth/OAuthBrowserFlow.cs` | Modified (mobile URL builder implementation) — complete |
 | `src/ZapiCli.Core/ErrorCodes.cs` | Modified (`DCL_MISSING`, `RSA_DECRYPT_FAILURE` added) — complete |
 | `src/ZapiCli.Core/Accounts/IAccountService.cs` | Modified (`MobileLoginAsync` signature added) — complete |
-| `src/ZapiCli.Core/Accounts/AccountService.cs` | **MODIFY** — replace `NotImplementedException` stubs with real code (Phases 2–3) |
-| `src/ZapiCli/Commands/AccountCommands.cs` | **MODIFY** — add `AccountMobileLoginSettings` + `AccountMobileLoginCommand` (Phase 4) |
+| `src/ZapiCli.Core/Accounts/AccountService.cs` | **MODIFY** — replace `NotImplementedException` stubs (Phases 2–3) |
+| `src/ZapiCli/Commands/AccountCommands.cs` | **MODIFY** — add `AccountMobileLoginSettings` + command (Phase 4) |
 | `src/ZapiCli/DependencyInjectionRegistrar.cs` | **MODIFY** — register `IRsaKeyPairProvider` (Phase 5) |
 | `src/ZapiCli/Program.cs` | **MODIFY** — add `mobile-login` command (Phase 5) |
 | `tests/ZapiCli.Tests/Auth/MobileLoginAsyncTests.cs` | Already created (12 scenarios) — no changes needed |
 | `tests/ZapiCli.Tests/Fakes/FakeRsaKeyPairProvider.cs` | Already created — no changes needed |
-| `tests/ZapiCli.Tests/Fakes/FakeMobileCallbackServer.cs` | Already created — no changes needed |
-| `tests/ZapiCli.Tests/Fakes/FakeOAuthBrowserFlow.cs` | Modified (`BuildMobileUrlCalls` + implementation) — complete |
 
 ---
 
@@ -271,9 +265,9 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
 | TEST-003 | Scenario 3 | Auth URL `ss_id` parameter equals the generated public key base64 |
 | TEST-004 | Scenario 4 | Token exchange POST body contains `client_secret=<decrypted value>` |
 | TEST-005 | Scenario 5 | Token exchange POST body contains `rt_hash=<gt_hash value>` |
-| TEST-006 | Scenario 6 | Token exchange URL host matches `accounts-server` from the redirect (DCL routing) |
+| TEST-006 | Scenario 6 | Token exchange URL host matches `accounts-server` from the redirect |
 | TEST-007 | Scenario 7 | Throws `DCL_MISSING` when `dc_locations` absent from token response |
-| TEST-008 | Scenario 8 | Throws `STATE_MISMATCH` when CSRF state doesn't match; no token request made |
+| TEST-008 | Scenario 8 | Throws `STATE_MISMATCH` when CSRF state doesn't match |
 | TEST-009 | Scenario 9 | Throws `ACCOUNT_ALREADY_EXISTS` before browser opens |
 | TEST-010 | Scenario 10 | Throws `LOGIN_TIMEOUT` when callback server times out |
 | TEST-011 | Scenario 11 | Throws `RSA_DECRYPT_FAILURE` when `gt_sec` is corrupt/undecodable |
@@ -283,16 +277,15 @@ internal async Task<(string Name, string Dc)> MobileLoginAsync(
 
 ## 7. Risks & Assumptions
 
-- **RISK-001**: Zoho may change the mobile auth endpoint or add required fields (e.g. `rook_cook`) in future versions. Mitigation: follow the AppXMacAuth pod version `1.0.4` spec as documented.
-- **RISK-002**: RSA PKCS#1 v1.5 is susceptible to Bleichenbacher padding oracle attacks in some contexts. In this usage it is acceptable: the decryption is local, one-shot, and the attacker would need to control the Zoho server to exploit it.
-- **ASSUMPTION-001**: The Zoho Developer Console Self-Client type "Mobile/Desktop App" uses `/oauth/v2/mobile/auth` and returns `gt_sec`, `gt_hash`, and `accounts-server` in the redirect. This matches the AppXMacAuth pod spec.
-- **ASSUMPTION-002**: The `ZUID` field in the user-info response may be returned as a number or string (handled already in `ExchangeAndFinalizeAsync`). No change needed.
+- **RISK-001**: Zoho may change the mobile auth endpoint or add required fields in future versions.
+- **RISK-002**: RSA PKCS#1 v1.5 is susceptible to Bleichenbacher padding oracle attacks in some contexts. In this usage it is acceptable: the decryption is local, one-shot, and the attacker would need to control the Zoho server.
+- **ASSUMPTION-001**: The Zoho Developer Console Self-Client type "Mobile/Desktop App" uses `/oauth/v2/mobile/auth` and returns `gt_sec`, `gt_hash`, and `accounts-server` in the redirect.
+- **ASSUMPTION-002**: The `ZUID` field in the user-info response may be returned as a number or string (handled already in `ExchangeAndFinalizeAsync`).
 
 ---
 
 ## 8. Related Specifications / Further Reading
 
-- [AppXMacAuth Pod Technical Documentation](../tech_spec/docs/AppXMacAuth-Pod.md)
-- [ADR-0002 — OAuth Authentication Strategy](../tech_spec/docs/adr/ADR-0002-oauth-authentication-strategy.md)
+- [AppXMacAuth Pod Technical Documentation](./../docs/AppXMacAuth-Pod.md)
+- [ADR-0002 — OAuth Authentication Strategy](../spec/adr/adr-0002-oauth-self-client-authentication.md)
 - [MobileLoginAsyncTests — 12 TDD Scenarios](../../tests/ZapiCli.Tests/Auth/MobileLoginAsyncTests.cs)
-- [Zoho OAuth 2.0 Mobile/Desktop App Guide](https://www.zoho.com/accounts/protocol/oauth/mobile-desktop-apps.html)

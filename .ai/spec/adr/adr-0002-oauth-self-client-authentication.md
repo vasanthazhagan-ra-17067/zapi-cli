@@ -99,6 +99,5 @@ Browser-based flows and any form of device code flow are **explicitly excluded f
 
 ## References
 
-- **REF-001**: [tech_spec/tech_spec.md — Section 6: Authentication](../tech_spec/tech_spec.md#6-authentication)
-- **REF-002**: [ADR-0005: OS Keychain Abstraction via P/Invoke](adr-0005-os-keychain-abstraction.md)
-- **REF-003**: [Zoho OAuth 2.0 Self-Client documentation](https://www.zoho.com/accounts/protocol/oauth/self-client.html)
+- **REF-001**: [ADR-0005: OS Keychain Abstraction](adr-0005-os-keychain-abstraction.md)
+- **REF-002**: [ADR-0003: ZohoCorp Domain Block](adr-0003-zohocorp-domain-block.md)
